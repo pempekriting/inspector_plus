@@ -4,6 +4,8 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 
 **Version:** 0.0.1
 
+![InspectorPlus Logo](docs/inspectorplus_logo.png)
+
 ---
 
 ## Features
