@@ -89,7 +89,7 @@ export function RecorderPanel() {
                     {step.action}
                   </span>
                   <code className="neo-recorder-step-code">
-                    {step.code.length > 50 ? step.code.substring(0, 50) + "..." : step.code}
+                    {step.code}
                   </code>
                 </div>
               </div>
