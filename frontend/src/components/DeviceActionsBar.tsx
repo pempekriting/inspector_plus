@@ -165,7 +165,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await tapDevice(centerX, centerY, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to tap");
@@ -176,7 +179,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Long press failed");
@@ -187,7 +193,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await swipeDevice(centerX, centerY, centerX, Math.max(0, centerY - 300), undefined, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to swipe");
@@ -198,7 +207,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Drag not supported on iOS");
@@ -208,7 +220,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Zoom not supported on iOS");
@@ -218,7 +233,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Pinch not supported on iOS");
@@ -228,7 +246,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("home", selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to press home");
@@ -238,7 +259,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("back", selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Back not supported on iOS");
@@ -248,7 +272,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("recent", selectedDevice ?? undefined);
-      useHierarchyStore.getState().lockSelection(null);
+      const store = useHierarchyStore.getState();
+      store.lockSelection(null);
+      store.setSelectedNode(null);
+      store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Recent not supported on iOS");
