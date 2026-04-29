@@ -2,7 +2,7 @@
 
 Real-time Android/iOS device UI inspection tool with hierarchical view exploration, tap-to-inspect, and desktop GUI.
 
-**Version:** 1.1.0
+**Version:** 0.0.1
 
 ---
 
