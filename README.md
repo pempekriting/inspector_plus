@@ -8,7 +8,7 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 
 ## Features
 
-- Live screenshot streaming with 2s auto-refresh
+- Screenshot streaming via combined `/hierarchy-and-screenshot` endpoint (refresh on demand or device switch)
 - Hierarchical UI element tree view with expand/collapse
 - Hover-to-highlight on canvas (shows element bounds)
 - Click-to-tap on device screen
@@ -16,6 +16,15 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 - Element property inspection (class, package, resource-id, text, bounds)
 - Dark/light Neo-Brutalism theme
 - Desktop app via Tauri (or browser-based dev mode)
+- F2 Test Recorder — record test steps and export as Python/Java/JS scripts
+- F3 WebView Contexts — switch between native and webview contexts
+- F4 Hierarchy Search — search with regex, filter by xpath/resource-id/text/content-desc/class
+- F6 WCAG Accessibility Audit — audit accessibility issues on UI nodes
+- D2 Canvas Modes — inspect/coordinate/layout modes with zoom (0.25x-4x) and pan
+- ADB Command Panel — execute allowlisted ADB shell commands directly
+- Locator Generation — generate Appium locator strategies (accessibility-id, class chain, predicate string, xpath)
+- APK Info Panel — view detailed package info (version, SDK, permissions)
+- Layout Bounds Overlay — display all element bounds on canvas
 
 ---
 
@@ -101,9 +110,11 @@ This automatically starts the Python backend and opens the desktop window.
 | Layer | Technology |
 |-------|------------|
 | Desktop Shell | Tauri 2 (Rust) |
-| Frontend Framework | React 18 + TypeScript |
-| Build Tool | Vite 6 |
-| State Management | Zustand 5 |
+| Frontend Framework | React 18.3 + TypeScript |
+| Build Tool | Vite 6.0 |
+| State Management | Zustand 5.0 |
+| Data Fetching | TanStack Query 5.100 |
+| Validation | Zod 4.3 |
 | Styling | Tailwind CSS 3.4 |
 | Backend Framework | FastAPI 0.115 |
 | Python Version | 3.13+ |
@@ -117,42 +128,97 @@ This automatically starts the Python backend and opens the desktop window.
 ```
 inspector_plus/
 ├── backend/
-│   ├── main.py              # FastAPI entry point, routes
-│   ├── pyproject.toml       # Python dependencies
+│   ├── main.py                  # FastAPI entry point, routes
+│   ├── pyproject.toml           # Python dependencies
+│   ├── uv.lock                  # Locked dependencies
+│   ├── Dockerfile               # Container build
+│   ├── .env.example             # Environment template
+│   ├── README.md               # Backend-specific docs
+│   ├── test_app.py             # pytest test suite
+│   ├── test_app_commands.py
+│   ├── test_base.py
+│   ├── test_device_bridges.py
+│   ├── test_validate.py
+│   ├── test_ws.py
+│   ├── test_ws_server.py
+│   ├── commands/
+│   │   ├── app_commands.py      # Appium-like command executor
+│   │   └── ios_app_commands.py
 │   └── device/
-│       ├── __init__.py       # Bridge factory
-│       ├── base.py           # DeviceBridgeBase abstract class
-│       ├── android_bridge.py # Android ADB implementation
-│       └── ios_bridge.py     # iOS idb implementation
+│       ├── __init__.py          # Bridge factory
+│       ├── base.py              # DeviceBridgeBase abstract class
+│       ├── android_bridge.py     # Android ADB implementation
+│       └── ios_bridge.py         # iOS idb implementation
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx           # Main layout
-│   │   ├── main.tsx          # React entry
-│   │   ├── index.css         # Global styles + theme
+│   │   ├── App.tsx              # Main layout
+│   │   ├── main.tsx             # React entry
+│   │   ├── index.css            # Global styles + theme
 │   │   ├── components/
-│   │   │   ├── ScreenshotCanvas.tsx
+│   │   │   ├── AccessibilityPanel.tsx
+│   │   │   ├── AdbPanel.tsx
+│   │   │   ├── ApkInfoPanel.tsx
+│   │   │   ├── BottomDrawer.tsx
+│   │   │   ├── CommandsDrawer.tsx
+│   │   │   ├── CommandsPanel.tsx
+│   │   │   ├── DevicePanel.tsx
+│   │   │   ├── EmptyState.tsx
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   ├── ErrorState.tsx
+│   │   │   ├── HierarchyPanel.tsx
 │   │   │   ├── HierarchyTree.tsx
-│   │   │   └── Overlay.tsx
+│   │   │   ├── LayoutBoundsOverlay.tsx
+│   │   │   ├── LocatorPanel.tsx
+│   │   │   ├── Overlay.tsx
+│   │   │   ├── PropertiesPanel.tsx
+│   │   │   ├── PropertyRow.tsx
+│   │   │   ├── RecorderPanel.tsx
+│   │   │   ├── ScreenshotCanvas.tsx
+│   │   │   ├── SearchBar.tsx
+│   │   │   ├── SkeletonLoader.tsx
+│   │   │   ├── StatusBar.tsx
+│   │   │   ├── StylePanel.tsx
+│   │   │   └── TabBar.tsx
 │   │   ├── stores/
 │   │   │   ├── hierarchyStore.ts
 │   │   │   ├── deviceStore.ts
+│   │   │   ├── recorderStore.ts
 │   │   │   └── themeStore.ts
-│   │   └── hooks/
-│   │       └── useDevice.ts
+│   │   ├── hooks/
+│   │   │   ├── useDevice.ts
+│   │   │   ├── useCommands.ts
+│   │   │   └── useRecording.ts
+│   │   └── services/
+│   │       └── api.ts
 │   ├── src-tauri/
 │   │   ├── tauri.conf.json
-│   │   └── src/main.rs
-│   └── package.json
+│   │   ├── capabilities/
+│   │   ├── gen/
+│   │   ├── icons/
+│   │   ├── src/main.rs
+│   │   ├── build.rs
+│   │   ├── Cargo.toml
+│   │   └── Cargo.lock
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   ├── vite.config.ts
+│   ├── vitest.config.ts
+│   ├── vitest.setup.ts
+│   ├── .env.example
+│   ├── .gitignore
+│   └── README.md
 │
-├── docs/                    # Detailed documentation
-│   ├── README.md            # Doc index
-│   ├── DEVELOPMENT.md        # Setup & dev guide
-│   └── ARCHITECTURE.md       # Technical details
+├── docs/
+│   ├── README.md
+│   ├── DEVELOPMENT.md
+│   └── ARCHITECTURE.md
 │
-├── CLAUDE.md                # Claude Code instructions
-├── README.md                # This file
-└── SPEC.md                  # Feature specification
+├── CLAUDE.md                     # Claude Code instructions
+└── README.md                     # This file
 ```
 
 ---
@@ -162,12 +228,27 @@ inspector_plus/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
+| GET | `/ready` | Readiness probe (checks device connection) |
 | GET | `/hierarchy` | Fetch UI hierarchy |
+| GET | `/hierarchy-and-screenshot` | Combined hierarchy + screenshot |
+| GET | `/hierarchy/search` | Filtered search by xpath/resource-id/text/content-desc/class |
+| GET | `/hierarchy/find` | Tree search with regex |
+| GET | `/hierarchy/locators` | Generate Appium locator strategies |
+| POST | `/hierarchy/audit` | WCAG accessibility audit |
 | POST | `/tap` | Tap at coordinates |
+| POST | `/input/text` | Text input to device |
 | GET | `/device/status` | Connection status |
 | GET | `/devices` | List all devices |
 | POST | `/device/select` | Switch active device |
+| GET | `/device/contexts` | List WebView/native contexts |
+| POST | `/device/switch-context` | Switch context (native/webview) |
+| POST | `/device/adb` | Execute allowlisted ADB command |
 | GET | `/screenshot` | PNG screenshot stream |
+| GET | `/app/commands/info` | Get detailed APK info |
+| POST | `/commands/execute` | Execute device commands |
+| POST | `/recorder/record` | Record test step |
+| GET | `/recorder/export` | Export recording as Python/Java/JS |
+| POST | `/recorder/clear` | Clear recording session |
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#rest-api) for full API details.
 
@@ -177,7 +258,7 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#rest-api) for full API details
 
 1. **Python 3.14 Incompatibility** - WebSocket uses deprecated APIs removed in Python 3.14. Use Python 3.13.
 2. **ADB Required** - Must have Android SDK with ADB installed.
-4. **No Authentication** - Backend has no auth, only runs locally.
+3. **No Authentication** - Backend has no auth, only runs locally.
 
 ---
 

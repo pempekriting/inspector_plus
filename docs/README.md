@@ -53,7 +53,7 @@ Technical architecture details:
 
 ## Key Features
 
-- Real-time device screenshot with 2s auto-refresh
+- Device screenshot via combined `/hierarchy-and-screenshot` endpoint (refresh on demand or device switch)
 - Hierarchical UI element tree view
 - Click-to-tap on device screen
 - Hover-to-highlight element bounds

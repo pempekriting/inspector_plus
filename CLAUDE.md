@@ -168,10 +168,10 @@ npm run dev                    # or npm run tauri dev for desktop
 ## Architecture Notes
 
 ### Refresh Mechanism
-- Screenshot auto-refreshes every 2s via `setInterval`
+- Screenshot uses combined `/hierarchy-and-screenshot` endpoint with TanStack Query (staleTime 2000ms)
 - Hierarchy refresh: `triggerHierarchyRefresh()` increments `refreshCounter`
-- Device switch: resets resolution + refreshes both screenshot and hierarchy
-- Both must finish before transition returns to 'idle'
+- Screenshot refresh: `triggerScreenshotRefresh()` increments `screenshotRefreshCounter` (manual only)
+- Device switch: resets resolution + refreshes both screenshot and hierarchy via refetch
 
 ### Coordinate Conversion
 - Canvas click → device coordinates: `(canvasX / canvasWidth) * deviceWidth`
