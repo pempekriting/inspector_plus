@@ -97,7 +97,7 @@ inspector_plus/
 │   ├── pyproject.toml       # Python dependencies
 │   ├── .venv/               # Virtual environment
 │   ├── device/
-│   │   ├── __init__.py      # Bridge exports (get_bridge is in main.py)
+│   │   ├── __init__.py      # Bridge factory (create_bridge_for_device)
 │   │   ├── base.py          # DeviceBridgeBase abstract class (15+ methods)
 │   │   ├── android_bridge.py # ADB + uiautomator implementation
 │   │   └── ios_bridge.py     # idb + WDA implementation

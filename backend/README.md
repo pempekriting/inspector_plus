@@ -1,12 +1,13 @@
 # InspectorPlus Backend
 
-FastAPI backend for Android UI inspection via ADB.
+FastAPI backend for Android/iOS UI inspection via ADB and idb.
 
 ## Requirements
 
 - Python 3.13+ (not 3.14 - WebSocket compatibility issue)
 - ADB (Android Debug Bridge) installed and in PATH
-- Android device/emulator connected
+- For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
+- Android device/emulator or iOS simulator connected
 
 ## Quick Start
 
@@ -22,13 +23,28 @@ API documentation available at `http://localhost:8001/docs`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/health` | Liveness probe |
+| GET | `/ready` | Readiness probe (checks device connection) |
 | GET | `/hierarchy` | Fetch UI hierarchy from device |
+| GET | `/hierarchy-and-screenshot` | Combined hierarchy + base64 screenshot |
+| GET | `/hierarchy/search` | Filtered search by xpath/resource-id/text/content-desc/class |
+| GET | `/hierarchy/find` | Tree search with regex (F4) |
+| GET | `/hierarchy/locators` | Generate Appium locators for a node |
+| POST | `/hierarchy/audit` | WCAG accessibility audit |
 | POST | `/tap` | Tap device at coordinates |
-| GET | `/device/status` | Get connection and device info |
-| GET | `/devices` | List all connected ADB devices |
-| POST | `/device/select` | Switch active device |
+| POST | `/input/text` | Input text |
 | GET | `/screenshot` | Get PNG screenshot |
-| WS | `/test` | Echo test for debugging |
+| GET | `/device/status` | Get connection and device info |
+| GET | `/devices` | List all connected devices |
+| POST | `/device/select` | Switch active device |
+| POST | `/device/adb` | Execute allowlisted ADB command |
+| GET | `/device/contexts` | List WebView/native contexts |
+| POST | `/device/switch-context` | Switch context |
+| POST | `/recorder/record` | Record test step |
+| GET | `/recorder/export` | Export recording as Python/Java/JS |
+| POST | `/recorder/clear` | Clear recording |
+| GET | `/app/commands/info` | Get detailed APK info |
+| POST | `/commands/execute` | Execute commands (install/uninstall/launch/check/list apps) |
 
 ## ADB Commands Used
 
@@ -41,22 +57,28 @@ API documentation available at `http://localhost:8001/docs`
 
 ```
 backend/
-├── main.py              # FastAPI app + routes
-├── pyproject.toml       # Dependencies
-└── device/
-    └── bridge.py       # DeviceBridge (ADB wrapper)
+├── main.py                  # FastAPI entry point + all routes + ADB security model
+├── pyproject.toml           # Dependencies
+├── device/
+│   ├── __init__.py          # Bridge factory (create_bridge_for_device)
+│   ├── base.py              # DeviceBridgeBase abstract class
+│   ├── android_bridge.py    # Android ADB implementation
+│   └── ios_bridge.py        # iOS idb implementation
+└── commands/
+    ├── app_commands.py      # Android app commands
+    └── ios_app_commands.py  # iOS app commands
 ```
 
 ## Device Selection
 
-Default device used when no serial specified. Switch via `/device/select`:
+Default device used when no serial/udid specified. Switch via `/device/select`:
 
 ```bash
 curl -X POST http://localhost:8001/device/select \
   -H "Content-Type: application/json" \
-  -d '{"serial": "emulator-5554"}'
+  -d '{"udid": "emulator-5554"}'
 ```
 
 ## Environment
 
-Uses `uv` for Python dependency management. Lock file: `uvl.lock`
+Uses `uv` for Python dependency management.
