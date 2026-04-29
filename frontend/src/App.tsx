@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { ScreenshotCanvas } from "./components/ScreenshotCanvas";
 import { Overlay } from "./components/Overlay";
 import { TabBar } from "./components/TabBar";
+import { SubTabBar } from "./components/SubTabBar";
 import { DevicePanel } from "./components/DevicePanel";
 import { HierarchyPanel } from "./components/HierarchyPanel";
-import { PropertiesPanel } from "./components/PropertiesPanel";
+import { AccessibilityPanel } from "./components/AccessibilityPanel";
 import { StatusBar } from "./components/StatusBar";
 import { CommandsDrawer } from "./components/CommandsDrawer";
 import { ApkInfoPanel } from "./components/ApkInfoPanel";
@@ -13,14 +14,14 @@ import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
 import { useDeviceStore } from "./stores/deviceStore";
 
-type TabType = 'inspector' | 'commands' | 'apk-info';
-type InspectorSubTab = 'hierarchy' | 'properties' | 'recorder';
+export type TabType = 'inspector' | 'commands' | 'apk-info';
+export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder';
 
 function App() {
   const { hoveredNode } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [activeTab, setActiveTab] = useState<TabType>('inspector');
-  const [activeInspectorTab, setActiveInspectorTab] = useState<InspectorSubTab>('properties');
+  const [activeInspectorTab, setActiveInspectorTab] = useState<InspectorSubTab>('hierarchy');
   const { isLoadingScreenshot, isLoadingHierarchy } = useHierarchyStore();
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'switching'>('idle');
 
@@ -171,47 +172,19 @@ function App() {
               }}
             >
               {/* Inspector sub-tabs */}
-              <div
-                className="flex items-center px-2"
-                style={{
-                  background: isDark ? '#18181b' : '#e5e5e5',
-                  borderBottom: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-                }}
-              >
-                {([
-                  { id: 'hierarchy' as InspectorSubTab, label: 'Hierarchy' },
-                  { id: 'properties' as InspectorSubTab, label: 'Properties' },
-                  { id: 'recorder' as InspectorSubTab, label: 'Recorder' },
-                ]).map((subTab) => {
-                  const isActive = activeInspectorTab === subTab.id;
-                  return (
-                    <button
-                      key={subTab.id}
-                      onClick={() => setActiveInspectorTab(subTab.id)}
-                      className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all relative"
-                      style={{
-                        background: 'transparent',
-                        color: isActive
-                          ? (isDark ? '#e4e4e7' : '#1a1a1a')
-                          : (isDark ? '#71717a' : '#666666'),
-                        borderBottom: isActive
-                          ? '3px solid #22d3ee'
-                          : '3px solid transparent',
-                      }}
-                    >
-                      {subTab.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <SubTabBar
+                activeTab={activeInspectorTab}
+                onTabChange={setActiveInspectorTab}
+                isDark={isDark}
+              />
 
               {/* Sub-tab content */}
               <div className="flex-1 overflow-y-auto">
                 <div style={{ display: activeInspectorTab === 'hierarchy' ? 'block' : 'none' }}>
                   <HierarchyPanel />
                 </div>
-                <div style={{ display: activeInspectorTab === 'properties' ? 'block' : 'none' }}>
-                  <PropertiesPanel />
+                <div style={{ display: activeInspectorTab === 'accessibility' ? 'block' : 'none' }}>
+                  <AccessibilityPanel />
                 </div>
                 <div style={{ display: activeInspectorTab === 'recorder' ? 'block' : 'none', height: '100%' }}>
                   <RecorderPanel />

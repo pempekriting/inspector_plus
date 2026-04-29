@@ -856,12 +856,6 @@ const TreeNode = memo(function TreeNode({
 
   return (
     <div style={{ opacity: isDimmed ? 0.4 : 1, transition: 'opacity 0.15s ease-out' }}>
-      {/* DEBUG: show matchSet count in tree */}
-      {matchSet && (
-        <span title={`matchSet: ${[...matchSet].join(', ')}`} className="text-[8px\] text-orange-400 ml-1">
-          [\{matchSet.size}\]
-        </span>
-      )}
       <div
         className="flex items-center py-1.5 cursor-pointer select-none rounded"
         style={{

@@ -374,6 +374,32 @@ class TextInputRequest(BaseModel):
     text: str = Field(..., max_length=1000, description="Text to input")
 
 
+class SwipeRequest(BaseModel):
+    startX: int = Field(..., ge=0, le=10000)
+    startY: int = Field(..., ge=0, le=10000)
+    endX: int = Field(..., ge=0, le=10000)
+    endY: int = Field(..., ge=0, le=10000)
+    duration: int = Field(default=300, ge=0, le=5000, description="Duration in ms")
+
+
+class DragRequest(BaseModel):
+    startX: int = Field(..., ge=0, le=10000)
+    startY: int = Field(..., ge=0, le=10000)
+    endX: int = Field(..., ge=0, le=10000)
+    endY: int = Field(..., ge=0, le=10000)
+    duration: int = Field(default=500, ge=0, le=5000)
+
+
+class PinchRequest(BaseModel):
+    x: int = Field(..., ge=0, le=10000, description="Center X of pinch area")
+    y: int = Field(..., ge=0, le=10000, description="Center Y of pinch area")
+    scale: float = Field(..., gt=0, description="Pinch scale: <1 for pinch in, >1 for pinch out")
+
+
+class PressKeyRequest(BaseModel):
+    key: str = Field(..., description="Key name: home, back, recent")
+
+
 class CommandRequest(BaseModel):
     type: str = Field(..., min_length=1, max_length=50, description="Command type")
     params: Optional[dict[str, Any]] = None
@@ -636,7 +662,9 @@ async def audit_accessibility(udid: Optional[str] = None):
 @app.post("/tap")
 async def tap_coordinates(req: TapRequest, udid: Optional[str] = None):
     try:
-        bridge = get_bridge(udid)
+        # Resolve udid to actual device serial if not provided
+        resolved_udid = udid or _get_first_android_device() or os.environ.get("ANDROID_SERIAL")
+        bridge = get_bridge(resolved_udid)
         if bridge is None:
             raise DeviceNotFoundError()
         success = bridge.tap(req.x, req.y)
@@ -644,17 +672,121 @@ async def tap_coordinates(req: TapRequest, udid: Optional[str] = None):
             raise HTTPException(status_code=500, detail="Tap command failed")
         return {"success": True}
     except AppError:
-        raise  # Let global handler deal with it
+        raise
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to tap: {str(e)}")
 
 
+_KEYCODE_MAP = {
+    "home": 3,
+    "back": 4,
+    "recent": 187,
+}
+
+
+def _resolve_android_udid(udid: Optional[str]) -> Optional[str]:
+    """Resolve udid to Android device serial, checking env and first device."""
+    if udid:
+        return udid
+    return os.environ.get("ANDROID_SERIAL") or _get_first_android_device()
+
+
+@app.post("/device/press-key")
+async def press_key(req: PressKeyRequest, udid: Optional[str] = None):
+    keycode = _KEYCODE_MAP.get(req.key)
+    if keycode is None:
+        raise HTTPException(status_code=400, detail=f"Unknown key: {req.key}. Use: home, back, recent")
+    try:
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
+        if bridge is None:
+            raise DeviceNotFoundError()
+        result = bridge.execute_adb_command(f"input keyevent {keycode}")
+        if result.get("exitCode") != 0:
+            raise HTTPException(status_code=500, detail=result.get("error", "Key press failed"))
+        return {"success": True}
+    except AppError:
+        raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to press key: {str(e)}")
+
+
+@app.post("/device/swipe")
+async def swipe_device(req: SwipeRequest, udid: Optional[str] = None):
+    try:
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
+        if bridge is None:
+            raise DeviceNotFoundError()
+        result = bridge.execute_adb_command(
+            f"input swipe {req.startX} {req.startY} {req.endX} {req.endY} {req.duration}"
+        )
+        if result.get("exitCode") != 0:
+            raise HTTPException(status_code=500, detail=result.get("error", "Swipe failed"))
+        return {"success": True}
+    except AppError:
+        raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to swipe: {str(e)}")
+
+
+@app.post("/device/drag")
+async def drag_device(req: DragRequest, udid: Optional[str] = None):
+    try:
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
+        if bridge is None:
+            raise DeviceNotFoundError()
+        result = bridge.execute_adb_command(
+            f"input drag {req.startX} {req.startY} {req.endX} {req.endY} {req.duration}"
+        )
+        if result.get("exitCode") != 0:
+            raise HTTPException(status_code=500, detail=result.get("error", "Drag failed"))
+        return {"success": True}
+    except AppError:
+        raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to drag: {str(e)}")
+
+
+@app.post("/device/pinch")
+async def pinch_device(req: PinchRequest, udid: Optional[str] = None):
+    """Pinch gesture using input roll command (two-finger rotation gesture)."""
+    try:
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
+        if bridge is None:
+            raise DeviceNotFoundError()
+        scale = req.scale
+        if scale > 1:
+            cmd = f"input roll dx 0 dy {-int((scale - 1) * 500)}"
+        else:
+            cmd = f"input roll dx 0 dy {int((1 - scale) * 500)}"
+        result = bridge.execute_adb_command(cmd)
+        if result.get("exitCode") != 0:
+            raise HTTPException(status_code=500, detail=result.get("error", "Pinch failed"))
+        return {"success": True}
+    except AppError:
+        raise
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to pinch: {str(e)}")
+
+
 @app.post("/input/text")
 async def input_text(req: TextInputRequest, udid: Optional[str] = None):
     try:
-        bridge = get_bridge(udid)
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
         if bridge is None:
             raise DeviceNotFoundError()
         success = bridge.input_text(req.text)

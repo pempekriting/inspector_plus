@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import { useThemeStore } from "../stores/themeStore";
 import { useCommands, CommandResult } from "../hooks/useCommands";
 import { useAdbCommand } from "../services/api";
-import { useRecording } from "../hooks/useRecording";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
@@ -219,105 +218,6 @@ function AppCommandsSection() {
   );
 }
 
-// Recorder Section - Neo Brutalist mini recorder
-function RecorderSection() {
-  const isDark = true;
-  const { isRecording, steps, toggleRecording } = useRecording();
-
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-center justify-between px-3 py-2"
-        style={{
-          borderBottom: isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a",
-          background: isDark ? "#18181b" : "#e5e5e5"
-        }}>
-        <div className="flex items-center gap-2">
-          {/* Animated dot indicator */}
-          <div className="relative">
-            <div
-              className="w-2.5 h-2.5 rounded-full transition-all duration-150"
-              style={{
-                background: isRecording ? "#ef4444" : "#52525b",
-                boxShadow: isRecording ? "0 0 6px #ef4444" : "none"
-              }}
-            />
-            {isRecording && (
-              <div
-                className="absolute inset-0 rounded-full animate-ping"
-                style={{ background: "#ef4444", opacity: 0.4 }}
-              />
-            )}
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
-            Recorder
-          </span>
-          {steps.length > 0 && (
-            <span
-              className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold"
-              style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
-                color: "#00e5cc",
-                border: "1px solid #00e5cc"
-              }}
-            >
-              {steps.length}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={toggleRecording}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95"
-          style={{
-            background: isRecording ? "#ef4444" : "#10b981",
-            color: "#000",
-            border: `2px solid ${isRecording ? "#ef4444" : "#10b981"}`,
-            boxShadow: `2px 2px 0 ${isRecording ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`
-          }}
-        >
-          {isRecording ? (
-            <>
-              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="6" width="12" height="12" rx="1" />
-              </svg>
-              Stop
-            </>
-          ) : (
-            <>
-              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="12" r="5" />
-              </svg>
-              Record
-            </>
-          )}
-        </button>
-      </div>
-
-      {steps.length > 0 ? (
-        <div className="px-3 py-2" style={{ background: isDark ? "#111114" : "#ffffff" }}>
-          <span className="text-[9px]" style={{ color: isDark ? "#71717a" : "#666666" }}>
-            <span style={{ color: "#00e5cc" }}>{steps.length}</span> step{steps.length !== 1 ? "s" : ""} recorded \u2014 open{" "}
-            <span
-              className="font-bold cursor-pointer underline"
-              style={{ color: "#00e5cc" }}
-              onClick={() => {/* Would trigger tab switch */}}
-            >
-              Recorder tab
-            </span>{" "}
-            to export
-          </span>
-        </div>
-      ) : (
-        <div className="px-3 py-2" style={{ background: isDark ? "#111114" : "#ffffff" }}>
-          <span className="text-[9px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
-            {isRecording ? "Click elements to record" : "Click Record to start"}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // Unified Commands Drawer - replaces BottomDrawer tabs
 export function CommandsDrawer({ isDark }: { isDark: boolean }) {
   return (
@@ -349,8 +249,6 @@ export function CommandsDrawer({ isDark }: { isDark: boolean }) {
         <AdbSection />
         <div style={{ borderTop: isDark ? "1px solid #27272a" : "1px solid #e5e5e5" }} />
         <AppCommandsSection />
-        <div style={{ borderTop: isDark ? "1px solid #27272a" : "1px solid #e5e5e5" }} />
-        <RecorderSection />
       </div>
     </div>
   );

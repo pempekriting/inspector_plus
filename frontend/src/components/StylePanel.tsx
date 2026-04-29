@@ -1,117 +1,157 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import { useThemeStore } from "../stores/themeStore";
 import type { UiStyles } from "../types/shared";
 
-interface StylePanelProps {
+interface LayoutChipsProps {
   styles: UiStyles | undefined;
+  compact?: boolean;
 }
 
-interface CopyButtonProps {
-  value: string;
-  isDark: boolean;
-}
+const emptyStateIcon = (
+  <svg className="w-5 h-5 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18M9 21V9" />
+  </svg>
+);
 
-const CopyButton = memo(function CopyButton({ value, isDark }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      // clipboard unavailable
-    }
-  };
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1"
-      style={{
-        background: copied
-          ? (isDark ? "rgba(52, 211, 153, 0.2)" : "rgba(4, 120, 87, 0.15)")
-          : (isDark ? "#1f1f23" : "#f0f0f0"),
-        color: copied
-          ? (isDark ? "#34d399" : "#047857")
-          : (isDark ? "#71717a" : "#666666"),
-        border: copied
-          ? (isDark ? "2px solid #34d399" : "2px solid #047857")
-          : (isDark ? "2px solid #3f3f46" : "2px solid #cccccc"),
-        cursor: "pointer",
-        minWidth: "52px",
-      }}
-    >
-      {copied ? (
-        <>
-          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <span>Copied!</span>
-        </>
-      ) : (
-        <span>Copy</span>
-      )}
-    </button>
-  );
-});
-
-interface StyleRowProps {
+function Chip({
+  label,
+  value,
+  isDark,
+  isColor,
+  colorHex,
+}: {
   label: string;
   value: string | undefined | null;
   isDark: boolean;
   isColor?: boolean;
   colorHex?: string;
-}
-
-const StyleRow = memo(function StyleRow({
-  label,
-  value,
-  isDark,
-  isColor = false,
-  colorHex,
-}: StyleRowProps) {
-  if (value === undefined || value === null) return null;
+}) {
+  if (!value) return null;
 
   return (
-    <div className="flex items-center py-1 px-2 -mx-2 rounded cursor-default hover:bg-white/[0.04] transition-colors">
+    <div
+      className="flex items-center gap-1 px-2 py-1 rounded"
+      style={{
+        background: isDark ? "#1f1f23" : "#f0f0f0",
+        border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #cccccc",
+      }}
+    >
+      {isColor && colorHex && (
+        <div
+          className="w-3 h-3 rounded-sm flex-shrink-0"
+          style={{
+            background: colorHex,
+            border: isDark ? "1px solid #52525b" : "1px solid #999999",
+          }}
+        />
+      )}
       <span
-        className="text-[10px] uppercase tracking-wider w-24 flex-shrink-0 font-bold"
-        style={{ color: isDark ? "#71717a" : "#666666" }}
+        className="text-[9px] font-bold uppercase tracking-wider"
+        style={{ color: isDark ? "#52525b" : "#999999" }}
       >
         {label}
       </span>
-      <div className="flex items-center flex-1 min-w-0">
-        {isColor && colorHex && (
-          <div
-            className="w-3 h-3 rounded-sm flex-shrink-0 mr-2 border"
-            style={{
-              background: colorHex,
-              borderColor: isDark ? "#3f3f46" : "#cccccc",
-            }}
-          />
-        )}
+      <span
+        className="text-[10px] font-mono"
+        style={{ color: isDark ? "#a1a1aa" : "#4a4a4a" }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export const LayoutChips = memo(function LayoutChips({ styles, compact = true }: LayoutChipsProps) {
+  const { theme } = useThemeStore();
+  const isDark = theme === "dark";
+
+  if (!styles) {
+    return (
+      <div className="flex items-center gap-1">
         <span
-          className="text-[11px] font-mono truncate"
-          style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}
+          className="text-[9px] font-bold uppercase tracking-wider"
+          style={{ color: isDark ? "#52525b" : "#999999" }}
         >
-          {value}
+          Layout
         </span>
-        <CopyButton value={value} isDark={isDark} />
+        <span
+          className="text-[10px]"
+          style={{ color: isDark ? "#3f3f46" : "#cccccc" }}
+        >
+          —
+        </span>
       </div>
+    );
+  }
+
+  const hasAnyStyle = styles.backgroundColor || styles.textColor || styles.padding || styles.elevation;
+
+  if (!hasAnyStyle) {
+    return (
+      <div className="flex items-center gap-1">
+        <span
+          className="text-[9px] font-bold uppercase tracking-wider"
+          style={{ color: isDark ? "#52525b" : "#999999" }}
+        >
+          Layout
+        </span>
+        <span
+          className="text-[10px]"
+          style={{ color: isDark ? "#3f3f46" : "#cccccc" }}
+        >
+          —
+        </span>
+      </div>
+    );
+  }
+
+  const paddingValue = styles.padding
+    ? `${styles.padding.left}|${styles.padding.top}|${styles.padding.right}|${styles.padding.bottom}`
+    : undefined;
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span
+        className="text-[9px] font-bold uppercase tracking-wider mr-1"
+        style={{ color: isDark ? "#52525b" : "#999999" }}
+      >
+        Layout
+      </span>
+      <Chip
+        label="bg"
+        value={styles.backgroundColor}
+        isDark={isDark}
+        isColor
+        colorHex={styles.backgroundColor}
+      />
+      <Chip
+        label="text"
+        value={styles.textColor}
+        isDark={isDark}
+        isColor
+        colorHex={styles.textColor}
+      />
+      {paddingValue && (
+        <Chip
+          label="pad"
+          value={paddingValue}
+          isDark={isDark}
+        />
+      )}
+      {styles.elevation && (
+        <Chip
+          label="elev"
+          value={styles.elevation}
+          isDark={isDark}
+        />
+      )}
     </div>
   );
 });
 
-const emptyStateIcon = (
-  <svg className="w-6 h-6 mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <path d="M8 12h8M12 8v8"/>
-  </svg>
-);
-
-export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) {
+/* Legacy full StylePanel kept for PropertiesPanel compatibility */
+export const StylePanel = memo(function StylePanel({ styles }: { styles: UiStyles | undefined }) {
   const { theme } = useThemeStore();
   const isDark = theme === "dark";
 
@@ -129,7 +169,7 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
             className="text-[10px] font-bold uppercase tracking-wider"
             style={{ color: isDark ? "#71717a" : "#666666" }}
           >
-            Styles
+            Layout
           </span>
         </div>
         <div
@@ -137,7 +177,7 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
           style={{ color: isDark ? "#52525b" : "#999999" }}
         >
           {emptyStateIcon}
-          <span className="text-[11px]">No styles available</span>
+          <span className="text-[11px]">No layout info available</span>
         </div>
       </div>
     );
@@ -146,9 +186,6 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
   const hasAnyStyle =
     styles.backgroundColor ||
     styles.textColor ||
-    styles.fontSize ||
-    styles.fontWeight ||
-    styles.fontFamily ||
     styles.padding ||
     styles.elevation;
 
@@ -166,7 +203,7 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
             className="text-[10px] font-bold uppercase tracking-wider"
             style={{ color: isDark ? "#71717a" : "#666666" }}
           >
-            Styles
+            Layout
           </span>
         </div>
         <div
@@ -174,7 +211,7 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
           style={{ color: isDark ? "#52525b" : "#999999" }}
         >
           {emptyStateIcon}
-          <span className="text-[11px]">No styles available</span>
+          <span className="text-[11px]">No layout info available</span>
         </div>
       </div>
     );
@@ -197,30 +234,41 @@ export const StylePanel = memo(function StylePanel({ styles }: StylePanelProps) 
           className="text-[10px] font-bold uppercase tracking-wider"
           style={{ color: isDark ? "#71717a" : "#666666" }}
         >
-          Styles
+          Layout
         </span>
       </div>
 
       <div className="space-y-0.5">
-        <StyleRow
-          label="Background"
-          value={styles.backgroundColor}
-          isDark={isDark}
-          isColor
-          colorHex={styles.backgroundColor}
-        />
-        <StyleRow
-          label="Text"
-          value={styles.textColor}
-          isDark={isDark}
-          isColor
-          colorHex={styles.textColor}
-        />
-        <StyleRow label="Font size" value={styles.fontSize} isDark={isDark} />
-        <StyleRow label="Font weight" value={styles.fontWeight} isDark={isDark} />
-        <StyleRow label="Font family" value={styles.fontFamily} isDark={isDark} />
-        <StyleRow label="Padding" value={paddingValue} isDark={isDark} />
-        <StyleRow label="Elevation" value={styles.elevation} isDark={isDark} />
+        {styles.backgroundColor && (
+          <div className="flex items-center gap-2 py-1 px-2 -mx-2 rounded" style={{ borderLeft: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a" }}>
+            <span className="text-[10px] uppercase tracking-wider w-24 flex-shrink-0 font-bold" style={{ color: isDark ? "#7a7a85" : "#666666" }}>Background</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-3 h-3 rounded-sm" style={{ background: styles.backgroundColor, border: isDark ? "1px solid #3f3f46" : "1px solid #cccccc" }} />
+              <span className="text-[11px] font-mono" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>{styles.backgroundColor}</span>
+            </div>
+          </div>
+        )}
+        {styles.textColor && (
+          <div className="flex items-center gap-2 py-1 px-2 -mx-2 rounded" style={{ borderLeft: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a" }}>
+            <span className="text-[10px] uppercase tracking-wider w-24 flex-shrink-0 font-bold" style={{ color: isDark ? "#7a7a85" : "#666666" }}>Text</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-3 h-3 rounded-sm" style={{ background: styles.textColor, border: isDark ? "1px solid #3f3f46" : "1px solid #cccccc" }} />
+              <span className="text-[11px] font-mono" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>{styles.textColor}</span>
+            </div>
+          </div>
+        )}
+        {paddingValue && (
+          <div className="flex items-center gap-2 py-1 px-2 -mx-2 rounded" style={{ borderLeft: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a" }}>
+            <span className="text-[10px] uppercase tracking-wider w-24 flex-shrink-0 font-bold" style={{ color: isDark ? "#7a7a85" : "#666666" }}>Padding</span>
+            <span className="text-[11px] font-mono" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>{paddingValue}</span>
+          </div>
+        )}
+        {styles.elevation && (
+          <div className="flex items-center gap-2 py-1 px-2 -mx-2 rounded" style={{ borderLeft: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a" }}>
+            <span className="text-[10px] uppercase tracking-wider w-24 flex-shrink-0 font-bold" style={{ color: isDark ? "#7a7a85" : "#666666" }}>Elevation</span>
+            <span className="text-[11px] font-mono" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>{styles.elevation}</span>
+          </div>
+        )}
       </div>
     </div>
   );
