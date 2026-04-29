@@ -39,7 +39,7 @@ export function HierarchyPanel() {
   }, [selectedDevice, triggerHierarchyRefresh]);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col">
+    <div className="flex flex-col h-full w-full overflow-hidden">
       <DeviceActionsBar />
       <HierarchyTree refreshKey={selectedDevice} />
       <PropertiesPanel />
