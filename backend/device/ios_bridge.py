@@ -640,8 +640,13 @@ class IOSDeviceBridge(DeviceBridgeBase):
         return node.get(key, default)
 
     def tap(self, x: int, y: int) -> bool:
+        # Convert from pixel coordinates to points for idb (iOS uses points, UI sends pixels)
+        scale = self._get_ios_scale()
+        point_x = round(x / scale) if scale != 1.0 else x
+        point_y = round(y / scale) if scale != 1.0 else y
+
         def do_tap():
-            result = _idb_cmd(["ui", "tap", str(x), str(y)], udid=self.udid, timeout=10)
+            result = _idb_cmd(["ui", "tap", str(point_x), str(point_y)], udid=self.udid, timeout=10)
             if result.returncode != 0:
                 raise Exception(f"tap failed: {result.stderr}")
             return result
@@ -667,6 +672,55 @@ class IOSDeviceBridge(DeviceBridgeBase):
         except Exception as e:
             logger.error(f"input_text failed after retries: {e}")
             return False
+
+    def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 300) -> bool:
+        # Convert from pixel coordinates to points for idb (iOS uses points, UI sends pixels)
+        scale = self._get_ios_scale()
+        point_start_x = round(start_x / scale) if scale != 1.0 else start_x
+        point_start_y = round(start_y / scale) if scale != 1.0 else start_y
+        point_end_x = round(end_x / scale) if scale != 1.0 else end_x
+        point_end_y = round(end_y / scale) if scale != 1.0 else end_y
+
+        def do_swipe():
+            result = _idb_cmd(
+                ["ui", "swipe", str(point_start_x), str(point_start_y), str(point_end_x), str(point_end_y)],
+                udid=self.udid,
+                timeout=10,
+            )
+            if result.returncode != 0:
+                raise Exception(f"swipe failed: {result.stderr}")
+            return result
+
+        try:
+            _retry_with_backoff(do_swipe, retries=3, base_delay=0.5)
+            return True
+        except Exception as e:
+            print(f"swipe failed after retries: {e}")
+            return False
+
+    def press_button(self, button: str) -> bool:
+        valid_buttons = {"HOME", "LOCK", "SIDE_BUTTON"}
+        if button not in valid_buttons:
+            raise ValueError(f"Invalid button '{button}'. Must be one of: {valid_buttons}")
+
+        def do_press():
+            result = _idb_cmd(["ui", "button", button], udid=self.udid, timeout=10)
+            if result.returncode != 0:
+                raise Exception(f"press_button failed: {result.stderr}")
+            return result
+
+        try:
+            _retry_with_backoff(do_press, retries=3, base_delay=0.5)
+            return True
+        except Exception as e:
+            print(f"press_button failed after retries: {e}")
+            return False
+
+    def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 500) -> bool:
+        raise NotImplementedError("Drag gesture is not supported on iOS devices")
+
+    def pinch(self, x: int, y: int, scale: float) -> bool:
+        raise NotImplementedError("Pinch gesture is not supported on iOS devices")
 
     def get_screenshot(self) -> bytes:
         def do_screenshot():

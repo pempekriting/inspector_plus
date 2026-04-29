@@ -144,6 +144,11 @@ class ScreenshotError(AppError):
         super().__init__(detail, "SCREENSHOT_FAILED", 500)
 
 
+class UnsupportedOnPlatformError(AppError):
+    def __init__(self, action: str, platform: str):
+        super().__init__(f"{action} is not supported on {platform}", "UNSUPPORTED_ACTION", 400)
+
+
 def _get_ios_devices() -> list[dict]:
     """Extract iOS devices from idb or xcrun simctl fallback."""
     devices = []
@@ -703,6 +708,13 @@ async def press_key(req: PressKeyRequest, udid: Optional[str] = None):
         bridge = get_bridge(resolved)
         if bridge is None:
             raise DeviceNotFoundError()
+        # Route to bridge.press_button() for iOS
+        if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
+            if req.key == "home":
+                bridge.press_button("HOME")
+                return {"success": True}
+            else:
+                raise UnsupportedOnPlatformError(req.key, "iOS")
         result = bridge.execute_adb_command(f"input keyevent {keycode}")
         if result.get("exitCode") != 0:
             raise HTTPException(status_code=500, detail=result.get("error", "Key press failed"))
@@ -722,6 +734,10 @@ async def swipe_device(req: SwipeRequest, udid: Optional[str] = None):
         bridge = get_bridge(resolved)
         if bridge is None:
             raise DeviceNotFoundError()
+        # Use bridge.swipe() for iOS
+        if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
+            bridge.swipe(req.startX, req.startY, req.endX, req.endY, req.duration)
+            return {"success": True}
         result = bridge.execute_adb_command(
             f"input swipe {req.startX} {req.startY} {req.endX} {req.endY} {req.duration}"
         )
@@ -743,6 +759,9 @@ async def drag_device(req: DragRequest, udid: Optional[str] = None):
         bridge = get_bridge(resolved)
         if bridge is None:
             raise DeviceNotFoundError()
+        # Drag is not supported on iOS
+        if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
+            raise UnsupportedOnPlatformError("drag", "iOS")
         result = bridge.execute_adb_command(
             f"input drag {req.startX} {req.startY} {req.endX} {req.endY} {req.duration}"
         )
@@ -765,6 +784,9 @@ async def pinch_device(req: PinchRequest, udid: Optional[str] = None):
         bridge = get_bridge(resolved)
         if bridge is None:
             raise DeviceNotFoundError()
+        # Pinch is not supported on iOS
+        if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
+            raise UnsupportedOnPlatformError("pinch", "iOS")
         scale = req.scale
         if scale > 1:
             cmd = f"input roll dx 0 dy {-int((scale - 1) * 500)}"

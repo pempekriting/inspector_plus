@@ -116,9 +116,15 @@ const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, 
 export const DeviceActionsBar = memo(function DeviceActionsBar() {
   const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
-  const { selectedDevice } = useDeviceStore();
+  const { selectedDevice, devices } = useDeviceStore();
   const [inputText, setInputText] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const isDark = theme === "dark";
+
+  // Get platform from selected device
+  const selectedDeviceInfo = devices.find(d => d.udid === selectedDevice);
+  const platform = selectedDeviceInfo?.platform ?? "android";
+  const isIOS = platform === "ios";
 
   const refetchFn = useHierarchyStore(s => s.refetchFn);
 
@@ -131,7 +137,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
 
   const displayNode = lockedNode || selectedNode || hoveredNode;
   const hasNode = !!displayNode;
-  const hasEditText = displayNode?.className?.includes("EditText");
+  const hasEditText = displayNode?.className?.includes("EditText") ||
+    displayNode?.className?.includes("TextField") ||
+    displayNode?.className?.includes("TextView") ||
+    displayNode?.className?.includes("SearchField");
 
   const nodeBounds = displayNode?.bounds;
   const centerX = nodeBounds ? nodeBounds.x + Math.floor(nodeBounds.width / 2) : 0;
@@ -139,53 +148,102 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
 
   const handleSendText = async () => {
     if (!inputText.trim()) return;
-    // Must tap EditText first to focus it, then send text
-    if (nodeBounds) {
-      await tapDevice(centerX, centerY, selectedDevice ?? undefined);
+    setErrorMsg(null);
+    try {
+      if (nodeBounds) {
+        await tapDevice(centerX, centerY, selectedDevice ?? undefined);
+      }
+      await inputDeviceText(inputText, selectedDevice ?? undefined);
+      setInputText("");
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to send text");
     }
-    await inputDeviceText(inputText, selectedDevice ?? undefined);
-    setInputText("");
-    triggerRefresh();
   };
 
   const handleTap = async () => {
-    await tapDevice(centerX, centerY, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await tapDevice(centerX, centerY, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to tap");
+    }
   };
   const handleLongPress = async () => {
     if (!nodeBounds) return;
-    await dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Long press failed");
+    }
   };
   const handleSwipe = async () => {
     if (!nodeBounds) return;
-    await swipeDevice(centerX, centerY, centerX, Math.max(0, centerY - 300), undefined, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await swipeDevice(centerX, centerY, centerX, Math.max(0, centerY - 300), undefined, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to swipe");
+    }
   };
   const handleDrag = async () => {
     if (!nodeBounds) return;
-    await dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Drag not supported on iOS");
+    }
   };
   const handleZoom = async () => {
-    await pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Zoom not supported on iOS");
+    }
   };
   const handlePinch = async () => {
-    await pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Pinch not supported on iOS");
+    }
   };
   const handleHome = async () => {
-    await pressKey("home", selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await pressKey("home", selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Failed to press home");
+    }
   };
   const handleBack = async () => {
-    await pressKey("back", selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await pressKey("back", selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Back not supported on iOS");
+    }
   };
   const handleRecent = async () => {
-    await pressKey("recent", selectedDevice ?? undefined);
-    triggerRefresh();
+    setErrorMsg(null);
+    try {
+      await pressKey("recent", selectedDevice ?? undefined);
+      triggerRefresh();
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Recent not supported on iOS");
+    }
   };
 
   const styles = displayNode?.styles;
@@ -227,17 +285,30 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
         <LayoutChips styles={styles} />
       </div>
 
+      {/* Error message display */}
+      {errorMsg && (
+        <div
+          className="px-2 py-1 rounded text-[9px] font-medium"
+          style={{
+            background: isDark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.1)",
+            color: isDark ? "#f87171" : "#dc2626",
+          }}
+        >
+          {errorMsg}
+        </div>
+      )}
+
       {/* Row 2: Action Pills */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <ActionPill label="Tap" onClick={handleTap} disabled={!hasNode} isDark={isDark} variant="primary" />
-        <ActionPill label="Long Press" onClick={handleLongPress} disabled={!hasNode} isDark={isDark} />
+        <ActionPill label="Long Press" onClick={handleLongPress} disabled={!hasNode || isIOS} isDark={isDark} />
         <ActionPill label="Swipe" onClick={handleSwipe} disabled={!hasNode} isDark={isDark} />
-        <ActionPill label="Drag" onClick={handleDrag} disabled={!hasNode} isDark={isDark} />
-        <ActionPill label="Zoom" onClick={handleZoom} disabled={!hasNode} isDark={isDark} />
-        <ActionPill label="Pinch" onClick={handlePinch} disabled={!hasNode} isDark={isDark} />
+        <ActionPill label="Drag" onClick={handleDrag} disabled={!hasNode || isIOS} isDark={isDark} />
+        <ActionPill label="Zoom" onClick={handleZoom} disabled={!hasNode || isIOS} isDark={isDark} />
+        <ActionPill label="Pinch" onClick={handlePinch} disabled={!hasNode || isIOS} isDark={isDark} />
         <ActionPill label="Home" onClick={handleHome} disabled={false} isDark={isDark} />
-        <ActionPill label="Back" onClick={handleBack} disabled={false} isDark={isDark} />
-        <ActionPill label="Recent" onClick={handleRecent} disabled={false} isDark={isDark} />
+        <ActionPill label="Back" onClick={handleBack} disabled={isIOS} isDark={isDark} />
+        <ActionPill label="Recent" onClick={handleRecent} disabled={isIOS} isDark={isDark} />
       </div>
     </div>
   );
