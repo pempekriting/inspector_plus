@@ -114,7 +114,7 @@ const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, 
 });
 
 export const DeviceActionsBar = memo(function DeviceActionsBar() {
-  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode, lockSelection } = useHierarchyStore();
   const { theme } = useThemeStore();
   const { selectedDevice, devices } = useDeviceStore();
   const [inputText, setInputText] = useState("");
@@ -165,6 +165,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await tapDevice(centerX, centerY, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to tap");
@@ -175,6 +176,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Long press failed");
@@ -185,6 +187,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await swipeDevice(centerX, centerY, centerX, Math.max(0, centerY - 300), undefined, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to swipe");
@@ -195,6 +198,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Drag not supported on iOS");
@@ -204,6 +208,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Zoom not supported on iOS");
@@ -213,6 +218,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Pinch not supported on iOS");
@@ -222,6 +228,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("home", selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Failed to press home");
@@ -231,6 +238,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("back", selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Back not supported on iOS");
@@ -240,6 +248,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     setErrorMsg(null);
     try {
       await pressKey("recent", selectedDevice ?? undefined);
+      lockSelection(null);
       triggerRefresh();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Recent not supported on iOS");
