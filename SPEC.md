@@ -32,11 +32,15 @@ Frontend (React + Zustand + Tailwind)
 ├── ScreenshotCanvas    ← screenshot display, zoom/pan, click-to-tap, click-to-lock
 ├── HierarchyTree       ← recursive tree, search, keyboard nav, lock on click
 ├── Overlay             ← hover/selected/locked highlight on canvas
-├── PropertiesPanel     ← node properties + locator generation (merged A11y tab)
+├── HierarchyPanel
+│   ├── DeviceActionsBar  ← tap, swipe, drag, pinch, input text, system keys (extracted from Properties)
+│   ├── HierarchyTree    ← recursive tree
+│   └── PropertiesPanel   ← read-only: Identity, State, Geometry, Locators (StylePanel removed)
+├── SubTabBar           ← Hierarchy | Accessibility sub-tabs
 ├── CommandsDrawer      ← App Commands + ADB Shell in bottom drawer
 ├── DevicePanel         ← device selector, online/offline status
 ├── TabBar              ← inspector | commands tabs
-└── BottomDrawer         ← collapsible, shared by CommandsDrawer
+└── BottomDrawer        ← collapsible, shared by CommandsDrawer
 
 Backend (FastAPI)
 ├── REST: /screenshot, /hierarchy, /tap, /input/text, /device/status, /devices
@@ -53,7 +57,10 @@ Backend (FastAPI)
 | ScreenshotCanvas | `components/ScreenshotCanvas.tsx` | Screenshot display, zoom (0.3x default), click-to-tap, element lock |
 | HierarchyTree | `components/HierarchyTree.tsx` | Recursive tree, search, keyboard nav, lock on click/Enter |
 | Overlay | `components/Overlay.tsx` | Canvas highlight: locked=yellow, selected/hovered=cyan |
-| PropertiesPanel | `components/PropertiesPanel.tsx` | Node props + LocatorPanel inline (A11y tab removed) |
+| HierarchyPanel | `components/HierarchyPanel.tsx` | Wrapper: DeviceActionsBar + HierarchyTree + PropertiesPanel |
+| DeviceActionsBar | `components/DeviceActionsBar.tsx` | Device interactions: tap, swipe, drag, pinch, input text, system keys |
+| SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility sub-tab navigation |
+| PropertiesPanel | `components/PropertiesPanel.tsx` | Node props (read-only): Identity, State, Geometry, Locators |
 | DevicePanel | `components/DevicePanel.tsx` | Device selector, auto-selects first device on reconnect |
 | CommandsDrawer | `components/CommandsDrawer.tsx` | App Commands + ADB Shell in bottom drawer |
 | BottomDrawer | `components/BottomDrawer.tsx` | Collapsible drawer container |
@@ -65,7 +72,7 @@ Backend (FastAPI)
 | SkeletonLoader | `components/SkeletonLoader.tsx` | Shimmer loaders for tree + canvas |
 | SearchBar | `components/SearchBar.tsx` | Search input in tree header |
 | PropertyRow | `components/PropertyRow.tsx` | Key-value row in PropertiesPanel |
-| StylePanel | `components/StylePanel.tsx` | Node styles display |
+| StylePanel | `components/StylePanel.tsx` | Layout chips: backgroundColor, textColor, padding, elevation |
 
 **Implemented:** `ApkInfoPanel` — 3rd tab in TabBar, shows APK details (version, SDK, permissions)
 
@@ -156,6 +163,10 @@ Backend (FastAPI)
 | POST | `/hierarchy/audit` | WCAG accessibility audit |
 | POST | `/tap` | `{"x": int, "y": int, "udid"?}` |
 | POST | `/input/text` | `{"text": string, "udid"?}` |
+| POST | `/device/press-key` | `{"key": "home"\|"back"\|"recent", "udid"?}` |
+| POST | `/device/swipe` | `{"startX", "startY", "endX", "endY", "duration"?, "udid"?}` |
+| POST | `/device/drag` | `{"startX", "startY", "endX", "endY", "duration"?, "udid"?}` |
+| POST | `/device/pinch` | `{"x", "y", "scale": float, "udid"?}` |
 | GET | `/device/status` | `{connected, devices}` |
 | GET | `/devices` | `{devices: [...]}` |
 | POST | `/device/select` | `{"udid": string|null}` |
@@ -286,7 +297,7 @@ inspector_plus/
 └── frontend/
     ├── src/
     │   ├── App.tsx              # main layout
-    │   ├── components/           # 29+ components
+    │   ├── components/           # 31+ components
 │   │   ├── AccessibilityPanel.tsx
 │   │   ├── AdbPanel.tsx
 │   │   ├── ApkInfoPanel.tsx

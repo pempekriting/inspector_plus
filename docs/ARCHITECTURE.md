@@ -85,6 +85,10 @@
 |--------|----------|-------------|---------|----------|
 | POST | `/tap` | Tap coordinates | `{x: int, y: int, udid?}` | `{success}` |
 | POST | `/input/text` | Text input | `{text: string, udid?}` | `{success}` |
+| POST | `/device/press-key` | System keyevent | `{key: "home"\|"back"\|"recent", udid?}` | `{success}` |
+| POST | `/device/swipe` | Swipe gesture | `{startX, startY, endX, endY, duration?, udid?}` | `{success}` |
+| POST | `/device/drag` | Drag gesture | `{startX, startY, endX, endY, duration?, udid?}` | `{success}` |
+| POST | `/device/pinch` | Pinch gesture | `{x, y, scale: float, udid?}` | `{success}` |
 | GET | `/screenshot` | PNG binary | `udid` (query) | PNG binary |
 
 #### App Commands
@@ -313,15 +317,18 @@ App
 ├── TabBar                    # inspector | commands | apk-info
 │
 └── Inspector (tab content)
-    ├── HierarchyPanel → HierarchyTree → TreeNode (recursive)
-    │                    ├── SearchBar (F4: search with regex)
-    │                    └── AccessibilityPanel (F6: WCAG audit results)
-    ├── PropertiesPanel → PropertyRow + StylePanel + LocatorPanel
+    ├── HierarchyPanel
+    │   ├── DeviceActionsBar   # tap, swipe, drag, pinch, input text, system keys
+    │   ├── HierarchyTree → TreeNode (recursive)
+    │   │   ├── SearchBar (F4: search with regex)
+    │   │   └── AccessibilityPanel (F6: WCAG audit results)
+    │   └── PropertiesPanel → PropertyRow + LocatorPanel (read-only)
+    ├── PropertiesPanel → PropertyRow + LocatorPanel
     └── RecorderPanel (F2: test recorder)
 ```
 
-**All components (29+):**
-`AccessibilityPanel`, `AdbPanel`, `ApkInfoPanel`, `BottomDrawer`, `CommandsDrawer`, `CommandsPanel`, `DevicePanel`, `EmptyState`, `ErrorBoundary`, `ErrorState`, `HierarchyPanel`, `HierarchyTree`, `LayoutBoundsOverlay`, `LocatorPanel`, `Overlay`, `PropertiesPanel`, `PropertyRow`, `RecorderPanel`, `ScreenshotCanvas`, `SearchBar`, `SkeletonLoader`, `StatusBar`, `StylePanel`, `TabBar`
+**All components (31+):**
+`AccessibilityPanel`, `AdbPanel`, `ApkInfoPanel`, `BottomDrawer`, `CommandsDrawer`, `CommandsPanel`, `DeviceActionsBar`, `DevicePanel`, `EmptyState`, `ErrorBoundary`, `ErrorState`, `HierarchyPanel`, `HierarchyTree`, `LayoutBoundsOverlay`, `LocatorPanel`, `Overlay`, `PropertiesPanel`, `PropertyRow`, `RecorderPanel`, `ScreenshotCanvas`, `SearchBar`, `SkeletonLoader`, `StatusBar`, `StylePanel`, `SubTabBar`, `TabBar`
 
 ### Canvas Modes (D2)
 
@@ -588,18 +595,21 @@ The Rust main.rs:
 |------|---------|
 | `backend/main.py` | FastAPI entry point, all REST endpoints, ADB security model |
 | `backend/device/base.py` | Abstract DeviceBridgeBase class |
-| `backend/device/android_bridge.py` | Android ADB implementation |
+| `backend/device/android_bridge.py` | Android ADB implementation (tap, swipe, drag, input text, keyevents) |
 | `backend/device/ios_bridge.py` | iOS idb implementation |
 | `backend/commands/app_commands.py` | App install/uninstall/launch commands |
 | `frontend/src/App.tsx` | Main layout (3-tab structure) |
 | `frontend/src/components/ScreenshotCanvas.tsx` | Screenshot display + zoom/pan + modes |
 | `frontend/src/components/HierarchyTree.tsx` | Recursive tree view + search |
-| `frontend/src/components/HierarchyPanel.tsx` | Combined hierarchy + screenshot fetch |
-| `frontend/src/components/PropertiesPanel.tsx` | Node properties + locators |
+| `frontend/src/components/HierarchyPanel.tsx` | Combined hierarchy + DeviceActionsBar + screenshot fetch |
+| `frontend/src/components/DeviceActionsBar.tsx` | Device interaction actions (tap, swipe, drag, pinch, input text, system keys) |
+| `frontend/src/components/PropertiesPanel.tsx` | Node properties (read-only) + LocatorPanel |
+| `frontend/src/components/SubTabBar.tsx` | Sub-tab navigation (Hierarchy / Accessibility) |
+| `frontend/src/components/StylePanel.tsx` | Layout chips (backgroundColor, textColor, padding, elevation) |
 | `frontend/src/components/RecorderPanel.tsx` | Test recorder UI |
 | `frontend/src/components/AccessibilityPanel.tsx` | WCAG audit results |
 | `frontend/src/services/api.ts` | TanStack Query hooks + Zod schemas |
-| `frontend/src/stores/hierarchyStore.ts` | UI tree state (20+ fields) |
+| `frontend/src/stores/hierarchyStore.ts` | UI tree state (refetchFn for auto-refresh) |
 | `frontend/src/stores/deviceStore.ts` | Device connection state |
 | `frontend/src/stores/recorderStore.ts` | Test recorder state |
 | `frontend/src/stores/themeStore.ts` | Theme state | |
