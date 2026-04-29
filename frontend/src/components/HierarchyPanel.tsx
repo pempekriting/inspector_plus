@@ -8,7 +8,7 @@ import { useHierarchyAndScreenshot } from "../services/api";
 
 export function HierarchyPanel() {
   const { selectedDevice } = useDeviceStore();
-  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl } = useHierarchyStore();
+  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl, expandAll } = useHierarchyStore();
 
   const { data, isLoading, refetch } = useHierarchyAndScreenshot(selectedDevice || undefined);
   const refetchRef = useRef(refetch);
@@ -23,8 +23,10 @@ export function HierarchyPanel() {
       setUiTree(data.hierarchy);
       setCombinedScreenshotUrl(data.screenshotUrl);
       useHierarchyStore.setState({ isRefreshing: false });
+      // Auto-expand all nodes when hierarchy loads
+      expandAll(data.hierarchy);
     }
-  }, [data, setUiTree, setCombinedScreenshotUrl]);
+  }, [data, setUiTree, setCombinedScreenshotUrl, expandAll]);
 
   useEffect(() => {
     if (isLoading === false && data === undefined) {
