@@ -85,11 +85,16 @@
 |--------|----------|-------------|---------|----------|
 | POST | `/tap` | Tap coordinates | `{x: int, y: int, udid?}` | `{success}` |
 | POST | `/input/text` | Text input | `{text: string, udid?}` | `{success}` |
-| POST | `/device/press-key` | System keyevent | `{key: "home"\|"back"\|"recent", udid?}` | `{success}` |
+| POST | `/device/press-key` | System keyevent (home/back/recent) | `{key: "home"\|"back"\|"recent", udid?}` | `{success}` |
 | POST | `/device/swipe` | Swipe gesture | `{startX, startY, endX, endY, duration?, udid?}` | `{success}` |
-| POST | `/device/drag` | Drag gesture | `{startX, startY, endX, endY, duration?, udid?}` | `{success}` |
-| POST | `/device/pinch` | Pinch gesture | `{x, y, scale: float, udid?}` | `{success}` |
+| POST | `/device/drag` | Drag gesture (Android only) | `{startX, startY, endX, endY, duration?, udid?}` | `{success}` |
+| POST | `/device/pinch` | Pinch gesture (Android only) | `{x, y, scale: float, udid?}` | `{success}` |
 | GET | `/screenshot` | PNG binary | `udid` (query) | PNG binary |
+
+**iOS Interaction Notes:**
+- Tap and swipe convert pixel coordinates to point coordinates automatically
+- `press_key` with `key=home` routes to `idb ui button HOME`
+- Drag and pinch return `UNSUPPORTED_ACTION` error for iOS devices
 
 #### App Commands
 | Method | Endpoint | Description | Request | Response |
@@ -190,6 +195,9 @@ class DeviceBridgeBase(ABC):
 - Falls back to `xcrun simctl list devices --json` if idb unavailable
 - WDA source to tree conversion with scale factor (points vs pixels)
 - iOS-specific locator strategies (accessibility-id, class chain, predicate string, xpath, class name + index)
+- **Coordinate handling**: iOS uses point coordinates; `tap()` and `swipe()` automatically convert from pixel coordinates (received from frontend) to points using `_ios_scale` factor
+- **Supported actions**: `tap()`, `swipe()`, `input_text()`, `press_button("HOME"|"LOCK"|"SIDE_BUTTON")`
+- **Unsupported actions**: `drag()` and `pinch()` raise `NotImplementedError`
 
 ### Bridge Selection Logic
 
@@ -239,6 +247,7 @@ class DeviceNotFoundError(AppError):      # 404 DEVICE_NOT_FOUND
 class HierarchyNotFoundError(AppError):    # 404 HIERARCHY_NOT_FOUND
 class CommandExecutionError(AppError):    # 500 COMMAND_EXECUTION_FAILED
 class ScreenshotError(AppError):          # 500 SCREENSHOT_FAILED
+class UnsupportedOnPlatformError(AppError):  # 400 UNSUPPORTED_ACTION (drag/pinch on iOS)
 ```
 
 Global handler: `@app.exception_handler(AppError, app_error_handler)` returns JSON `{error: code, detail: message}`.

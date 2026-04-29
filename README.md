@@ -22,11 +22,12 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 - F3 WebView Contexts — switch between native and webview contexts
 - F4 Hierarchy Search — search with regex, filter by xpath/resource-id/text/content-desc/class
 - F6 WCAG Accessibility Audit — audit accessibility issues on UI nodes
-- D2 Canvas Modes — inspect/coordinate/layout modes with zoom (0.25x-4x) and pan
-- ADB Command Panel — execute allowlisted ADB shell commands directly
-- Locator Generation — generate Appium locator strategies (accessibility-id, class chain, predicate string, xpath)
-- APK Info Panel — view detailed package info (version, SDK, permissions)
-- Layout Bounds Overlay — display all element bounds on canvas
+- D2 Canvas Modes - inspect/coordinate/layout modes with zoom (0.25x-4x) and pan
+- iOS Device Support - tap, swipe, text input, home button via idb (drag/pinch/zoom/back/recent disabled)
+- ADB Command Panel - execute allowlisted ADB shell commands directly
+- Locator Generation - generate Appium locator strategies (accessibility-id, class chain, predicate string, xpath)
+- APK Info Panel - view detailed package info (version, SDK, permissions)
+- Layout Bounds Overlay - display all element bounds on canvas
 
 ---
 

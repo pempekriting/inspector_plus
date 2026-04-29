@@ -58,7 +58,7 @@ Backend (FastAPI)
 | HierarchyTree | `components/HierarchyTree.tsx` | Recursive tree, search, keyboard nav, lock on click/Enter |
 | Overlay | `components/Overlay.tsx` | Canvas highlight: locked=yellow, selected/hovered=cyan |
 | HierarchyPanel | `components/HierarchyPanel.tsx` | Wrapper: DeviceActionsBar + HierarchyTree + PropertiesPanel |
-| DeviceActionsBar | `components/DeviceActionsBar.tsx` | Device interactions: tap, swipe, drag, pinch, input text, system keys |
+| DeviceActionsBar | `components/DeviceActionsBar.tsx` | Device interactions: tap, swipe, drag, pinch, input text, system keys. iOS: tap/swipe/text/home work; drag/pinch/zoom/back/recent disabled |
 | SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility sub-tab navigation |
 | PropertiesPanel | `components/PropertiesPanel.tsx` | Node props (read-only): Identity, State, Geometry, Locators |
 | DevicePanel | `components/DevicePanel.tsx` | Device selector, auto-selects first device on reconnect |
