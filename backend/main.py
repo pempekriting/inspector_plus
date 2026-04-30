@@ -18,6 +18,7 @@ import time
 import subprocess
 import json
 import re
+import shutil
 
 from device import create_bridge_for_device, AndroidDeviceBridge, DeviceBridgeBase
 from device.ios_bridge import IOSDeviceBridge
@@ -27,6 +28,17 @@ from commands.ios_app_commands import IOSAppCommands
 
 # --- App version from env or default ---
 __version__ = os.environ.get("APP_VERSION", "0.0.1")
+
+# --- Resolve adb path ---
+def _get_adb_path() -> str:
+    android_home = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+    if android_home:
+        adb_path = os.path.join(android_home, "platform-tools", "adb")
+        if os.path.isfile(adb_path):
+            return adb_path
+    return shutil.which("adb") or "adb"
+
+_ADB_PATH = _get_adb_path()
 
 
 # --- Lifespan: graceful shutdown ---
@@ -350,7 +362,7 @@ def _is_ios_udid(udid: str) -> bool:
 def _get_first_android_device() -> Optional[str]:
     """Return serial of first connected Android device."""
     try:
-        result = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=5)
+        result = subprocess.run([_ADB_PATH, "devices"], capture_output=True, text=True, timeout=5)
         lines = result.stdout.strip().split(chr(10))
         for line in lines[1:]:  # skip "List of devices attached" header
             parts = line.strip().split()

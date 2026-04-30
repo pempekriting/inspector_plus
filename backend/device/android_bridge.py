@@ -26,6 +26,27 @@ except ImportError:
 from device.base import DeviceBridgeBase
 from device.ios_bridge import _retry_with_backoff
 
+# Resolve adb path once at module load
+def _get_adb_path() -> str:
+    """Resolve adb executable path using ANDROID_HOME or PATH."""
+    import shutil
+    # Check ANDROID_HOME env var first
+    android_home = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+    if android_home:
+        adb_path = os.path.join(android_home, "platform-tools", "adb")
+        if os.path.isfile(adb_path):
+            return adb_path
+    # Fallback to PATH lookup
+    adb_in_path = shutil.which("adb")
+    if adb_in_path:
+        return adb_in_path
+    return "adb"  # last resort, let it fail with clear error
+    if adb_in_path:
+        return adb_in_path
+    return "adb"  # fallback to just 'adb' and hope it's in PATH
+
+_ADB_PATH = _get_adb_path()
+
 _node_counter = itertools.count(start=1)
 _node_lock = threading.Lock()
 
@@ -416,7 +437,7 @@ class AndroidDeviceBridge(DeviceBridgeBase):
 
     def _adb_cmd(self, args: list[str]) -> list[str]:
         """Prepend -s <serial> to adb command if serial is set."""
-        cmd = ["adb"]
+        cmd = [_ADB_PATH]
         if self.serial:
             cmd.extend(["-s", self.serial])
         cmd.extend(args)
@@ -445,7 +466,7 @@ class AndroidDeviceBridge(DeviceBridgeBase):
     def get_devices(self) -> list[dict]:
         try:
             result = subprocess.run(
-                ["adb", "devices", "-l"],
+                [_ADB_PATH, "devices", "-l"],
                 capture_output=True,
                 text=True,
                 timeout=10,

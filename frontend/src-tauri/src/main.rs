@@ -1,90 +1,53 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::process::Command;
-use std::time::Duration;
-use std::thread;
-use std::net::TcpStream;
-use std::path::PathBuf;
+mod backend_manager;
+mod commands;
 
-fn get_backend_dir() -> PathBuf {
-    // In dev: executable is in src-tauri/target/debug/
-    // Backend is at project-root/backend/
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-    // Try relative paths for both dev and release builds
-    let candidates = [
-        // Dev: src-tauri/target/debug/ -> frontend/ -> project root -> backend
-        exe_dir.as_ref().map(|p| p.join("../../../../backend")).unwrap_or_default(),
-        // Release: src-tauri/target/release/bundle/macos/InspectorPlus.app/ -> backend
-        exe_dir.as_ref().map(|p| p.join("../../../../../../backend")).unwrap_or_default(),
-        // Fallback: use executable's parent and go up
-        PathBuf::from("/Users/azzamnizar/Documents/project/inspector_plus/backend"),
-    ];
-
-    for candidate in &candidates {
-        let python_path = candidate.join(".venv/bin/python");
-        if python_path.exists() {
-            return candidate.clone();
-        }
-    }
-
-    // Fallback to hardcoded path
-    PathBuf::from("/Users/azzamnizar/Documents/project/inspector_plus/backend")
-}
+use backend_manager::{create_backend_manager, SharedBackendManager};
+use tauri::Manager;
 
 fn main() {
     env_logger::init();
 
-    // Start Python backend
-    log::info!("Starting Python backend...");
+    log::info!("Starting InspectorPlus...");
 
-    let backend_dir = get_backend_dir();
-    log::info!("Backend directory: {:?}", backend_dir);
+    let backend_manager: SharedBackendManager = create_backend_manager();
 
-    let venv_python = backend_dir.join(".venv/bin/python");
-    let start_cmd = format!(
-        "cd '{}' && '{}' -m uvicorn main:app --port 8001 --host 127.0.0.1",
-        backend_dir.display(),
-        venv_python.display()
-    );
-
-    log::info!("Starting: {}", start_cmd);
-
-    let python_child = Command::new("sh")
-        .args(["-c", &start_cmd])
-        .spawn();
-
-    match python_child {
-        Ok(child) => {
-            log::info!("Python backend started with PID: {}", child.id());
-
-            // Wait for backend to be ready
-            log::info!("Waiting for backend to be ready...");
-            let mut retries = 30;
-            while retries > 0 {
-                if TcpStream::connect("127.0.0.1:8001").is_ok() {
-                    log::info!("Backend is ready!");
-                    break;
-                }
-                thread::sleep(Duration::from_millis(500));
-                retries -= 1;
-            }
-
-            if retries == 0 {
-                log::warn!("Backend may not be ready, continuing anyway...");
-            }
-        }
-        Err(e) => {
-            log::error!("Failed to start Python backend: {}", e);
+    // Start backend before app window opens
+    {
+        let mut manager = backend_manager.blocking_lock();
+        log::info!("Starting Python backend...");
+        if let Err(e) = manager.start() {
+            log::error!("Failed to start backend: {}", e);
+        } else {
+            log::info!("Backend started successfully");
+            manager.wait_for_ready(15);
         }
     }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
+        .manage(backend_manager)
+        .invoke_handler(tauri::generate_handler![
+            commands::get_backend_status,
+            commands::start_backend,
+            commands::stop_backend,
+            commands::restart_backend,
+        ])
+        .setup(|_app| {
+            log::info!("Tauri app setup complete");
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                log::info!("Window close requested - shutting down backend...");
+                let manager = window.state::<SharedBackendManager>();
+                let mut mgr = manager.blocking_lock();
+                let _ = mgr.stop();
+            }
+        })
         .run(tauri::generate_context!())
         .unwrap();
 }
