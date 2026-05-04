@@ -13,7 +13,6 @@ import { RecorderPanel } from "./components/RecorderPanel";
 import { OnboardingModal } from "./components/OnboardingModal";
 import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
-import { useDeviceStore } from "./stores/deviceStore";
 
 export type TabType = 'inspector' | 'commands' | 'app-info';
 export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder';
@@ -27,17 +26,13 @@ function App() {
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'switching'>('idle');
 
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const { selectedDevice } = useDeviceStore();
-  const { triggerHierarchyRefresh } = useHierarchyStore();
 
   // D4: Keyboard shortcut overlay
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ? to show shortcuts
       if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement)) {
         setShowShortcuts(prev => !prev);
       }
-      // Escape to close shortcuts
       if (e.key === 'Escape') {
         setShowShortcuts(false);
       }
@@ -56,8 +51,6 @@ function App() {
     document.documentElement.classList.remove('theme-dark', 'theme-light');
     document.documentElement.classList.add(theme === 'dark' ? 'theme-dark' : 'theme-light');
   }, [theme]);
-
-
 
   const handleDeviceChange = () => {
     setTransitionPhase('switching');
@@ -102,32 +95,31 @@ function App() {
         >
           {/* Header */}
           <div
-            className="px-4 py-3 flex items-center justify-between"
+            className="px-4 py-2.5 flex items-center justify-between"
             style={{
               background: isDark ? '#18181b' : '#e5e5e5',
               borderBottom: isDark ? '3px solid #3f3f46' : '3px solid #1a1a1a',
             }}
           >
-            <div className="flex items-center gap-2">
-              {/* D4: Shortcuts hint */}
-              <button
-                onClick={() => setShowShortcuts(prev => !prev)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
-                style={{
-                  background: isDark ? '#1f1f23' : '#ffffff',
-                  color: isDark ? '#71717a' : '#666666',
-                  border: isDark ? '2px solid #3f3f46' : '2px solid #cccccc',
-                }}
-                title="Keyboard shortcuts (?)"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              </button>
-              <DevicePanel onDeviceChange={handleDeviceChange} />
-            </div>
+            <DevicePanel onDeviceChange={handleDeviceChange} />
+
+            {/* Shortcuts hint */}
+            <button
+              onClick={() => setShowShortcuts(prev => !prev)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg transition-all active:scale-95"
+              style={{
+                background: isDark ? '#1f1f23' : '#ffffff',
+                color: isDark ? '#71717a' : '#666666',
+                border: isDark ? '2px solid #3f3f46' : '2px solid #cccccc',
+                boxShadow: isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a',
+              }}
+              title="Keyboard shortcuts (?)"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+              </svg>
+            </button>
           </div>
 
           {/* Tab Content */}
@@ -188,7 +180,7 @@ function App() {
         </div>
       </div>
 
-      {/* D4: Keyboard Shortcuts Overlay */}
+      {/* Keyboard Shortcuts Overlay */}
       {showShortcuts && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"

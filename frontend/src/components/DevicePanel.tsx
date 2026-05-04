@@ -1,47 +1,52 @@
 import { useState, useRef, useEffect } from "react";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useThemeStore } from "../stores/themeStore";
-import { checkDeviceStatus, selectDevice } from "../hooks/useDevice";
+import { selectDevice } from "../hooks/useDevice";
 import { useDeviceStatus } from "../services/api";
 
 interface DevicePanelProps {
   onDeviceChange?: () => void;
 }
 
+interface ToolbarButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+  title: string;
+  active?: boolean;
+  isDark: boolean;
+}
+
+function ToolbarButton({ onClick, children, title, active, isDark }: ToolbarButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className="w-9 h-9 flex items-center justify-center rounded-lg transition-all active:scale-95"
+      style={{
+        background: active
+          ? (isDark ? '#27272a' : '#e5e5e5')
+          : (isDark ? '#1f1f23' : '#ffffff'),
+        color: active
+          ? (isDark ? '#e4e4e7' : '#1a1a1a')
+          : (isDark ? '#a1a1aa' : '#525252'),
+        border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
+        boxShadow: isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
   const { devices, selectedDevice, setDevices, setSelectedDevice, setConnected } = useDeviceStore();
   const { data: status } = useDeviceStatus();
   const connected = status?.connected ?? false;
-
-  // Sync status data to deviceStore
-  useEffect(() => {
-    if (!status) return;
-    const devices = status.devices || [];
-    setDevices(devices);
-
-    const anyConnected = devices.some(d => d.state === "device" || d.state === "connected" || d.state === "unknown");
-    setConnected(anyConnected);
-
-    if (devices.length === 0 || !anyConnected) {
-      // No devices or none connected — clear selection so HierarchyTree/ScreenshotCanvas show empty state
-      setSelectedDevice(null);
-    } else if (!selectedDevice) {
-      // Devices came back but no device selected — auto-select first connected device
-      const firstConnected = devices.find(d => d.state === "device" || d.state === "connected" || d.state === "unknown");
-      if (firstConnected) {
-        setSelectedDevice(firstConnected.udid || firstConnected.serial || null);
-      }
-    } else {
-      // Keep existing selectedDevice if it's still in the list
-      const stillConnected = devices.some(d => (d.udid || d.serial) === selectedDevice);
-      if (!stillConnected) {
-        setSelectedDevice(null);
-      }
-    }
-  }, [status, setDevices, setSelectedDevice, setConnected]);
   const { theme, toggleTheme } = useThemeStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -69,20 +74,35 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
   };
 
   const currentDevice = devices.find(d => d.udid === selectedDevice || d.serial === selectedDevice);
-  const isDark = theme === 'dark';
+
+  // Sync status data to deviceStore
+  useEffect(() => {
+    if (!status) return;
+    const devices = status.devices || [];
+    setDevices(devices);
+
+    const anyConnected = devices.some(d => d.state === "device" || d.state === "connected" || d.state === "unknown");
+    setConnected(anyConnected);
+
+    if (devices.length === 0 || !anyConnected) {
+      setSelectedDevice(null);
+    } else if (!selectedDevice) {
+      const firstConnected = devices.find(d => d.state === "device" || d.state === "connected" || d.state === "unknown");
+      if (firstConnected) {
+        setSelectedDevice(firstConnected.udid || firstConnected.serial || null);
+      }
+    } else {
+      const stillConnected = devices.some(d => (d.udid || d.serial) === selectedDevice);
+      if (!stillConnected) {
+        setSelectedDevice(null);
+      }
+    }
+  }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={toggleTheme}
-        className="w-8 h-8 flex items-center justify-center rounded-lg transition-transform active:scale-95"
-        style={{
-          background: isDark ? '#1f1f23' : '#ffffff',
-          border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-          boxShadow: isDark ? '3px 3px 0 #000' : '3px 3px 0 #1a1a1a',
-          color: isDark ? '#e4e4e7' : '#1a1a1a',
-        }}
-      >
+    <div className="flex items-center gap-1.5">
+      {/* Theme Toggle */}
+      <ToolbarButton onClick={toggleTheme} title="Toggle theme" isDark={isDark}>
         {isDark ? (
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="5" />
@@ -93,8 +113,9 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
             <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
           </svg>
         )}
-      </button>
+      </ToolbarButton>
 
+      {/* Connection Status */}
       <div
         className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider"
         style={{
@@ -113,22 +134,23 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
         {connected ? 'Online' : 'Offline'}
       </div>
 
+      {/* Device Selector */}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all duration-150"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-150"
           style={{
             background: isDark ? '#1f1f23' : '#ffffff',
             color: isDark ? '#a1a1aa' : '#4a4a4a',
             border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-            boxShadow: isDark ? '3px 3px 0 #000' : '3px 3px 0 #1a1a1a',
+            boxShadow: isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a',
           }}
         >
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <rect x="5" y="2" width="14" height="20" rx="2" />
             <line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
           </svg>
-          <span className="max-w-[100px] truncate">
+          <span className="max-w-[80px] truncate">
             {currentDevice ? (currentDevice.name || currentDevice.model || currentDevice.udid || currentDevice.serial) : 'Select'}
           </span>
           <svg className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -165,7 +187,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                 className="w-full px-3 py-2.5 text-left text-[11px] font-medium transition-colors flex items-center gap-3"
                 style={{
                   color: selectedDevice === deviceKey
-                    ? (isDark ? 'var(--accent-cyan)' : '#0066cc')
+                    ? (isDark ? '#22d3ee' : '#0066cc')
                     : (isDark ? '#a1a1aa' : '#4a4a4a'),
                   background: selectedDevice === deviceKey
                     ? (isDark ? '#1f1f23' : '#f0f0f0')
