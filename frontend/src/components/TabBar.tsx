@@ -1,6 +1,6 @@
 import { useThemeStore } from "../stores/themeStore";
 
-type TabType = 'inspector' | 'commands' | 'app-info';
+type TabType = 'inspector' | 'commands';
 
 interface TabBarProps {
   activeTab: TabType;
@@ -19,17 +19,6 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <path d="M9 9h6M9 13h6M9 17h4" />
-        </svg>
-      ),
-    },
-    {
-      id: 'app-info',
-      label: 'App Info',
-      icon: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
       ),
     },
@@ -63,7 +52,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
               background: isActive ? (isDark ? '#111114' : '#ffffff') : 'transparent',
               color: isActive ? (isDark ? '#e4e4e7' : '#1a1a1a') : (isDark ? '#71717a' : '#666666'),
               borderBottom: isActive
-                ? (isDark ? '3px solid #22d3ee' : '3px solid #0066cc')
+                ? (isDark ? '3px solid var(--accent-cyan, #00e5cc)' : '3px solid var(--accent-blue, #1d4ed8)')
                 : '3px solid transparent',
             }}
           >

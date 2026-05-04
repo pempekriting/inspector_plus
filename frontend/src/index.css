@@ -283,23 +283,6 @@ body {
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.neo-btn {
-  position: relative;
-  border: 2px solid var(--border-default);
-  box-shadow: 3px 3px 0 var(--border-default);
-  transition: all 0.1s ease;
-}
-
-.neo-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--border-default);
-}
-
-.neo-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 var(--border-default);
-}
-
 /* Overlay highlight - Neo Brutalism style */
 .overlay-highlight {
   box-shadow:

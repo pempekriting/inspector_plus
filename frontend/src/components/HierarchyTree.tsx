@@ -673,8 +673,8 @@ const TreeHeader = memo(function TreeHeader({
             className="px-1.5 py-0.5 rounded text-[9px] font-bold font-mono"
             style={{
               background: isDark ? 'rgba(253, 224, 71, 0.15)' : 'rgba(180, 83, 9, 0.15)',
-              color: isDark ? '#fde047' : '#b45309',
-              border: isDark ? '2px solid #fde047' : '2px solid #b45309',
+              color: isDark ? 'var(--accent-amber, #fde047)' : 'var(--accent-orange, #c2410c)',
+              border: isDark ? '2px solid var(--accent-amber, #fde047)' : '2px solid var(--accent-orange, #c2410c)',
             }}
           >
             {matchCount} match{matchCount !== 1 ? 'es' : ''}

@@ -227,7 +227,7 @@ export const SearchBar = memo(function SearchBar() {
               ? (isDark ? "#0a0a0c" : "#1a1a1a")
               : (isDark ? "#1f1f23" : "#ffffff"),
             color: isRegex
-              ? (isDark ? "#fde047" : "#b45309")
+              ? (isDark ? "var(--accent-amber, #fde047)" : "var(--accent-orange, #c2410c)")
               : (isDark ? "#71717a" : "#666666"),
             border: isRegex
               ? (isDark ? "2px solid #fde047" : "2px solid #b45309")

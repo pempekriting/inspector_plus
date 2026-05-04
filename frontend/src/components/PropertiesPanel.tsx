@@ -69,7 +69,7 @@ export function PropertiesPanel() {
     );
   }
   identityRows.push(
-    <PropertyRow key="package" label="package" value={_(node?.package)} valueColor={isDark ? '#fb923c' : '#c2410c'} isDark={isDark} />,
+    <PropertyRow key="package" label="package" value={_(node?.package)} valueColor={isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)'} isDark={isDark} />,
     <PropertyRow key="resource-id" label="resource-id" value={node?.resourceId ? `#${node.resourceId}` : "-"} valueColor={isDark ? '#00e5cc' : '#0c4a6e'} isDark={isDark} />,
     <PropertyRow key="text" label="text" value={node?.text ? `"${node.text}"` : "-"} valueColor={isDark ? '#fde047' : '#b45309'} italic isDark={isDark} />,
     <PropertyRow key="content-desc" label="content-desc" value={_(node?.contentDesc)} valueColor={isDark ? '#a78bfa' : '#5b21b6'} isDark={isDark} />,

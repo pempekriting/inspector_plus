@@ -437,8 +437,8 @@ export function ScreenshotCanvas() {
           {zoom !== 1 && (
             <button onClick={resetZoom} className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95" style={{
               background: isDark ? '#1f1f23' : '#ffffff',
-              color: isDark ? '#fb923c' : '#c2410c',
-              border: isDark ? '1.5px solid #fb923c' : '1.5px solid #c2410c',
+              color: isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)',
+              border: isDark ? '1.5px solid var(--accent-orange, #fb923c)' : '1.5px solid var(--accent-button, #c2410c)',
             }} title="Reset zoom">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
