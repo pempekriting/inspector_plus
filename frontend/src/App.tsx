@@ -8,13 +8,12 @@ import { HierarchyPanel } from "./components/HierarchyPanel";
 import { AccessibilityPanel } from "./components/AccessibilityPanel";
 import { StatusBar } from "./components/StatusBar";
 import { CommandsDrawer } from "./components/CommandsDrawer";
-import { ApkInfoPanel } from "./components/ApkInfoPanel";
 import { RecorderPanel } from "./components/RecorderPanel";
 import { OnboardingModal } from "./components/OnboardingModal";
 import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
 
-export type TabType = 'inspector' | 'commands' | 'app-info';
+export type TabType = 'inspector' | 'commands';
 export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder';
 
 function App() {
@@ -163,16 +162,6 @@ function App() {
               }}
             >
               <CommandsDrawer isDark={isDark} />
-            </div>
-
-            {/* App Info Panel */}
-            <div
-              className="flex-1 flex flex-col min-h-0"
-              style={{
-                display: activeTab === 'app-info' ? 'flex' : 'none',
-              }}
-            >
-              <ApkInfoPanel isDark={isDark} />
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { useState, memo, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useHierarchyStore } from "../stores/hierarchyStore";
+import { useDeviceStore } from "../stores/deviceStore";
 import { useThemeStore } from "../stores/themeStore";
 import type { UiNode } from "../types/shared";
 
@@ -21,9 +22,12 @@ interface AuditResult {
 
 export function useAccessibilityAudit() {
   return useMutation({
-    mutationFn: async (): Promise<AuditResult> => {
+    mutationFn: async (udid: string | undefined): Promise<AuditResult> => {
       const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
-      const res = await fetch(`${API_BASE}/hierarchy/audit`, {
+      const url = udid
+        ? `${API_BASE}/hierarchy/audit?udid=${encodeURIComponent(udid)}`
+        : `${API_BASE}/hierarchy/audit`;
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -73,6 +77,7 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
   const { theme } = useThemeStore();
   const isDark = theme === "dark";
   const { setSelectedNode, setHoveredNode, uiTree } = useHierarchyStore();
+  const { selectedDevice } = useDeviceStore();
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
 
@@ -80,11 +85,11 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
 
   const handleRunAudit = useCallback(() => {
     if (!uiTree) return;
-    runAudit(undefined, {
+    runAudit(selectedDevice || undefined, {
       onSuccess: (data) => setAuditResult(data),
       onError: () => {},
     });
-  }, [runAudit, uiTree]);
+  }, [runAudit, uiTree, selectedDevice]);
 
   const handleExportReport = useCallback(() => {
     if (!auditResult) return;

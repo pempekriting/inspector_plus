@@ -245,6 +245,61 @@ export function useAdbCommand() {
   });
 }
 
+// Execute multi-pointer gesture
+export function useGestureExecute() {
+  return useMutation({
+    mutationFn: ({ actions, coordinateMode, udid }: {
+      actions: Array<{
+        type: string;
+        x?: number;
+        y?: number;
+        duration?: number;
+        pointer?: number;
+        button?: string;
+      }>;
+      coordinateMode: string;
+      udid?: string;
+    }) =>
+      apiFetch<{ success: boolean; message?: string }>(
+        udid
+          ? `${API_BASE}/gesture/execute?udid=${encodeURIComponent(udid)}`
+          : `${API_BASE}/gesture/execute`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actions, coordinateMode }),
+        }
+      ),
+    onError: (error) => {
+      console.error("Gesture execution failed:", error);
+    },
+  });
+}
+
+// Execute arbitrary script/command
+export function useExecuteScript() {
+  return useMutation({
+    mutationFn: ({ script, platform, udid }: {
+      script: string;
+      platform?: string;
+      udid?: string;
+    }) =>
+      apiFetch<{ success: boolean; output: string; error?: string | null; exitCode: number }>(
+        udid
+          ? `${API_BASE}/execute?udid=${encodeURIComponent(udid)}`
+          : `${API_BASE}/execute`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ script, platform }),
+        }
+      ),
+    onError: (error) => {
+      console.error("Script execution failed:", error);
+    },
+  });
+}
+
 // Accessibility Audit
 export interface AccessibilityIssue {
   nodeId: string;
