@@ -1,6 +1,6 @@
 import { useThemeStore } from "../stores/themeStore";
 
-type TabType = 'inspector' | 'commands' | 'apk-info';
+type TabType = 'inspector' | 'commands' | 'app-info';
 
 interface TabBarProps {
   activeTab: TabType;
@@ -23,21 +23,22 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
       ),
     },
     {
+      id: 'app-info',
+      label: 'App Info',
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      ),
+    },
+    {
       id: 'commands',
       label: 'Commands',
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 17l6-6-6-6M12 19h8" />
-        </svg>
-      ),
-    },
-    {
-      id: 'apk-info',
-      label: 'Apk Info',
-      icon: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="5" y="2" width="14" height="20" rx="2" />
-          <line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
         </svg>
       ),
     },

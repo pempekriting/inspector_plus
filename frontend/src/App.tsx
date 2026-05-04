@@ -10,15 +10,16 @@ import { StatusBar } from "./components/StatusBar";
 import { CommandsDrawer } from "./components/CommandsDrawer";
 import { ApkInfoPanel } from "./components/ApkInfoPanel";
 import { RecorderPanel } from "./components/RecorderPanel";
+import { OnboardingModal } from "./components/OnboardingModal";
 import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
 import { useDeviceStore } from "./stores/deviceStore";
 
-export type TabType = 'inspector' | 'commands' | 'apk-info';
+export type TabType = 'inspector' | 'commands' | 'app-info';
 export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder';
 
 function App() {
-  const { hoveredNode } = useHierarchyStore();
+  const { hoveredNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [activeTab, setActiveTab] = useState<TabType>('inspector');
   const [activeInspectorTab, setActiveInspectorTab] = useState<InspectorSubTab>('hierarchy');
@@ -69,7 +70,7 @@ function App() {
       className="flex flex-col h-screen w-screen overflow-hidden"
       style={{
         background: isDark ? '#0a0a0c' : '#f5f5f5',
-        fontFamily: '"Space Grotesk", sans-serif',
+        fontFamily: '"Satoshi", sans-serif',
       }}
     >
       {/* Main Content */}
@@ -87,7 +88,7 @@ function App() {
             }}
           >
             <ScreenshotCanvas />
-            {(hoveredNode || useHierarchyStore.getState().lockedNode) && <Overlay />}
+            {(hoveredNode || lockedNode) && <Overlay />}
           </div>
         </div>
 
@@ -107,36 +108,6 @@ function App() {
               borderBottom: isDark ? '3px solid #3f3f46' : '3px solid #1a1a1a',
             }}
           >
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 flex items-center justify-center"
-                style={{
-                  background: isDark ? '#1f1f23' : '#ffffff',
-                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-                  boxShadow: isDark ? '3px 3px 0 #000' : '3px 3px 0 #1a1a1a',
-                }}
-              >
-                <svg
-                  className="w-5 h-5"
-                  style={{ color: isDark ? '#22d3ee' : '#0066cc' }}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 9h6M9 13h6M9 17h4" />
-                </svg>
-              </div>
-              <div>
-                <h1
-                  className="text-sm font-bold tracking-tight"
-                  style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
-                >
-                  Element Inspector
-                </h1>
-              </div>
-            </div>
             <div className="flex items-center gap-2">
               {/* D4: Shortcuts hint */}
               <button
@@ -202,11 +173,11 @@ function App() {
               <CommandsDrawer isDark={isDark} />
             </div>
 
-            {/* APK Info Panel */}
+            {/* App Info Panel */}
             <div
               className="flex-1 flex flex-col min-h-0"
               style={{
-                display: activeTab === 'apk-info' ? 'flex' : 'none',
+                display: activeTab === 'app-info' ? 'flex' : 'none',
               }}
             >
               <ApkInfoPanel isDark={isDark} />
@@ -287,6 +258,8 @@ function App() {
           </div>
         </div>
       )}
+
+      <OnboardingModal />
     </div>
   );
 }

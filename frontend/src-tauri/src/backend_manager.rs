@@ -92,10 +92,6 @@ impl BackendManager {
             return Ok(());
         }
 
-        log::info!("Backend dir: {:?}", self.backend_dir);
-        log::info!("Python path: {:?}", self.get_python_path());
-        log::info!("Uvicorn cmd: {}", self.get_uvicorn_cmd());
-
         self.status = BackendStatus::Starting;
 
         let python_child = Command::new("sh")
@@ -108,13 +104,18 @@ impl BackendManager {
             Ok(child) => {
                 log::info!("Python backend started with PID: {}", child.id());
                 self.child = Some(child);
-                self.status = BackendStatus::Running;
-                Ok(())
+                // Check port immediately; if not open, mark as Error
+                if Self::is_port_open(self.port) {
+                    self.status = BackendStatus::Running;
+                    Ok(())
+                } else {
+                    self.status = BackendStatus::Error("Backend process started but port not open".to_string());
+                    Err("Backend process started but port not open".to_string())
+                }
             }
             Err(e) => {
                 let err = format!("Failed to spawn backend process: {}", e);
                 log::error!("{}", err);
-                log::error!("Command was: {}", self.get_uvicorn_cmd());
                 self.status = BackendStatus::Error(err.clone());
                 Err(err)
             }
