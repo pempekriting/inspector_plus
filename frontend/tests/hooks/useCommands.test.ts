@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useCommands } from "../useCommands";
-import * as api from "../../services/api";
+import { useCommands } from "../../src/hooks/useCommands";
+import * as api from "../../src/services/api";
 
 const mockMutation = {
   mutateAsync: vi.fn(),
   isPending: false,
 };
 
-vi.mock("../../services/api", () => ({
+vi.mock("../../src/services/api", () => ({
   useExecuteCommand: vi.fn(() => mockMutation),
 }));
 
-vi.mock("../../stores/deviceStore", () => ({
+vi.mock("../../src/stores/deviceStore", () => ({
   useDeviceStore: vi.fn(() => ({
     selectedDevice: "emulator-5554",
   })),

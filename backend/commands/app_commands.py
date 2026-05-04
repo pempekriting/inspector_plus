@@ -10,7 +10,7 @@ def _safe_path(path: str, must_exist: bool = True) -> bool:
     """Validate a file path is safe (no path traversal, allowed extension)."""
     if not path or len(path) > 1000:
         return False
-    if ".." in path or path.startswith("/") or path.startswith("~"):
+    if ".." in path:
         return False
     # Must end with .apk
     if not path.lower().endswith(".apk"):
@@ -20,15 +20,14 @@ def _safe_path(path: str, must_exist: bool = True) -> bool:
     return True
 
 
-_PACKAGE_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$") if "re" in dir() else None
+_PACKAGE_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 
 
 def _safe_package(package: str) -> bool:
     """Validate an Android package name."""
-    import re
     if not package or len(package) > 255:
         return False
-    return bool(re.match(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$", package))
+    return bool(_PACKAGE_RE.match(package))
 
 
 class AppCommands:

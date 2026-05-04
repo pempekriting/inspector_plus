@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useThemeStore, ThemeMode } from "../themeStore";
+import { useThemeStore, ThemeMode } from "../../src/stores/themeStore";
 
 // Mock localStorage
 const localStorageMock = {

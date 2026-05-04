@@ -165,7 +165,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                 className="w-full px-3 py-2.5 text-left text-[11px] font-medium transition-colors flex items-center gap-3"
                 style={{
                   color: selectedDevice === deviceKey
-                    ? (isDark ? '#22d3ee' : '#0066cc')
+                    ? (isDark ? 'var(--accent-cyan)' : '#0066cc')
                     : (isDark ? '#a1a1aa' : '#4a4a4a'),
                   background: selectedDevice === deviceKey
                     ? (isDark ? '#1f1f23' : '#f0f0f0')

@@ -294,7 +294,7 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
                           <div className="flex items-center justify-between mb-0.5">
                             <span
                               className="text-[10px] font-bold font-mono"
-                              style={{ color: isDark ? "#22d3ee" : "#0066cc" }}
+                              style={{ color: isDark ? "var(--accent-cyan)" : "#0066cc" }}
                             >
                               {CHECK_LABELS[issue.check] || issue.check}
                             </span>

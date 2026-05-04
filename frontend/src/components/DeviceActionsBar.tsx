@@ -79,7 +79,7 @@ const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, 
   };
 
   const bgColor = variant === "primary"
-    ? (isDark ? "#22d3ee" : "#0066cc")
+    ? (isDark ? "var(--accent-cyan)" : "#0066cc")
     : variant === "danger"
     ? (isDark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.1)")
     : (isDark ? "#1f1f23" : "#f0f0f0");

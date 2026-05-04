@@ -526,7 +526,7 @@ export function RecorderPanel() {
         }
 
         .neo-recorder-action-export:hover:not(:disabled) {
-          background: #22d3ee;
+          background: var(--accent-cyan);
         }
 
         /* Scrollbar */

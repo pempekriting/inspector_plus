@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { canvasToDevice, deviceToCanvas } from "../coordinates";
-import type { Bounds } from "../../types/shared";
+import { canvasToDevice, deviceToCanvas } from "../../src/utils/coordinates";
+import type { Bounds } from "../../src/types/shared";
 
 describe("coordinates", () => {
   const canvasSize = { width: 400, height: 800 };

@@ -9,7 +9,7 @@ import type { UiNode } from '../types/shared';
 // Covers both Android (android.widget.*) and iOS (XCUIElementType*) element types
 const CLASS_COLORS: Record<string, { border: string; fill: string }> = {
   // Android / shared interactive — vivid high-contrast colors
-  Button:          { border: '#00f5d4', fill: 'transparent' },  // cyan
+  Button:          { border: 'var(--accent-cyan)', fill: 'transparent' },  // cyan
   TextView:       { border: '#ff6b6b', fill: 'transparent' },  // red - stands out
   EditText:       { border: '#a78bfa', fill: 'transparent' },  // purple
   ImageView:      { border: '#f472b6', fill: 'transparent' },  // pink
@@ -199,8 +199,8 @@ function ModeBadge({ isDark }: { isDark: boolean }) {
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: 9, fontWeight: 700, letterSpacing: '0.15em',
       background: isDark ? 'rgba(0, 245, 212, 0.15)' : 'rgba(0, 102, 204, 0.10)',
-      border: `1.5px solid ${isDark ? '#00f5d4' : '#0066cc'}`,
-      color: isDark ? '#00f5d4' : '#0066cc',
+      border: `1.5px solid ${isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)'}`,
+      color: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)',
       pointerEvents: 'none',
     }}>
       LAYOUT MODE
@@ -211,7 +211,7 @@ function ModeBadge({ isDark }: { isDark: boolean }) {
 // ─── Legend ─────────────────────────────────────────────────────────────────
 function Legend({ isDark }: { isDark: boolean }) {
   const items = [
-    { label: 'Button / TextView', color: '#00f5d4' },
+    { label: 'Button / TextView', color: 'var(--accent-cyan)' },
     { label: 'EditText', color: '#a78bfa' },
     { label: 'ImageView', color: '#f472b6' },
     { label: 'Layouts', color: '#64748b' },

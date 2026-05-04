@@ -309,22 +309,29 @@ export function useSwitchContext() {
 }
 
 // F2: Test Recorder
-// APK Info
+// App Info
 
 export interface AppInfo {
   packageName: string;
   versionName: string;
   versionCode: number;
+  platform: "android" | "ios";
   minSdk: number;
   targetSdk: number;
+  minimumOSVersion?: string;
   firstInstallTime: string;
   lastUpdateTime: string;
   installerPackage: string;
+  displayName?: string;
+  bundleIdentifier?: string;
+  installType?: string;
+  architectures?: string;
   permissions: Array<{
     name: string;
     label: string;
-    granted: boolean;
-    group: string;
+    granted?: boolean;
+    group?: string;
+    description?: string;
   }>;
   permissionCount: number;
   grantedCount: number;
@@ -332,12 +339,15 @@ export interface AppInfo {
 
 // List installed packages (returns raw package list as newline-separated string)
 // Deferred: only fetch when selectedPackage is set (user selected an app)
-export function useInstalledPackages(enabled: boolean = false) {
+export function useInstalledPackages(enabled: boolean = false, udid?: string | null) {
   return useQuery({
-    queryKey: ["installed-packages"],
-    queryFn: () =>
-      apiFetch<{ success: boolean; output: string }>(
-        `${API_BASE}/commands/execute`,
+    queryKey: ["installed-packages", udid],
+    queryFn: () => {
+      const url = udid
+        ? `${API_BASE}/commands/execute?udid=${encodeURIComponent(udid)}`
+        : `${API_BASE}/commands/execute`;
+      return apiFetch<{ success: boolean; output: string }>(
+        url,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -346,7 +356,8 @@ export function useInstalledPackages(enabled: boolean = false) {
       ).then((data) => {
         if (!data.success) throw new Error(data.output);
         return data.output.split("\n").filter(Boolean).sort();
-      }),
+      });
+    },
     enabled,
     staleTime: 30000,
     gcTime: 60000,
@@ -355,13 +366,14 @@ export function useInstalledPackages(enabled: boolean = false) {
 }
 
 // Get detailed app info for a specific package
-export function useAppInfo(packageName: string | null) {
+export function useAppInfo(packageName: string | null, udid?: string | null) {
   return useQuery({
-    queryKey: ["app-info", packageName],
-    queryFn: () =>
-      apiFetch<AppInfo>(
-        `${API_BASE}/app/commands/info?package=${encodeURIComponent(packageName || "")}`
-      ),
+    queryKey: ["app-info", packageName, udid],
+    queryFn: () => {
+      let url = `${API_BASE}/app/commands/info?package=${encodeURIComponent(packageName || "")}`;
+      if (udid) url += `&udid=${encodeURIComponent(udid)}`;
+      return apiFetch<AppInfo>(url);
+    },
     enabled: !!packageName,
     staleTime: 30000,
     gcTime: 60000,

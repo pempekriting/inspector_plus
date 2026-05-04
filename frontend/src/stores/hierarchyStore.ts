@@ -38,7 +38,7 @@ interface HierarchyState {
   // Screenshot from combined /hierarchy-and-screenshot endpoint
   combinedScreenshotUrl: string | null;
   // Refetch function and refreshing state for refresh button
-  refetchFn: React.MutableRefObject<(() => void) | null>;
+  refetchFn: { current: (() => void) | null };
   isRefreshing: boolean;
   setUiTree: (tree: UiNode | null) => void;
   setHoveredNode: (node: UiNode | null, canvasPos?: { x: number; y: number }) => void;

@@ -188,9 +188,9 @@ function AppCommandsSection() {
             disabled={isExecuting || (cmd.type !== "list_apps" && !packageName.trim())}
             className="px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              background: isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? '#22d3ee' : '#0066cc'),
+              background: isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)'),
               color: isExecuting ? (isDark ? '#71717a' : '#999999') : (isDark ? '#0a0a0c' : '#ffffff'),
-              border: `1.5px solid ${isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? '#22d3ee' : '#0066cc')}`,
+              border: `1.5px solid ${isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)')}`,
             }}
           >
             {cmd.name}

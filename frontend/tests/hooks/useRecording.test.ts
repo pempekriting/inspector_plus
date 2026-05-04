@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useRecording } from "../useRecording";
-import { useRecorderStore } from "../../stores/recorderStore";
-import * as api from "../../services/api";
+import { useRecording } from "../../src/hooks/useRecording";
+import { useRecorderStore } from "../../src/stores/recorderStore";
+import * as api from "../../src/services/api";
 
 // Mock the api service
-vi.mock("../../services/api", () => ({
+vi.mock("../../src/services/api", () => ({
   useRecorder: vi.fn(() => ({
     addStep: vi.fn().mockResolvedValue({ stepCount: 1 }),
     clearRecording: vi.fn().mockResolvedValue({ cleared: true }),
@@ -13,7 +13,7 @@ vi.mock("../../services/api", () => ({
 }));
 
 // Mock useDeviceStore
-vi.mock("../../stores/deviceStore", () => ({
+vi.mock("../../src/stores/deviceStore", () => ({
   useDeviceStore: vi.fn(() => ({
     selectedDevice: "emulator-5554",
   })),

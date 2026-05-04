@@ -534,7 +534,7 @@ function SearchResultNode({
         style={{
           paddingLeft: `${indent}px`,
           background: 'rgba(253, 224, 71, 0.12)',
-          borderLeft: `3px solid ${isDark ? '#00f5d4' : '#2563eb'}`,
+          borderLeft: `3px solid ${isDark ? 'var(--accent-cyan)' : '#2563eb'}`,
           minWidth: '0',
         }}
         onMouseEnter={() => onHover(node)}
@@ -584,7 +584,7 @@ function SearchResultNode({
             {shortClassName}
           </span>
           {node.resourceId ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? '#00f5d4' : '#2563eb' }}>
+            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}>
               #{node.resourceId}
             </span>
           ) : node.contentDesc ? (
@@ -833,11 +833,11 @@ const TreeNode = memo(function TreeNode({
   const borderColor = isLocked
     ? '#fbbf24'  // locked: bright yellow
     : isSelected
-    ? (isDark ? '#00f5d4' : '#1a1a2e')
+    ? (isDark ? 'var(--accent-cyan)' : '#1a1a2e')
     : isHovered
     ? (isDark ? '#fee440' : '#e94560')
     : isSearchMatch
-    ? (isDark ? '#00f5d4' : '#2563eb')
+    ? (isDark ? 'var(--accent-cyan)' : '#2563eb')
     : 'transparent';
 
   const bgColor = isLocked
@@ -915,7 +915,7 @@ const TreeNode = memo(function TreeNode({
           </span>
 
           {node.resourceId ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? '#00f5d4' : '#2563eb' }}>
+            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}>
               #{node.resourceId}
             </span>
           ) : node.contentDesc ? (

@@ -67,7 +67,7 @@ const HighlightBox = memo(function HighlightBox({ bounds, layout, isDark, locked
   const finalHeight = Math.max(height, 6);
 
   // Locked: bright yellow border + "SELECTED" badge. Hover/selected: subtle cyan.
-  const accentColor = locked ? '#fbbf24' : (isDark ? '#00f5d4' : '#1a1a2e');
+  const accentColor = locked ? '#fbbf24' : (isDark ? 'var(--accent-cyan)' : '#1a1a2e');
   const bgColor = locked
     ? 'rgba(251, 191, 36, 0.20)'
     : (isDark ? 'rgba(0, 245, 212, 0.12)' : 'rgba(26, 26, 46, 0.10)');
@@ -119,7 +119,7 @@ const InfoTooltip = memo(function InfoTooltip({
   const left = layout.imgLeft + (bounds.x + bounds.width) * layout.scale + 12;
   const top = layout.imgTop + bounds.y * layout.scale;
 
-  const accentColor = isDark ? '#00f5d4' : '#1a1a2e';
+  const accentColor = isDark ? 'var(--accent-cyan)' : '#1a1a2e';
   const bgColor = isDark ? '#1a1a1f' : '#ffffff';
   const borderColor = isDark ? '#4a4a55' : '#c5c2bb';
   const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';

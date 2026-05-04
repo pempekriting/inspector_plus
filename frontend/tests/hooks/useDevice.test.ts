@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useDevicePolling, fetchHierarchy, searchHierarchy, tapDevice, checkDeviceStatus, listDevices, selectDevice, getScreenshot, inputDeviceText } from "../useDevice";
+import { useDevicePolling, fetchHierarchy, searchHierarchy, tapDevice, checkDeviceStatus, listDevices, selectDevice, getScreenshot, inputDeviceText } from "../../src/hooks/useDevice";
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);

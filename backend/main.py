@@ -520,13 +520,6 @@ async def search_hierarchy(
     """Search hierarchy using specified filter type.
 
     Args:
-        query: The search query (1-500 chars)
-        filter: Filter type - one of xpath, resource-id, text, content-desc, class
-        udid: Optional device UDID
-    """
-    """Search hierarchy using specified filter type.
-
-    Args:
         query: The search query (XPath, resource-id, text, content-desc, or class name)
         filter: Filter type - one of 'xpath', 'resource-id', 'text', 'content-desc', 'class'
         udid: Optional device UDID
@@ -1035,6 +1028,7 @@ async def get_app_info(package: str, udid: Optional[str] = None):
         success, info = app_commands.get_app_info(package)
         if not success:
             raise HTTPException(status_code=404, detail=info.get("error", "Package not found"))
+        info["platform"] = "ios" if is_ios else "android"
         return info
     except HTTPException:
         raise

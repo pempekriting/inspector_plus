@@ -74,7 +74,7 @@ export function ScreenshotCanvas() {
   const { selectedDevice, setDeviceResolution } = useDeviceStore();
   const {
     isLoadingScreenshot, uiTree, setHoveredNode, setSelectedNode, lockSelection,
-    setLoadingScreenshot, combinedScreenshotUrl,
+    setLoadingScreenshot, combinedScreenshotUrl, lockedNode,
     canvasMode, setCanvasMode,
   } = useHierarchyStore();
   const { theme } = useThemeStore();
@@ -82,14 +82,14 @@ export function ScreenshotCanvas() {
   const { isRecording, recordStep } = useRecording();
 
   // D2: Zoom + Pan state
-  const [zoom, setZoom] = useState(0.3);
+  const [zoom, setZoom] = useState(0.7);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
-  const zoomRef = useRef(0.3);
+  const zoomRef = useRef(0.7);
   zoomRef.current = zoom;
 
-  const resetZoom = () => { setZoom(0.3); setPan({ x: 0, y: 0 }); };
+  const resetZoom = () => { setZoom(0.7); setPan({ x: 0, y: 0 }); };
   const zoomIn  = () => setZoom(z => Math.min(4, +(z * 1.25).toFixed(2)));
   const zoomOut = () => setZoom(z => Math.max(0.25, +(z / 1.25).toFixed(2)));
 
@@ -313,7 +313,7 @@ export function ScreenshotCanvas() {
         <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: isDark ? '#1a1a1f' : '#ffffff' }}>
           <div className="w-16 h-16 mb-4 animate-br-spin" style={{ background: isDark ? '#242429' : '#f0eeeb', border: `3px solid ${isDark ? '#3f3f46' : '#1a1a1a'}` }}>
             <div className="w-full h-full flex items-center justify-center">
-              <svg className="w-8 h-8" style={{ color: isDark ? '#00f5d4' : '#047857' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="w-8 h-8" style={{ color: isDark ? 'var(--accent-cyan)' : '#047857' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5h.008z" />
               </svg>
@@ -328,7 +328,7 @@ export function ScreenshotCanvas() {
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 animate-br-spin" style={{ background: isDark ? '#242429' : '#f0eeeb', border: `3px solid ${isDark ? '#3f3f46' : '#1a1a1a'}` }}>
               <div className="w-full h-full flex items-center justify-center">
-                <svg className="w-6 h-6" style={{ color: isDark ? '#00f5d4' : '#0066cc' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <svg className="w-6 h-6" style={{ color: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -345,7 +345,7 @@ export function ScreenshotCanvas() {
           backdropFilter: 'blur(8px)',
           border: isDark ? '1.5px solid #4a4a55' : '1.5px solid #c5c2bb',
         }}>
-          <svg className="w-3 h-3" style={{ color: isDark ? '#00f5d4' : '#1a1a2e' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="w-3 h-3" style={{ color: isDark ? 'var(--accent-cyan)' : '#1a1a2e' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
           </svg>
           <span className="text-[10px] font-mono" style={{ color: isDark ? '#a8a8b3' : '#4a4a5c' }}>{imageSize.width}x{imageSize.height}</span>
@@ -358,9 +358,9 @@ export function ScreenshotCanvas() {
           onClick={() => setCanvasMode('inspect')}
           className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
           style={{
-            background: canvasMode === 'inspect' ? (isDark ? '#00f5d4' : '#0066cc') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
+            background: canvasMode === 'inspect' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
             backdropFilter: 'blur(8px)',
-            border: `2px solid ${canvasMode === 'inspect' ? (isDark ? '#00f5d4' : '#0066cc') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
+            border: `2px solid ${canvasMode === 'inspect' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
             boxShadow: canvasMode === 'inspect' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
           }}
           title="Inspect Mode"
@@ -393,12 +393,12 @@ export function ScreenshotCanvas() {
           style={{
             background: canvasMode === 'layout' ? (isDark ? 'rgba(0, 245, 212, 0.20)' : 'rgba(0, 102, 204, 0.15)') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
             backdropFilter: 'blur(8px)',
-            border: `2px solid ${canvasMode === 'layout' ? (isDark ? '#00f5d4' : '#0066cc') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
+            border: `2px solid ${canvasMode === 'layout' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
             boxShadow: canvasMode === 'layout' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
           }}
           title="Layout Mode (L)"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={canvasMode === 'layout' ? (isDark ? '#00f5d4' : '#0066cc') : (isDark ? '#a1a1aa' : '#4a4a4a')} strokeWidth="2">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={canvasMode === 'layout' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#a1a1aa' : '#4a4a4a')} strokeWidth="2">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -422,7 +422,7 @@ export function ScreenshotCanvas() {
             <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /></svg>
           </button>
           <div className="w-20 h-1 rounded-full mx-1" style={{ background: isDark ? '#3f3f46' : '#cccccc' }}>
-            <div className="h-full rounded-full" style={{ background: isDark ? '#22d3ee' : '#0066cc', width: `${((zoom - 0.25) / 3.75) * 100}%` }} />
+            <div className="h-full rounded-full" style={{ background: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)', width: `${((zoom - 0.25) / 3.75) * 100}%` }} />
           </div>
           <button onClick={zoomIn} className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95" style={{
             background: isDark ? '#1f1f23' : '#ffffff',

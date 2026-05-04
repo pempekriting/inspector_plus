@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useRecorderStore } from "../recorderStore";
+import { useRecorderStore } from "../../src/stores/recorderStore";
 
 describe("recorderStore", () => {
   beforeEach(() => {
@@ -87,6 +87,85 @@ describe("recorderStore", () => {
     it("updates the sessionId", () => {
       useRecorderStore.getState().setSessionId("custom-session");
       expect(useRecorderStore.getState().sessionId).toBe("custom-session");
+    });
+  });
+
+  describe("step types", () => {
+    it("records click step", () => {
+      const step = {
+        action: "click" as const,
+        nodeId: "btn_submit",
+        locator: { strategy: "id", value: "btn_submit" },
+        code: 'find_element(By.id("btn_submit")).click()',
+      };
+      useRecorderStore.getState().addStep(step);
+      expect(useRecorderStore.getState().steps[0].action).toBe("click");
+    });
+
+    it("records fill step", () => {
+      const step = {
+        action: "fill" as const,
+        nodeId: "input_username",
+        locator: { strategy: "accessibility-id", value: "username" },
+        code: 'find_element(By.accessibility_id("username")).send_keys("testuser")',
+        value: "testuser",
+      };
+      useRecorderStore.getState().addStep(step);
+      expect(useRecorderStore.getState().steps[0].value).toBe("testuser");
+    });
+
+    it("records swipe step", () => {
+      const step = {
+        action: "swipe" as const,
+        nodeId: "gesture_1",
+        locator: { strategy: "class", value: "RecyclerView" },
+        code: 'driver.execute_script("mobile: swipe", {...})',
+        value: { startX: 100, startY: 500, endX: 100, endY: 100 },
+      };
+      useRecorderStore.getState().addStep(step);
+      expect(useRecorderStore.getState().steps[0].action).toBe("swipe");
+      expect(useRecorderStore.getState().steps[0].value).toEqual({ startX: 100, startY: 500, endX: 100, endY: 100 });
+    });
+
+    it("records wait step", () => {
+      const step = {
+        action: "wait" as const,
+        nodeId: "",
+        locator: {},
+        code: 'time.sleep(2)',
+        value: 2,
+      };
+      useRecorderStore.getState().addStep(step);
+      expect(useRecorderStore.getState().steps[0].action).toBe("wait");
+    });
+  });
+
+  describe("setRecording interaction", () => {
+    it("starting new recording resets session", () => {
+      useRecorderStore.setState({
+        sessionId: "session_old",
+        steps: [{ action: "click", nodeId: "btn", locator: { strategy: "id", value: "btn" }, code: "" }],
+      });
+      useRecorderStore.getState().setRecording(true);
+      expect(useRecorderStore.getState().sessionId).not.toBe("session_old");
+    });
+
+    it("steps are isolated per recording session", () => {
+      useRecorderStore.setState({ isRecording: true });
+      useRecorderStore.getState().addStep({
+        action: "click",
+        nodeId: "btn1",
+        locator: { strategy: "id", value: "btn1" },
+        code: "",
+      });
+      expect(useRecorderStore.getState().steps).toHaveLength(1);
+
+      // Stop recording
+      useRecorderStore.getState().setRecording(false);
+
+      // Start new recording - should have fresh session
+      useRecorderStore.getState().setRecording(true);
+      expect(useRecorderStore.getState().steps).toHaveLength(0);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateLocators, bestLocator, type Locator } from "../locators";
-import type { UiNode } from "../../types/shared";
+import { generateLocators, bestLocator, type Locator } from "../../src/utils/locators";
+import type { UiNode } from "../../src/types/shared";
 
 describe("locators", () => {
   describe("generateLocators", () => {

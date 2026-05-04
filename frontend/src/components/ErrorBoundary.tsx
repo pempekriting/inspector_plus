@@ -11,7 +11,7 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
       className="flex flex-col items-center justify-center h-screen w-screen p-8"
       style={{
         background: isDark ? "#0a0a0c" : "#f5f5f5",
-        fontFamily: '"Space Grotesk", sans-serif',
+        fontFamily: '"Satoshi", sans-serif',
       }}
     >
       <div

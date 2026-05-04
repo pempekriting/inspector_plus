@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useThemeStore } from "../stores/themeStore";
+import { useDeviceStore } from "../stores/deviceStore";
 import { useInstalledPackages, useAppInfo } from "../services/api";
 import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../services/api";
@@ -57,28 +58,37 @@ function PermissionBadge({ group }: { group: string }) {
 
 export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
   const { theme } = useThemeStore();
+  const { devices, selectedDevice } = useDeviceStore();
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [packagesLoaded, setPackagesLoaded] = useState(false);
 
+  const currentDevice = devices.find((d) => d.udid === selectedDevice);
+  const platform = currentDevice?.platform ?? "android";
+  const isIOS = platform === "ios";
+
   // Only fetch packages when user clicks Load (lazy load)
-  const { data: packages = [], isLoading: loadingPkgs, refetch } = useInstalledPackages(packagesLoaded);
+  const { data: packages = [], isLoading: loadingPkgs, refetch } = useInstalledPackages(packagesLoaded, selectedDevice);
 
   const handleLoadPackages = () => {
     setPackagesLoaded(true);
   };
-  const { data: appInfo, isLoading: loadingInfo } = useAppInfo(selectedPackage);
+  const { data: appInfo, isLoading: loadingInfo } = useAppInfo(selectedPackage, selectedDevice);
 
   const launchMutation = useMutation({
-    mutationFn: (pkg: string) =>
-      apiFetch<{ success: boolean; output: string }>(
-        `${API_BASE}/commands/execute`,
+    mutationFn: (pkg: string) => {
+      const url = selectedDevice
+        ? `${API_BASE}/commands/execute?udid=${encodeURIComponent(selectedDevice)}`
+        : `${API_BASE}/commands/execute`;
+      return apiFetch<{ success: boolean; output: string }>(
+        url,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "launch_app", params: { package: pkg } }),
         }
-      ),
+      );
+    },
   });
 
   // Filter packages by search
@@ -92,8 +102,9 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
     if (!appInfo?.permissions) return {};
     const groups: Record<string, typeof appInfo.permissions> = {};
     for (const perm of appInfo.permissions) {
-      if (!groups[perm.group]) groups[perm.group] = [];
-      groups[perm.group].push(perm);
+      const group = perm.group ?? "Other";
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(perm);
     }
     return groups;
   }, [appInfo]);
@@ -117,7 +128,7 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search packages..."
+            placeholder={isIOS ? "Search apps..." : "Search packages..."}
             className="w-full px-2 py-1 rounded text-[10px] font-mono"
             style={{
               background: isDark ? "#1f1f23" : "#f5f5f5",
@@ -134,13 +145,13 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
           style={{ borderBottom: isDark ? "1px solid #27272a" : "1px solid #e5e5e5" }}
         >
           <span className="text-[9px] font-bold uppercase" style={{ color: isDark ? "#52525b" : "#999999" }}>
-            {loadingPkgs ? "Loading..." : `${filteredPackages.length} packages`}
+            {loadingPkgs ? "Loading..." : `${filteredPackages.length} ${isIOS ? "apps" : "packages"}`}
           </span>
           {!packagesLoaded && !loadingPkgs && (
             <button
               onClick={handleLoadPackages}
               className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
-              style={{ background: isDark ? "#22d3ee" : "#0066cc", color: "#000" }}
+              style={{ background: isDark ? "var(--accent-cyan)" : "#0066cc", color: "#000" }}
             >
               Load
             </button>
@@ -152,7 +163,7 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
           {!packagesLoaded ? (
             <div className="p-3 text-center">
               <span className="text-[10px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
-                Click Load to fetch packages
+                Click Load to fetch {isIOS ? "apps" : "packages"}
               </span>
             </div>
           ) : loadingPkgs ? (
@@ -168,7 +179,7 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
           ) : filteredPackages.length === 0 ? (
             <div className="p-3 text-center">
               <span className="text-[10px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
-                No packages found
+                No {isIOS ? "apps" : "packages"} found
               </span>
             </div>
           ) : (
@@ -182,10 +193,10 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
                   style={{
                     background: isSelected ? (isDark ? "#1f1f23" : "#f0f0f0") : "transparent",
                     color: isSelected
-                      ? (isDark ? "#22d3ee" : "#0066cc")
+                      ? (isDark ? "var(--accent-cyan)" : "#0066cc")
                       : (isDark ? "#71717a" : "#666666"),
                     borderLeft: isSelected
-                      ? `2px solid ${isDark ? "#22d3ee" : "#0066cc"}`
+                      ? `2px solid ${isDark ? "var(--accent-cyan)" : "#0066cc"}`
                       : "2px solid transparent",
                   }}
                   title={pkg}
@@ -234,11 +245,23 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-[13px] font-bold truncate" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
-                  {appInfo.packageName}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[13px] font-bold truncate" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
+                    {isIOS ? (appInfo.displayName || appInfo.packageName) : appInfo.packageName}
+                  </h3>
+                  <span
+                    className="flex-shrink-0 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
+                    style={{
+                      background: isDark ? "#1f1f23" : "#f0f0f0",
+                      color: isIOS ? (isDark ? "#a78bfa" : "#7c3aed") : (isDark ? "#34d399" : "#059669"),
+                      border: `1px solid ${isIOS ? (isDark ? "#a78bfa33" : "#7c3aed33") : (isDark ? "#34d39933" : "#05966933")}`,
+                    }}
+                  >
+                    {isIOS ? "iOS" : "Android"}
+                  </span>
+                </div>
                 <p className="text-[10px] font-mono mt-0.5 truncate" style={{ color: isDark ? "#52525b" : "#999999" }}>
-                  {appInfo.packageName}
+                  {isIOS ? (appInfo.bundleIdentifier || appInfo.packageName) : appInfo.packageName}
                 </p>
               </div>
               <button
@@ -246,9 +269,9 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
                 disabled={launchMutation.isPending}
                 className="flex-shrink-0 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
                 style={{
-                  background: isDark ? "#22d3ee" : "#0066cc",
+                  background: isDark ? "var(--accent-cyan)" : "#0066cc",
                   color: "#000",
-                  border: `1.5px solid ${isDark ? "#22d3ee" : "#0066cc"}`,
+                  border: `1.5px solid ${isDark ? "var(--accent-cyan)" : "#0066cc"}`,
                 }}
               >
                 {launchMutation.isPending ? "..." : "Launch"}
@@ -257,12 +280,34 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
 
             {/* Version cards */}
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Version", value: appInfo.versionName },
-                { label: "Version Code", value: String(appInfo.versionCode) },
-                { label: "Min SDK", value: `${appInfo.minSdk} (${getSdkName(appInfo.minSdk)})` },
-                { label: "Target SDK", value: `${appInfo.targetSdk} (${getSdkName(appInfo.targetSdk)})` },
-              ].map(({ label, value }) => (
+              {isIOS
+                ? [
+                    { label: "Version", value: appInfo.versionName || "Unknown" },
+                    ...(appInfo.versionCode ? [{ label: "Build", value: String(appInfo.versionCode) }] : []),
+                    ...(appInfo.minimumOSVersion ? [{ label: "Min iOS", value: appInfo.minimumOSVersion }] : []),
+                    ...(appInfo.bundleIdentifier ? [{ label: "Bundle ID", value: appInfo.bundleIdentifier }] : []),
+                    ...(appInfo.installType ? [{ label: "Install Type", value: appInfo.installType }] : []),
+                    ...(appInfo.architectures ? [{ label: "Architecture", value: appInfo.architectures }] : []),
+                  ].map(({ label, value }) => (
+                    <div
+                      key={label}
+                      className="rounded p-2"
+                      style={{ background: isDark ? "#1f1f23" : "#f5f5f5", border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #e5e5e5" }}
+                    >
+                      <div className="text-[8px] font-bold uppercase tracking-wider mb-0.5" style={{ color: isDark ? "#52525b" : "#999999" }}>
+                        {label}
+                      </div>
+                      <div className="text-[10px] font-mono font-bold truncate" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
+                        {value}
+                      </div>
+                    </div>
+                  ))
+                : [
+                    { label: "Version", value: appInfo.versionName },
+                    { label: "Version Code", value: String(appInfo.versionCode) },
+                    { label: "Min SDK", value: `${appInfo.minSdk} (${getSdkName(appInfo.minSdk)})` },
+                    { label: "Target SDK", value: `${appInfo.targetSdk} (${getSdkName(appInfo.targetSdk)})` },
+                  ].map(({ label, value }) => (
                 <div
                   key={label}
                   className="rounded p-2"
@@ -278,7 +323,8 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
               ))}
             </div>
 
-            {/* Timestamps + Installer */}
+            {/* Timestamps + Installer — Android only */}
+            {!isIOS && (
             <div className="space-y-1">
               {[
                 { label: "First Installed", value: appInfo.firstInstallTime },
@@ -295,69 +341,118 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Permissions */}
-            {appInfo.permissions.length > 0 ? (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
+            {isIOS ? (
+              // iOS: permission descriptions from Info.plist
+              appInfo.permissions.length > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-[10px] font-bold uppercase" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
-                      Permissions
+                      Permission Descriptions
                     </span>
                     <span
                       className="px-1.5 py-0.5 rounded text-[9px] font-bold"
                       style={{ background: isDark ? "#1f1f23" : "#f0f0f0", color: isDark ? "#71717a" : "#666666", border: `1px solid ${isDark ? "#3f3f46" : "#e5e5e5"}` }}
                     >
-                      {appInfo.grantedCount}/{appInfo.permissionCount}
+                      {appInfo.permissions.length}
                     </span>
                   </div>
-                </div>
-                <div className="space-y-3">
-                  {Object.entries(groupedPermissions).map(([group, perms]) => (
-                    <div key={group}>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <PermissionBadge group={group} />
-                        <span className="text-[8px]" style={{ color: isDark ? "#3f3f46" : "#cccccc" }}>
-                          {perms.length}
-                        </span>
+                  <div className="space-y-1.5">
+                    {appInfo.permissions.map((perm) => (
+                      <div
+                        key={perm.name}
+                        className="rounded p-2"
+                        style={{
+                          background: isDark ? "#1f1f23" : "#f5f5f5",
+                          border: isDark ? "1px solid #27272a" : "1px solid #e5e5e5",
+                        }}
+                      >
+                        <div className="text-[9px] font-bold mb-0.5" style={{ color: isDark ? "#a78bfa" : "#7c3aed" }}>
+                          {perm.label}
+                        </div>
+                        <div className="text-[9px]" style={{ color: isDark ? "#71717a" : "#666666" }}>
+                          {perm.description}
+                        </div>
                       </div>
-                      <div className="space-y-0.5 ml-1">
-                        {perms.map((perm) => (
-                          <div
-                            key={perm.name}
-                            className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px]"
-                            style={{
-                              background: isDark ? "#1f1f23" : "#f5f5f5",
-                              border: isDark ? "1px solid #27272a" : "1px solid #e5e5e5",
-                            }}
-                          >
-                            <div
-                              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                              style={{ background: perm.granted ? "#10b981" : "#52525b" }}
-                            />
-                            <span
-                              className="flex-1 truncate font-mono"
-                              style={{ color: perm.granted ? (isDark ? "#10b981" : "#047857") : (isDark ? "#71717a" : "#999999") }}
-                              title={perm.name}
-                            >
-                              {perm.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  className="rounded p-3 text-center"
+                  style={{ background: isDark ? "#1f1f23" : "#f5f5f5", border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #e5e5e5" }}
+                >
+                  <span className="text-[10px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
+                    No permission descriptions available
+                  </span>
+                </div>
+              )
             ) : (
-              <div
-                className="rounded p-3 text-center"
-                style={{ background: isDark ? "#1f1f23" : "#f5f5f5", border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #e5e5e5" }}
-              >
-                <span className="text-[10px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
-                  No permissions requested
-                </span>
-              </div>
+              // Android: permissions with grant status
+              appInfo.permissions.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase" style={{ color: isDark ? "#e4e4e7" : "#1a1a1a" }}>
+                        Permissions
+                      </span>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                        style={{ background: isDark ? "#1f1f23" : "#f0f0f0", color: isDark ? "#71717a" : "#666666", border: `1px solid ${isDark ? "#3f3f46" : "#e5e5e5"}` }}
+                      >
+                        {appInfo.grantedCount}/{appInfo.permissionCount}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {Object.entries(groupedPermissions).map(([group, perms]) => (
+                      <div key={group}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <PermissionBadge group={group} />
+                          <span className="text-[8px]" style={{ color: isDark ? "#3f3f46" : "#cccccc" }}>
+                            {perms.length}
+                          </span>
+                        </div>
+                        <div className="space-y-0.5 ml-1">
+                          {perms.map((perm) => (
+                            <div
+                              key={perm.name}
+                              className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px]"
+                              style={{
+                                background: isDark ? "#1f1f23" : "#f5f5f5",
+                                border: isDark ? "1px solid #27272a" : "1px solid #e5e5e5",
+                              }}
+                            >
+                              <div
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ background: perm.granted ? "#10b981" : "#52525b" }}
+                              />
+                              <span
+                                className="flex-1 truncate font-mono"
+                                style={{ color: perm.granted ? (isDark ? "#10b981" : "#047857") : (isDark ? "#71717a" : "#999999") }}
+                                title={perm.name}
+                              >
+                                {perm.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="rounded p-3 text-center"
+                  style={{ background: isDark ? "#1f1f23" : "#f5f5f5", border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #e5e5e5" }}
+                >
+                  <span className="text-[10px]" style={{ color: isDark ? "#52525b" : "#999999" }}>
+                    No permissions requested
+                  </span>
+                </div>
+              )
             )}
           </div>
         ) : (
@@ -370,7 +465,7 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
                 color: isDark ? "#fb7185" : "#dc2626",
               }}
             >
-              <span className="text-[10px] font-bold">Package not found</span>
+              <span className="text-[10px] font-bold">{isIOS ? "App not found" : "Package not found"}</span>
             </div>
           </div>
         )}

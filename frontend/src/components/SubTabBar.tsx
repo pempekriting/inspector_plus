@@ -56,7 +56,7 @@ export const SubTabBar = memo(function SubTabBar({ activeTab, onTabChange, isDar
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200"
             style={{
               background: isActive
-                ? (isDark ? '#22d3ee' : '#0066cc')
+                ? (isDark ? 'var(--accent-cyan)' : '#0066cc')
                 : 'transparent',
               color: isActive
                 ? (isDark ? '#0a0a0c' : '#ffffff')

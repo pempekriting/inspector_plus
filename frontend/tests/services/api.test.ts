@@ -5,7 +5,7 @@ import {
   DeviceInfoSchema,
   DeviceStatusSchema,
   HierarchyResponseSchema,
-} from "../api";
+} from "../../src/services/api";
 
 describe("api Zod schemas", () => {
   describe("BoundsSchema", () => {

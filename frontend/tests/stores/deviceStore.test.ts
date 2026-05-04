@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useDeviceStore } from "../deviceStore";
+import { useDeviceStore } from "../../src/stores/deviceStore";
 
 const localStorageMock = {
   getItem: vi.fn(),
