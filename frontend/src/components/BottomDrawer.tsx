@@ -60,10 +60,10 @@ export const BottomDrawer = memo(function BottomDrawer({
   return (
     <div
       ref={containerRef}
-      className="flex flex-col flex-shrink-0 select-none"
+      className="flex flex-col flex-shrink-0 select-none rounded-t-lg"
       style={{
-        background: isDark ? "#111114" : "#ffffff",
-        borderTop: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a",
+        background: "var(--bg-secondary)",
+        borderTop: "var(--nb-border)",
         height: isCollapsed ? minHeight : height,
         transition: isDragging ? "none" : "height 0.15s ease-out",
         cursor: isDragging ? "ns-resize" : "default",
@@ -73,8 +73,8 @@ export const BottomDrawer = memo(function BottomDrawer({
       <div
         className="flex items-center justify-between px-4 py-2 flex-shrink-0"
         style={{
-          background: isDark ? "#18181b" : "#e5e5e5",
-          borderBottom: isDark ? "2px solid #27272a" : "2px solid #d4d4d4",
+          background: "var(--bg-tertiary)",
+          borderBottom: "2px solid var(--border-subtle)",
           cursor: isDragging ? "ns-resize" : "ns-resize",
         }}
         onPointerDown={handleDragStart}
@@ -86,7 +86,7 @@ export const BottomDrawer = memo(function BottomDrawer({
           <div
             className="w-8 h-1 rounded-full"
             style={{
-              background: isDark ? "#3f3f46" : "#cccccc",
+              background: "var(--border-default)",
             }}
           />
         </div>
@@ -94,9 +94,9 @@ export const BottomDrawer = memo(function BottomDrawer({
           onClick={toggleCollapse}
           className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95"
           style={{
-            background: isDark ? "#1f1f23" : "#ffffff",
-            color: isDark ? "#71717a" : "#666666",
-            border: isDark ? "1.5px solid #3f3f46" : "1.5px solid #cccccc",
+            background: "var(--bg-elevated)",
+            color: "var(--text-secondary)",
+            border: "1.5px solid var(--border-default)",
           }}
         >
           <svg

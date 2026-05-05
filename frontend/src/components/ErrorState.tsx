@@ -21,8 +21,8 @@ export const ErrorState = memo(function ErrorState({
         className="w-16 h-16 flex items-center justify-center mb-4"
         style={{
           background: isDark ? "rgba(251, 113, 133, 0.1)" : "rgba(220, 38, 38, 0.08)",
-          border: isDark ? "3px solid #fb7185" : "3px solid #dc2626",
-          boxShadow: isDark ? "4px 4px 0 rgba(251, 113, 133, 0.3)" : "4px 4px 0 rgba(220, 38, 38, 0.2)",
+          border: isDark ? "3px solid var(--accent-rose)" : "3px solid #dc2626",
+          boxShadow: isDark ? "var(--nb-shadow-dark)" : "6px 6px 0 rgba(220, 38, 38, 0.2)",
           color: isDark ? "#fb7185" : "#dc2626",
         }}
       >
@@ -50,10 +50,10 @@ export const ErrorState = memo(function ErrorState({
             onClick={onRetry}
             className="px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
             style={{
-              background: isDark ? "#1f1f23" : "#ffffff",
+              background: "var(--bg-elevated)",
               color: isDark ? "#fb7185" : "#dc2626",
-              border: isDark ? "2px solid #fb7185" : "2px solid #dc2626",
-              boxShadow: isDark ? "3px 3px 0 rgba(251, 113, 133, 0.3)" : "3px 3px 0 rgba(220, 38, 38, 0.2)",
+              border: isDark ? "2px solid var(--accent-rose)" : "2px solid #dc2626",
+              boxShadow: isDark ? "var(--nb-shadow-dark)" : "6px 6px 0 rgba(220, 38, 38, 0.2)",
             }}
           >
             Retry
@@ -64,9 +64,9 @@ export const ErrorState = memo(function ErrorState({
             onClick={onCopyDetails}
             className="px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
             style={{
-              background: isDark ? "#1f1f23" : "#ffffff",
+              background: "var(--bg-elevated)",
               color: isDark ? "#a1a1aa" : "#4a4a4a",
-              border: isDark ? "2px solid #3f3f46" : "2px solid #cccccc",
+              border: "2px solid var(--border-default)",
             }}
           >
             Copy Details

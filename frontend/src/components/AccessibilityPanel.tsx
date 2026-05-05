@@ -133,8 +133,8 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
       <div
         className="px-3 py-2 flex items-center justify-between flex-shrink-0"
         style={{
-          background: isDark ? "#18181b" : "#e5e5e5",
-          borderBottom: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a",
+          background: "var(--bg-tertiary)",
+          borderBottom: "var(--nb-border)",
         }}
       >
         <div className="flex items-center gap-2">
@@ -150,12 +150,12 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
           disabled={isRunning || !uiTree}
           className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded transition-all active:scale-95"
           style={{
-            background: isDark ? "#34d399" : "#059669",
-            color: "#ffffff",
-            border: isDark ? "2px solid #34d399" : "2px solid #059669",
-            boxShadow: isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a",
-            opacity: isRunning || !uiTree ? 0.6 : 1,
-          }}
+                background: "var(--accent-emerald)",
+                color: "#ffffff",
+                border: "2px solid var(--accent-emerald)",
+                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
+                opacity: isRunning || !uiTree ? 0.6 : 1,
+              }}
         >
           {isRunning ? (
             <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -178,9 +178,9 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
             <div
               className="w-16 h-16 flex items-center justify-center mb-4"
               style={{
-                background: isDark ? "#18181b" : "#ffffff",
-                border: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a",
-                boxShadow: isDark ? "4px 4px 0 #000" : "4px 4px 0 #1a1a1a",
+                background: "var(--bg-secondary)",
+                border: "var(--nb-border)",
+                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
               }}
             >
               <svg className="w-8 h-8" style={{ color: isDark ? "#52525b" : "#999999" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -200,8 +200,8 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
             <div
               className="p-2.5 rounded"
               style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
-                border: isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a",
+                background: "var(--bg-elevated)",
+                border: "2px solid var(--border-default)",
               }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -251,10 +251,10 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
               onClick={handleExportReport}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-bold rounded transition-all active:scale-95"
               style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
+                background: "var(--bg-elevated)",
                 color: isDark ? "#a1a1aa" : "#4a4a4a",
-                border: isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a",
-                boxShadow: isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a",
+                border: "2px solid var(--border-default)",
+                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
               }}
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -290,10 +290,8 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
                           style={{
                             background: isSelected
                               ? colors.bg
-                              : isDark
-                              ? "#18181b"
-                              : "#f5f5f5",
-                            border: `1.5px solid ${isSelected ? colors.border : isDark ? "#3f3f46" : "#e5e5e5"}`,
+                              : "var(--bg-tertiary)",
+                            border: `1.5px solid ${isSelected ? colors.border : "var(--border-default)"}`,
                           }}
                         >
                           <div className="flex items-center justify-between mb-0.5">
@@ -306,7 +304,7 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
                             <span
                               className="text-[9px] font-mono px-1 py-0.5 rounded"
                               style={{
-                                background: isDark ? "#27272a" : "#e5e5e5",
+                                background: "var(--bg-tertiary)",
                                 color: isDark ? "#71717a" : "#999999",
                               }}
                             >

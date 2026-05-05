@@ -169,8 +169,8 @@ export const SearchBar = memo(function SearchBar() {
     <div
       className="px-3 py-2 flex-shrink-0"
       style={{
-        background: isDark ? "#18181b" : "#e5e5e5",
-        borderBottom: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a",
+        background: "var(--bg-tertiary)",
+        borderBottom: "var(--nb-border)",
       }}
     >
       {/* Search Input Row */}
@@ -187,12 +187,12 @@ export const SearchBar = memo(function SearchBar() {
             maxLength={500}
             className="w-full h-8 px-3 pr-16 text-[11px] font-medium rounded outline-none transition-all"
             style={{
-              background: isDark ? "#1f1f23" : "#ffffff",
-              color: isDark ? "#e4e4e7" : "#1a1a1a",
+              background: "var(--bg-elevated)",
+              color: "var(--text-primary)",
               border: charError
                 ? "2px solid #ef4444"
-                : (isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a"),
-              boxShadow: isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a",
+                : "2px solid var(--border-default)",
+              boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
             }}
           />
           {/* Char limit error tooltip */}
@@ -207,8 +207,8 @@ export const SearchBar = memo(function SearchBar() {
               onClick={handleClear}
               className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded transition-transform active:scale-90"
               style={{
-                background: isDark ? "#3f3f46" : "#cccccc",
-                color: isDark ? "#a1a1aa" : "#666666",
+                background: "var(--border-default)",
+                color: "var(--text-secondary)",
               }}
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -224,16 +224,16 @@ export const SearchBar = memo(function SearchBar() {
           className="h-8 px-2.5 flex items-center gap-1 rounded text-[10px] font-bold font-mono transition-all active:scale-95"
           style={{
             background: isRegex
-              ? (isDark ? "#0a0a0c" : "#1a1a1a")
-              : (isDark ? "#1f1f23" : "#ffffff"),
+              ? (isDark ? "var(--bg-primary)" : "#1a1a1a")
+              : "var(--bg-elevated)",
             color: isRegex
-              ? (isDark ? "var(--accent-amber, #fde047)" : "var(--accent-orange, #c2410c)")
-              : (isDark ? "#71717a" : "#666666"),
+              ? (isDark ? "var(--accent-amber)" : "var(--accent-orange)")
+              : "var(--text-secondary)",
             border: isRegex
-              ? (isDark ? "2px solid #fde047" : "2px solid #b45309")
-              : (isDark ? "2px solid #3f3f46" : "2px solid #cccccc"),
+              ? "2px solid var(--accent-amber)"
+              : "2px solid var(--border-default)",
             boxShadow: isRegex
-              ? (isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a")
+              ? (isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)")
               : "none",
           }}
           title="Toggle regex mode"
@@ -245,10 +245,10 @@ export const SearchBar = memo(function SearchBar() {
         {isSearching && (
           <div
             className="h-8 w-8 flex items-center justify-center rounded"
-            style={{ background: isDark ? "#1f1f23" : "#f0f0f0", border: isDark ? "2px solid #3f3f46" : "2px solid #cccccc" }}
+            style={{ background: "var(--bg-elevated)", border: "2px solid var(--border-default)" }}
           >
             <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
-              style={{ color: isDark ? "#00f5d4" : "#0066cc" }}>
+              style={{ color: "var(--accent-cyan)" }}>
               <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.2" />
               <path d="M21 12a9 9 0 01-9 9" strokeLinecap="round" />
             </svg>
@@ -260,9 +260,9 @@ export const SearchBar = memo(function SearchBar() {
           <div
             className="h-8 px-2 flex items-center rounded"
             style={{
-              background: isDark ? "rgba(253, 224, 71, 0.15)" : "rgba(180, 83, 9, 0.15)",
-              color: isDark ? "#fde047" : "#b45309",
-              border: isDark ? "2px solid #fde047" : "2px solid #b45309",
+              background: isDark ? "rgba(253,224,71,0.15)" : "rgba(180,83,9,0.15)",
+              color: "var(--accent-amber)",
+              border: "2px solid var(--accent-amber)",
             }}
           >
             <span className="text-[10px] font-bold font-mono">
@@ -283,16 +283,16 @@ export const SearchBar = memo(function SearchBar() {
               className="px-2.5 py-1 flex-shrink-0 text-[10px] font-bold rounded transition-all active:scale-95"
               style={{
                 background: isActive
-                  ? (isDark ? "#0a0a0c" : "#1a1a1a")
-                  : (isDark ? "#1f1f23" : "#ffffff"),
+                  ? "var(--bg-primary)"
+                  : "var(--bg-elevated)",
                 color: isActive
-                  ? (isDark ? "#f0f0f5" : "#ffffff")
-                  : (isDark ? "#a1a1aa" : "#4a4a4a"),
+                  ? "var(--text-primary)"
+                  : "var(--text-secondary)",
                 border: isActive
-                  ? (isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a")
-                  : (isDark ? "2px solid #3f3f46" : "2px solid #cccccc"),
+                  ? "2px solid var(--border-default)"
+                  : "2px solid var(--border-default)",
                 boxShadow: isActive
-                  ? (isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a")
+                  ? (isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)")
                   : "none",
               }}
             >

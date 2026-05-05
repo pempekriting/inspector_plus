@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRecording } from "../hooks/useRecording";
 import { useRecorder } from "../services/api";
+import { useThemeStore } from "../stores/themeStore";
 
 export function RecorderPanel() {
   const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } = useRecording();
   const [lang, setLang] = useState<"python" | "java" | "javascript">("python");
+  const [frameworkOpen, setFrameworkOpen] = useState(false);
+  const frameworkRef = useRef<HTMLDivElement>(null);
   const { exportRecording } = useRecorder();
+  const { theme } = useThemeStore();
+  const isDark = theme === "dark";
 
   const handleExport = async () => {
     const result = await exportRecording({ sessionId, lang, platform: "android" });
@@ -17,6 +22,16 @@ export function RecorderPanel() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (frameworkRef.current && !frameworkRef.current.contains(e.target as Node)) {
+        setFrameworkOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="flex flex-col h-full neo-recorder">
@@ -100,22 +115,57 @@ export function RecorderPanel() {
 
       {/* Footer - Actions */}
       <div className="neo-recorder-footer">
-        {/* Language selector - Neo brutalist custom select */}
+        {/* Language selector - matches DevicePanel dropdown style */}
         <div className="neo-recorder-lang">
           <label className="neo-recorder-lang-label">FRAMEWORK</label>
-          <div className="neo-recorder-lang-select-wrapper">
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value as typeof lang)}
-              className="neo-recorder-lang-select"
+          <div className="relative" ref={frameworkRef}>
+            <button
+              onClick={() => setFrameworkOpen(!frameworkOpen)}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[10px] font-bold transition-all duration-150"
+              style={{
+                background: "var(--bg-elevated)",
+                color: "var(--text-secondary)",
+                border: "2px solid var(--border-default)",
+                boxShadow: "2px 2px 0 var(--border-default)",
+              }}
             >
-              <option value="python">Python</option>
-              <option value="java">Java</option>
-              <option value="javascript">JavaScript</option>
-            </select>
-            <svg className="neo-recorder-lang-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
+              </svg>
+              <span className="max-w-[80px] truncate capitalize">{lang}</span>
+              <svg className={`w-3 h-3 transition-transform ${frameworkOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {frameworkOpen && (
+              <div
+                className="absolute left-0 bottom-full mb-2 z-50 rounded-lg overflow-hidden"
+                style={{
+                  background: "var(--bg-secondary)",
+                  border: "var(--nb-border)",
+                  boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
+                  minWidth: "140px",
+                }}
+              >
+                {(["python", "java", "javascript"] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => {
+                      setLang(l);
+                      setFrameworkOpen(false);
+                    }}
+                    className="w-full px-3 py-2.5 text-left text-[11px] font-medium transition-colors flex items-center gap-2"
+                    style={{
+                      color: lang === l ? "var(--accent-cyan)" : "var(--text-secondary)",
+                      background: lang === l ? "var(--bg-tertiary)" : "transparent",
+                      borderBottom: "1px solid var(--border-subtle)",
+                    }}
+                  >
+                    <span className="capitalize">{l}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -432,38 +482,8 @@ export function RecorderPanel() {
           color: var(--text-tertiary);
         }
 
-        .neo-recorder-lang-select-wrapper {
-          position: relative;
-        }
-
-        .neo-recorder-lang-select {
-          appearance: none;
-          padding: 6px 28px 6px 10px;
-          background: var(--bg-secondary);
-          border: 2px solid var(--border-default);
-          border-radius: 4px;
-          font-family: "JetBrains Mono", monospace;
-          font-size: 11px;
-          font-weight: 500;
-          color: var(--text-primary);
-          cursor: pointer;
-          box-shadow: 2px 2px 0 var(--border-default);
-        }
-
-        .neo-recorder-lang-select:focus {
-          outline: none;
-          box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-cyan);
-        }
-
         .neo-recorder-lang-arrow {
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 14px;
-          height: 14px;
-          color: var(--text-tertiary);
-          pointer-events: none;
+          display: none;
         }
 
         .neo-recorder-actions {

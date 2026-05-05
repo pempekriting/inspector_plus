@@ -56,9 +56,9 @@ export const EmptyState = memo(function EmptyState({ icon, title, description, a
       <div
         className="w-16 h-16 flex items-center justify-center mb-4"
         style={{
-          background: isDark ? "#18181b" : "#ffffff",
-          border: isDark ? "3px solid #3f3f46" : "3px solid #1a1a1a",
-          boxShadow: isDark ? "4px 4px 0 #000" : "4px 4px 0 #1a1a1a",
+          background: "var(--bg-secondary)",
+          border: "var(--nb-border)",
+          boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
           color: isDark ? "#71717a" : "#666666",
         }}
       >
@@ -81,9 +81,9 @@ export const EmptyState = memo(function EmptyState({ icon, title, description, a
           onClick={action.onClick}
           className="mt-4 px-4 py-2 rounded text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
           style={{
-            background: isDark ? "#1f1f23" : "#ffffff",
+            background: "var(--bg-elevated)",
             color: isDark ? "#e4e4e7" : "#1a1a1a",
-            border: isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a",
+            border: "2px solid var(--border-default)",
             boxShadow: isDark ? "3px 3px 0 #000" : "3px 3px 0 #1a1a1a",
           }}
         >

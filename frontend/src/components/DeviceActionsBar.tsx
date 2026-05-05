@@ -288,13 +288,13 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     <div
       className="px-3 py-2 space-y-2 flex-shrink-0"
       style={{
-        background: isDark ? "#18181b" : "#e5e5e5",
-        borderBottom: isDark ? "2px solid #3f3f46" : "2px solid #1a1a1a",
+        background: "var(--bg-tertiary)",
+        borderBottom: "2px solid var(--border-subtle)",
       }}
     >
       {/* Row 1: Input Text */}
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: isDark ? "#52525b" : "#999999" }}>
+        <span className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: "var(--text-tertiary)" }}>
           Input
         </span>
         <input
@@ -306,9 +306,9 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
           disabled={!hasEditText}
           className="flex-1 px-2 py-1 rounded text-[10px] font-mono disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            background: isDark ? "#1f1f23" : "#ffffff",
-            color: isDark ? "#e4e4e7" : "#1a1a1a",
-            border: isDark ? "2px solid #3f3f46" : "2px solid #cccccc",
+            background: "var(--bg-elevated)",
+            color: "var(--text-primary)",
+            border: "2px solid var(--border-default)",
           }}
         />
         <ActionPill
@@ -326,8 +326,8 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
         <div
           className="px-2 py-1 rounded text-[9px] font-medium"
           style={{
-            background: isDark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.1)",
-            color: isDark ? "#f87171" : "#dc2626",
+            background: isDark ? "rgba(248,113,113,0.15)" : "rgba(220,38,38,0.1)",
+            color: isDark ? "var(--accent-rose)" : "#dc2626",
           }}
         >
           {errorMsg}

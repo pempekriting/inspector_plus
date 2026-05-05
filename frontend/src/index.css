@@ -440,20 +440,20 @@ body, .theme-transition {
   }
 
   .neo-panel-dark {
-    background: #111114;
-    border: 3px solid #3f3f46;
-    box-shadow: 6px 6px 0 #000;
+    background: var(--bg-secondary);
+    border: var(--nb-border);
+    box-shadow: var(--nb-shadow-dark);
   }
 
   .neo-panel-light {
-    background: #ffffff;
-    border: 3px solid #1a1a1a;
-    box-shadow: 6px 6px 0 #1a1a1a;
+    background: var(--bg-secondary);
+    border: var(--nb-border);
+    box-shadow: var(--nb-shadow-light);
   }
 
   .neo-inspector {
-    background: #111114;
-    border-left: 3px solid #3f3f46;
+    background: var(--bg-secondary);
+    border-left: var(--nb-border);
   }
 
   .neo-inspector-light {
@@ -469,13 +469,13 @@ body, .theme-transition {
   }
 
   .neo-header-dark {
-    background: #18181b;
-    border-bottom: 3px solid #3f3f46;
+    background: var(--bg-tertiary);
+    border-bottom: var(--nb-border);
   }
 
   .neo-header-light {
-    background: #e5e5e5;
-    border-bottom: 3px solid #1a1a1a;
+    background: var(--bg-tertiary);
+    border-bottom: var(--nb-border);
   }
 
   /* Neo-Brutalist Buttons */
@@ -526,7 +526,7 @@ body, .theme-transition {
     @apply absolute right-0 top-full mt-2 z-50 rounded-lg overflow-hidden;
     background: var(--bg-secondary);
     border: var(--nb-border);
-    box-shadow: 6px 6px 0 #000;
+    box-shadow: var(--nb-shadow-dark);
     min-width: 220px;
   }
 

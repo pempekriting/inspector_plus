@@ -115,10 +115,10 @@ function App() {
                 title="Toggle theme"
                 className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
                 style={{
-                  background: isDark ? '#1f1f23' : '#ffffff',
-                  color: isDark ? '#a1a1aa' : '#525252',
-                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                  background: "var(--bg-elevated)",
+                  color: "var(--text-secondary)",
+                  border: "2px solid var(--border-default)",
+                  boxShadow: "2px 2px 0 var(--border-default)",
                 }}
               >
                 {isDark ? (
@@ -139,10 +139,10 @@ function App() {
                 title="Keyboard shortcuts (?)"
                 className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
                 style={{
-                  background: isDark ? '#1f1f23' : '#ffffff',
-                  color: isDark ? '#a1a1aa' : '#525252',
-                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                  background: "var(--bg-elevated)",
+                  color: "var(--text-secondary)",
+                  border: "2px solid var(--border-default)",
+                  boxShadow: "2px 2px 0 var(--border-default)",
                 }}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -157,10 +157,10 @@ function App() {
                 title="Settings"
                 className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
                 style={{
-                  background: isDark ? '#1f1f23' : '#ffffff',
-                  color: isDark ? '#a1a1aa' : '#525252',
-                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                  background: "var(--bg-elevated)",
+                  color: "var(--text-secondary)",
+                  border: "2px solid var(--border-default)",
+                  boxShadow: "2px 2px 0 var(--border-default)",
                 }}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
