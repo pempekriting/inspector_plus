@@ -46,6 +46,11 @@ Backend (FastAPI)
 ├── REST: /screenshot, /hierarchy, /tap, /input/text, /device/status, /devices
 ├── Bridges: AndroidDeviceBridge (ADB), IOSDeviceBridge (idb)
 └── Commands: AppCommands (install/uninstall/launch/list)
+
+MCP Server (TypeScript - port 8002)
+├── Tools: get_hierarchy, get_node, get_children, get_path, get_ancestors, search_nodes
+├── Transport: Streamable HTTP (JSON-RPC 2.0)
+└── SSE: /subscribe/:deviceId for real-time tree updates
 ```
 
 ---
@@ -256,77 +261,124 @@ interface Device {
 - `test_device_bridges.py` — Android/iOS bridge unit tests
 - `test_app_commands.py` — AppCommands tests
 
----
-
-## Known Issues Fixed (2026-04-26)
-- ScreenshotCanvas useEffect missing `selectedDevice` in deps → canvas not updating on device switch
-- Backend `get_bridge("")` fell through to `AndroidDeviceBridge(serial=None)` → "more than one device" error
-- `adb devices -1` returns empty on macOS → now parses `adb devices` full output
-- DevicePanel didn't sync `connected` state to deviceStore
-- Empty udid from frontend bypassed backend device resolution → now backend always resolves empty to first device
-- AbortError spam in console on device switch → now silently absorbed
 
 ---
 
-## Phased Delivery
+## MCP Server (AI Tool Access)
 
-| Phase | Status | Scope |
-|-------|--------|-------|
-| v1.0 | ✅ Done | Core inspection (screenshot, hierarchy, tap, devices) |
-| v1.1 | ✅ Done | Lock feature, empty states, device reconnect, test coverage |
-| v1.2 | ✅ Done | Accessibility Audit, WebView Support, Recorder |
+MCP (Model Context Protocol) server that serves tree hierarchy data for AI clients (Claude Code, etc.), enabling POM (Page Object Model) generation.
 
----
+### Quick Start
 
-## Project Structure
+```bash
+# Terminal 1: FastAPI backend
+cd backend && uv run uvicorn main:app --reload --port 8001
+
+# Terminal 2: MCP server
+cd backend/mcp && npm install && npm run dev
+```
+
+**MCP Port:** 8002 (configure via `MCP_PORT` env var)
+
+### Configuration
+
+| Env Variable | Default | Description |
+|--------------|---------|-------------|
+| `MCP_PORT` | `8002` | MCP server port |
+| `FASTAPI_URL` | `http://localhost:8001` | FastAPI backend URL |
+
+### Available Tools
+
+| Tool | Arguments | Description |
+|------|-----------|-------------|
+| `get_hierarchy` | `deviceId`, `maxDepth?` | Fetch full UI tree hierarchy |
+| `get_node` | `nodeId` | Get specific node by ID |
+| `get_children` | `nodeId`, `cursor?`, `pageSize?` | Paginated children |
+| `get_path` | `nodeId` | Path from root to node |
+| `get_ancestors` | `nodeId` | All ancestor nodes |
+| `search_nodes` | `deviceId`, `query`, `matchType?`, `limit?` | Search by text/xpath/regex |
+
+### MCP Protocol (JSON-RPC 2.0)
+
+**Initialize:**
+```bash
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"cli","version":"1.0.0"}}}'
+
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}'
+```
+
+**List Tools:**
+```bash
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+**Call Tool (get_hierarchy):**
+```bash
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_hierarchy","arguments":{"deviceId":"emulator-5554"}}}'
+```
+
+**Call Tool (search_nodes):**
+```bash
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_nodes","arguments":{"deviceId":"emulator-5554","query":"Login","matchType":"text"}}}'
+```
+
+### SSE Subscription (Real-time)
+
+```bash
+curl -N http://localhost:8002/subscribe/emulator-5554
+```
+
+### File Structure
 
 ```
-inspector_plus/
-├── SPEC.md                  ← this file
-├── README.md
-├── backend/
-│   ├── main.py              # FastAPI entry + all REST routes
-│   ├── device/
-│   │   ├── android_bridge.py   # ADB + uiautomator
-│   │   └── ios_bridge.py        # idb CLI
-│   ├── commands/
-│   │   └── app_commands.py     # install/uninstall/launch/list
-│   ├── test_app.py              # 35 REST tests
-│   ├── test_device_bridges.py   # 36 bridge tests
-│   └── test_app_commands.py     # 17 app command tests
-└── frontend/
-    ├── src/
-    │   ├── App.tsx              # main layout
-    │   ├── components/           # 31+ components
-│   │   ├── AccessibilityPanel.tsx
-│   │   ├── AdbPanel.tsx
-│   │   ├── ApkInfoPanel.tsx
-│   │   ├── BottomDrawer.tsx
-│   │   ├── CommandsDrawer.tsx
-│   │   ├── CommandsPanel.tsx
-│   │   ├── DevicePanel.tsx
-│   │   ├── EmptyState.tsx
-│   │   ├── ErrorBoundary.tsx
-│   │   ├── ErrorState.tsx
-│   │   ├── HierarchyPanel.tsx
-│   │   ├── HierarchyTree.tsx
-│   │   ├── LayoutBoundsOverlay.tsx
-│   │   ├── LocatorPanel.tsx
-│   │   ├── Overlay.tsx
-│   │   ├── PropertiesPanel.tsx
-│   │   ├── PropertyRow.tsx
-│   │   ├── RecorderPanel.tsx
-│   │   ├── ScreenshotCanvas.tsx
-│   │   ├── SearchBar.tsx
-│   │   ├── SkeletonLoader.tsx
-│   │   ├── StatusBar.tsx
-│   │   ├── StylePanel.tsx
-│   │   └── TabBar.tsx
-│   ├── stores/              # hierarchyStore, deviceStore, themeStore, recorderStore
-    │   ├── stores/              # hierarchyStore, deviceStore, themeStore
-    │   ├── hooks/                # useDevice.ts
-    │   ├── services/             # api.ts (TanStack Query hooks)
-    │   ├── utils/               # locators.ts, coordinates.ts
-    │   └── types/               # shared.ts
-    └── vitest.config.ts
+backend/mcp/
+├── src/
+│   ├── server.ts              # Express + StreamableHTTP MCP
+│   ├── types/mcp-types.ts    # Zod schemas, types
+│   ├── services/tree-service.ts  # FastAPI bridge
+│   ├── cache/tree-cache.ts    # TTL cache
+│   └── tools/                 # hierarchy, traversal, search tools
+├── package.json
+└── tsconfig.json
 ```
+
+### Error Responses
+
+```json
+// Device not connected
+{"error": "Device not connected: emulator-5554", "code": "DEVICE_NOT_CONNECTED"}
+
+// Node not found
+{"error": "Node not found: Button_999", "code": "NODE_NOT_FOUND"}
+```
+
+### Response Format
+
+Tool responses wrap JSON in `content.text`:
+
+```javascript
+// Parse get_hierarchy response
+const parsed = JSON.parse(result.content[0].text);
+// parsed.data.tree - hierarchy
+// parsed.data.stats - { totalNodes, depth, lastRefresh }
+// parsed._meta - { source: "android"|"ios", cached }
+```
+
+---
+
+## Known Issues
+
+1. **Python 3.14 Incompatibility:** WebSocket handler uses deprecated APIs removed in Python 3.14. Use Python 3.13.
+2. **ADB Required:** Must have Android SDK with ADB installed and device connected.
+3. **No Authentication:** Backend has no auth - only runs locally.
+4. **iOS Simulator Only:** Real iOS devices require WDA (WebDriverAgent) via idb-companion.

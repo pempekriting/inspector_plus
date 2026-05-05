@@ -2,159 +2,110 @@
 
 ## Prerequisites
 
-- Python 3.13+ (not 3.14 - WebSocket compatibility issue)
+- Python 3.13+ (not 3.14 — WebSocket compatibility issue)
 - Node.js 18+
 - npm or yarn
-- ADB (Android Debug Bridge) installed and in PATH
+- ADB in PATH
 - For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
-
-## Environment Setup
-
-### 1. Backend Setup
-
-```bash
-cd backend
-
-# Create virtual environment with Python 3.13
-uv sync --python python3.13
-
-# Or if uv not installed
-python3.13 -m venv .venv
-source .venv/bin/activate
-pip install fastapi uvicorn websockets pydantic
-```
-
-### 2. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Or if using yarn
-yarn
-```
-
-### 3. Tauri Setup (for desktop app)
-
-```bash
-# Install Rust if not available
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Verify installation
-rustc --version
-cargo --version
-```
-
-## Running the Application
-
-### Development Mode (Browser)
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-uv sync --python python3.13
-uvicorn main:app --reload --port 8001
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-Open `http://localhost:5173` in your browser.
-
-### Tauri Desktop App
-
-```bash
-cd frontend
-npm run tauri dev
-```
-
-This will:
-1. Start the Python backend automatically
-2. Open the Tauri window
-3. Connect frontend to backend
-
-### Build for Production
-
-**Frontend + Tauri:**
-```bash
-cd frontend
-npm run tauri build
-```
-
-Output: `frontend/src-tauri/target/release/inspectorplus`
 
 ## Project Structure
 
 ```
 inspector_plus/
-├── backend/
-│   ├── main.py              # FastAPI entry point + all routes + ADB security model
-│   ├── pyproject.toml       # Python dependencies
-│   ├── .venv/               # Virtual environment
+├── backend/                    # Python FastAPI
+│   ├── main.py                 # Entry + routes + error handlers
+│   ├── pyproject.toml
 │   ├── device/
-│   │   ├── __init__.py      # Bridge factory (create_bridge_for_device)
-│   │   ├── base.py          # DeviceBridgeBase abstract class (15+ methods)
-│   │   ├── android_bridge.py # ADB + uiautomator implementation
-│   │   └── ios_bridge.py     # idb + WDA implementation
-│   └── commands/
-│       ├── app_commands.py      # Android app commands
-│       └── ios_app_commands.py  # iOS app commands
+│   │   ├── __init__.py         # Bridge factory
+│   │   ├── base.py             # DeviceBridgeBase abstract
+│   │   ├── android_bridge.py  # ADB + uiautomator
+│   │   └── ios_bridge.py       # idb + WDA
+│   ├── commands/
+│   │   ├── app_commands.py
+│   │   └── ios_app_commands.py
+│   └── mcp/                    # MCP server (Node.js)
+│       ├── src/
+│       │   ├── server.ts
+│       │   ├── types/
+│       │   ├── services/
+│       │   ├── cache/
+│       │   └── tools/
+│       └── package.json
 │
-├── frontend/
+├── frontend/                   # React + TypeScript + Vite
 │   ├── src/
-│   │   ├── App.tsx           # Main layout (3-tab: inspector/commands/apk-info)
-│   │   ├── main.tsx          # React entry point + QueryClient provider
-│   │   ├── index.css         # Global styles + CSS variables
-│   │   ├── components/       # 29+ components
-│   │   ├── stores/           # Zustand stores (hierarchy, device, theme, recorder)
-│   │   ├── hooks/
-│   │   │   └── useDevice.ts  # Polling hook (legacy)
-│   │   └── services/
-│   │       └── api.ts        # TanStack Query hooks + Zod schemas (primary)
-│   ├── src-tauri/
-│   │   ├── tauri.conf.json   # Tauri configuration
-│   │   ├── Cargo.toml        # Rust dependencies
-│   │   └── src/
-│   │       └── main.rs       # Rust entry point
-│   ├── package.json
-│   └── vite.config.ts
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   ├── stores/           # Zustand
+│   │   ├── services/api.ts    # TanStack Query + Zod
+│   │   └── types/
+│   └── src-tauri/             # Tauri desktop
 │
-├── docs/                    # Documentation
-│   ├── DEVELOPMENT.md        # This file
-│   └── ARCHITECTURE.md       # Technical architecture
+├── docs/
+│   ├── ARCHITECTURE.md         # System design
+│   └── DEVELOPMENT.md          # This file
 │
-├── CLAUDE.md                # Claude Code instructions
-├── README.md                # Project overview
-└── SPEC.md                  # Feature specification
+├── SPEC.md                    # Technical reference
+├── README.md                  # Quick overview
+└── CLAUDE.md                  # Claude Code instructions
 ```
 
-## Development Workflow
+## Backend Setup
 
-### 1. Making Backend Changes
-
-The backend runs independently. After modifying backend code:
-- If using `uvicorn --reload`, changes auto-reload
-- Otherwise restart: `uvicorn main:app --reload --port 8001`
-
-### 2. Making Frontend Changes
-
-Changes hot-reload via Vite. No restart needed.
-
-### 3. Making Tauri/Rust Changes
-
-Requires app restart:
 ```bash
-npm run tauri dev
+cd backend
+uv sync --python python3.13
 ```
 
-### 4. Adding New API Endpoints
+Start:
+```bash
+uv run uvicorn main:app --reload --port 8001
+```
 
-**Backend (main.py):**
+## Frontend Setup
+
+```bash
+cd frontend
+npm install
+```
+
+Start:
+```bash
+npm run dev      # Browser mode (http://localhost:5173)
+npm run tauri dev  # Desktop app
+```
+
+## MCP Server Setup
+
+```bash
+cd backend/mcp
+npm install
+```
+
+Start:
+```bash
+npm run dev      # Development (tsx watch)
+npm run build && npm start  # Production (port 8002)
+```
+
+## Running Tests
+
+**Backend:**
+```bash
+cd backend
+uv run pytest
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm test
+```
+
+## Adding New Features
+
+### Backend: New API Endpoint
+
 ```python
 from main import AppError, DeviceNotFoundError
 
@@ -167,17 +118,15 @@ async def new_endpoint(udid: Optional[str] = None):
         result = bridge.some_method()
         return result
     except AppError:
-        raise  # Let global handler deal with it
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to ...")
+        raise HTTPException(status_code=500, detail=f"Failed: {e}")
 ```
 
-**Frontend (services/api.ts) — TanStack Query + Zod:**
-```typescript
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from './services/api';
+### Frontend: New TanStack Query Hook
 
-// Add Zod schema for request/response
+```typescript
+// services/api.ts
 const NewEndpointSchema = z.object({ field: z.string() });
 
 export function useNewEndpoint(udid?: string) {
@@ -188,86 +137,75 @@ export function useNewEndpoint(udid?: string) {
 }
 ```
 
-## Testing
+### New MCP Tool
 
-### Manual Testing
+```typescript
+// backend/mcp/src/tools/hierarchy.ts
+export async function getNodeTool(input) {
+  // Implementation
+}
 
-1. Connect Android device via USB or start emulator
-2. Verify ADB connection: `adb devices`
-3. Start backend and frontend
-4. Test interactions:
-   - Screenshot displays correctly
-   - Tree view populates
-   - Hover highlights work
-   - Click-to-tap works
-
-### iOS Testing
-
-1. Install idb-companion: `brew install facebook/fb/idb-companion`
-2. List simulators: `xcrun simctl list devices`
-3. Boot a simulator
-4. idb should detect it automatically
+// backend/mcp/src/server.ts
+server.registerTool('get_node', {
+  description: '...',
+  inputSchema: z.object({ nodeId: z.string() }),
+}, async ({ nodeId }) => {
+  return handleToolCall('get_node', { nodeId });
+});
+```
 
 ## Troubleshooting
 
-### ADB Not Found
-
+### ADB not found
 ```bash
-# Check if adb is installed
 which adb
-
-# If not found, install Android SDK platform tools
+# Install Android SDK platform tools if missing
 ```
 
-### Backend Port Already in Use
-
+### Port 8001 in use
 ```bash
-# Find and kill process on port 8001
 lsof -i :8001
 kill -9 <PID>
 ```
 
-### Python Version Issue
-
+### Python 3.14 detected
 ```bash
-# Check Python version
-python3 --version
-
-# Should be 3.13.x, not 3.14.x
-# If on 3.14, use pyenv or conda to install 3.13
+python3 --version  # Should be 3.13.x
+# Use pyenv or conda to install 3.13 if needed
 ```
 
-### Tauri Build Fails
-
+### Tauri build fails
 ```bash
-# Clean Rust build cache
 cd frontend/src-tauri
 cargo clean
-
-# Rebuild
 npm run tauri build
+```
+
+### MCP server won't start
+```bash
+cd backend/mcp
+npm install
+npm run build
+# Check for TypeScript errors
 ```
 
 ## Code Style
 
-### Python (Backend)
-
-- Use type hints
-- Follow PEP 8
+### Python
+- Type hints on all functions
 - Use `async` for FastAPI handlers
 - Validate input with Pydantic models
+- Follow PEP 8
 
-### TypeScript (Frontend)
+### TypeScript
+- Strict TypeScript
+- Zustand for state management
+- `memo()` for performance-critical components
 
-- Use strict TypeScript
-- Prefer Zustand stores over React Context
-- Use `memo()` for performance-critical components
-- Follow existing naming conventions
+## Adding New Device Platform
 
-## Adding New Device Platforms
-
-1. Create new bridge class in `backend/device/`
+1. Create `backend/device/new_platform_bridge.py`
 2. Inherit from `DeviceBridgeBase`
 3. Implement all abstract methods
-4. Update `get_bridge()` in `main.py` to detect new platform
-5. Update frontend device store if platform needs special handling
+4. Update `get_bridge()` in `main.py`
+5. Update frontend device store if needed

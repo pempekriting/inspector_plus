@@ -82,3 +82,16 @@ curl -X POST http://localhost:8001/device/select \
 ## Environment
 
 Uses `uv` for Python dependency management.
+
+## MCP Server (AI Tool Access)
+
+A TypeScript MCP server exposes hierarchy data for AI clients. See `docs/MCP_SERVER.md` for full documentation or `SPEC.md` for consolidated reference.
+
+```bash
+cd backend/mcp
+npm install
+npm run dev      # Development (tsx watch)
+npm run build && npm start   # Production
+```
+
+**Port:** 8002 (configure via `MCP_PORT` env var)

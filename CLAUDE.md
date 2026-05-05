@@ -83,11 +83,15 @@ inspector_plus/
 │   ├── test_app.py              # 35 pytest tests (covers all endpoints)
 │   ├── pyproject.toml
 │   ├── Dockerfile
-│   ├── device/
-│   │   ├── __init__.py          # Bridge factory
-│   │   ├── base.py              # DeviceBridgeBase (abstract)
-│   │   ├── android_bridge.py    # ADB implementation
-│   │   └── ios_bridge.py        # idb implementation
+│   ├── mcp/                     # MCP server for AI tool consumption
+│   │   ├── src/
+│   │   │   ├── server.ts         # Express + StreamableHTTP MCP server
+│   │   │   ├── types/mcp-types.ts
+│   │   │   ├── services/tree-service.ts
+│   │   │   ├── cache/tree-cache.ts
+│   │   │   └── tools/           # hierarchy, traversal, search tools
+│   │   ├── package.json
+│   │   └── tsconfig.json
 │   └── commands/
 │       └── app_commands.py      # Appium-like command executor
 ├── frontend/
@@ -187,3 +191,11 @@ npm run dev                    # or npm run tauri dev for desktop
 2. Pulls XML from `/sdcard/window_dump.xml` → parses to JSON
 3. Each node gets incremental ID: `ClassName_N`
 4. Bounds `[x1,y1,x2,y2]` → `{x, y, width, height}`
+
+### MCP Server (Port 8002)
+Separate TypeScript MCP server for AI tool consumption. Exposes the same hierarchy data via MCP protocol.
+
+**Start:** `cd backend/mcp && npm run dev`
+**Endpoints:** `POST /mcp` (tools), `GET /health`, `GET /subscribe/:deviceId` (SSE)
+**Tools:** `get_hierarchy`, `get_node`, `get_children`, `get_path`, `get_ancestors`, `search_nodes`
+**Docs:** `docs/MCP_SERVER.md` and `docs/MCP_QUICKREF.md`
