@@ -15,8 +15,9 @@ export function useRecording(lang: Lang = "python") {
     (step: Omit<RecordingStep, "code">) => {
       const { sessionId } = useRecorderStore.getState();
 
-      // Generate code for display based on selected lang
-      const code = stepToCode(step, lang);
+      // Generate code for display based on current lang from store
+      const currentLang = useRecorderStore.getState().lang;
+      const code = stepToCode(step, currentLang);
 
       // Create full step with code
       const fullStep: RecordingStep = { ...step, code };
