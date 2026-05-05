@@ -275,6 +275,26 @@ export function useGestureExecute() {
   });
 }
 
+// Input text to device
+export function useInputText() {
+  return useMutation({
+    mutationFn: ({ text, udid }: { text: string; udid?: string }) =>
+      apiFetch<{ success: boolean }>(
+        udid
+          ? `${getApiUrl()}/input/text?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/input/text`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        }
+      ),
+    onError: (error) => {
+      console.error("Input text failed:", error);
+    },
+  });
+}
+
 // Execute arbitrary script/command
 export function useExecuteScript() {
   return useMutation({

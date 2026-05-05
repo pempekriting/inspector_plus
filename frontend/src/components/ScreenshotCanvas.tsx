@@ -5,6 +5,7 @@ import { useThemeStore } from "../stores/themeStore";
 import { SkeletonCanvas } from "./SkeletonLoader";
 import { LayoutBoundsOverlay } from "./LayoutBoundsOverlay";
 import { useRecording } from "../hooks/useRecording";
+import { useInputText } from "../services/api";
 
 interface ImageMetrics {
   naturalWidth: number;
@@ -80,6 +81,7 @@ export function ScreenshotCanvas() {
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
   const { isRecording, recordStep } = useRecording();
+  const inputTextMutation = useInputText();
 
   // D2: Zoom + Pan state
   const [zoom, setZoom] = useState(0.7);
@@ -176,6 +178,12 @@ export function ScreenshotCanvas() {
           const fillValue = window.prompt("Enter text to fill:");
           if (fillValue !== null) {
             const locator = nodeToLocator(node);
+            // Execute fill on device first
+            inputTextMutation.mutate({
+              text: fillValue,
+              udid: selectedDevice || undefined,
+            });
+            // Then record the step
             recordStep({
               action: "fill",
               nodeId: node.id,
