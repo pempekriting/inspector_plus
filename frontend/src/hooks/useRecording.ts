@@ -104,21 +104,19 @@ function stepToCode(step: Omit<RecordingStep, "code">, lang: Lang): string {
         return `driver.findElement(${by}("${locator.value}"))`;
     }
   } else {
-    // javascript
-    const by = locator.strategy === "id"
-      ? `using: "id", value: "${locator.value}"`
-      : `using: "xpath", value: "${locator.value}"`;
+    // javascript - WebDriverIO
+    const strategy = locator.strategy === "id" ? "id" : locator.strategy === "accessibility-id" ? "accessibility id" : "xpath";
     switch (action) {
       case "click":
-        return `await driver.$({{{by}}}).click()`;
+        return `await (await driver.$("${locator.value}")).click()`;
       case "fill":
-        return `await driver.$({{{by}}}).setValue("${value || ""}")`;
+        return `await (await driver.$("${locator.value}")).setValue("${value || ""}")`;
       case "swipe":
         return `// swipe`;
       case "wait":
         return `await driver.pause(${(Number(value) || 1000)})`;
       default:
-        return `await driver.$(${by})`;
+        return `await driver.$("${locator.value}")`;
     }
   }
 }
