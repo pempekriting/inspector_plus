@@ -928,27 +928,6 @@ const TreeNode = memo(function TreeNode({
             </span>
           ) : null}
         </div>
-
-        {node.capabilities && node.capabilities.length > 0 && (
-          <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-            {node.capabilities
-                  .filter((cap: UiCapability) => cap.type !== 'tap' && cap.type !== 'focus')
-                  .map((cap: UiCapability) => (
-              <span
-                key={cap.type}
-                title={cap.type}
-                className="font-mono text-[8px] font-bold px-1 py-0.5 rounded-sm"
-                style={{
-                  background: capColor(cap.type),
-                  color: '#0a0a0c',
-                }}
-              >
-                {cap.badge}
-              </span>
-            ))}
-          </div>
-        )}
-
         {node.bounds && (
           <span className="text-[9px] ml-2 flex-shrink-0 font-mono" style={{ color: isDark ? '#52525b' : '#999999' }}>
             {node.bounds.width}x{node.bounds.height}
