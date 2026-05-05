@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types";
 import { randomUUID } from "node:crypto";
 import express, { Request, Response } from "express";
+import cors from "cors";
 import * as z from "zod";
 
 import { getHierarchy, getNode, getChildren, getAncestors, getPath, searchNodes, subscribeTree, getSubscriberCount } from "./services/tree-service.js";
@@ -227,6 +228,7 @@ function registerTools(server: McpServer): void {
 
 const app = express();
 app.use(express.json());
+app.use(cors({ origin: "*" }));
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {

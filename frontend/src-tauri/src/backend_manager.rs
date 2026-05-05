@@ -87,6 +87,15 @@ impl BackendManager {
         .is_ok()
     }
 
+    fn find_available_port(start: u16) -> Option<u16> {
+        for port in start..start + 100 {
+            if !Self::is_port_open(port) {
+                return Some(port);
+            }
+        }
+        None
+    }
+
     pub fn start(&mut self) -> Result<(), String> {
         if self.status == BackendStatus::Running {
             return Ok(());
@@ -132,6 +141,12 @@ impl BackendManager {
         Ok(())
     }
 
+    pub fn restart_on_port(&mut self, port: u16) -> Result<(), String> {
+        self.stop()?;
+        self.port = port;
+        self.start()
+    }
+
     pub fn wait_for_ready(&self, timeout_secs: u64) -> bool {
         let mut retries = timeout_secs * 2;
         while retries > 0 {
@@ -159,5 +174,21 @@ impl Drop for BackendManager {
 pub type SharedBackendManager = Arc<Mutex<BackendManager>>;
 
 pub fn create_backend_manager() -> SharedBackendManager {
-    Arc::new(Mutex::new(BackendManager::new(8001)))
+    let requested_port = std::env::var("BACKEND_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok());
+
+    let port = match requested_port {
+        Some(p) => p,
+        None => {
+            // Try default 8001; if busy, find available port starting from 8002
+            if BackendManager::is_port_open(8001) {
+                BackendManager::find_available_port(8002).unwrap_or(8001)
+            } else {
+                8001
+            }
+        }
+    };
+
+    Arc::new(Mutex::new(BackendManager::new(port)))
 }

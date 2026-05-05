@@ -10,6 +10,7 @@ import { StatusBar } from "./components/StatusBar";
 import { CommandsDrawer } from "./components/CommandsDrawer";
 import { RecorderPanel } from "./components/RecorderPanel";
 import { OnboardingModal } from "./components/OnboardingModal";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
 
@@ -25,6 +26,7 @@ function App() {
   const [transitionPhase, setTransitionPhase] = useState<'idle' | 'switching'>('idle');
 
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // D4: Keyboard shortcut overlay
   useEffect(() => {
@@ -100,7 +102,73 @@ function App() {
               borderBottom: isDark ? '3px solid #3f3f46' : '3px solid #1a1a1a',
             }}
           >
-            <DevicePanel onDeviceChange={handleDeviceChange} onShowShortcuts={() => setShowShortcuts(prev => !prev)} />
+            <DevicePanel onDeviceChange={handleDeviceChange} />
+
+            {/* Right-side controls */}
+            <div className="ml-auto flex items-center gap-2">
+              {/* Theme Toggle */}
+              <button
+                onClick={() => {
+                  const { toggleTheme } = useThemeStore.getState();
+                  toggleTheme();
+                }}
+                title="Toggle theme"
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
+                style={{
+                  background: isDark ? '#1f1f23' : '#ffffff',
+                  color: isDark ? '#a1a1aa' : '#525252',
+                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
+                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                }}
+              >
+                {isDark ? (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Keyboard Shortcuts */}
+              <button
+                onClick={() => setShowShortcuts(true)}
+                title="Keyboard shortcuts (?)"
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
+                style={{
+                  background: isDark ? '#1f1f23' : '#ffffff',
+                  color: isDark ? '#a1a1aa' : '#525252',
+                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
+                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+                </svg>
+              </button>
+
+              {/* Settings */}
+              <button
+                onClick={() => setShowSettings(true)}
+                title="Settings"
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
+                style={{
+                  background: isDark ? '#1f1f23' : '#ffffff',
+                  color: isDark ? '#a1a1aa' : '#525252',
+                  border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
+                  boxShadow: isDark ? '2px 2px 0 #3f3f46' : '2px 2px 0 #1a1a1a',
+                }}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 6h16M4 12h16M4 18h7" />
+                  <circle cx="17" cy="18" r="3" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Tab Content */}
@@ -223,6 +291,7 @@ function App() {
       )}
 
       <OnboardingModal />
+      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import type { Bounds, DeviceInfo, DeviceStatus, UiNode } from "../types/shared";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+import { getApiUrl } from "../config/apiConfig";
 
 // Re-export shared types
 export type { Bounds, DeviceInfo, DeviceStatus, UiNode };
@@ -67,7 +66,7 @@ export function useDeviceStatus() {
   return useQuery({
     queryKey: ["device-status"],
     queryFn: () =>
-      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${API_BASE}/device/status`),
+      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`),
     refetchInterval: 10000,
     retry: 2,
     staleTime: 3000,
@@ -81,7 +80,7 @@ export function useDevices() {
     queryKey: ["devices"],
     queryFn: () =>
       apiFetch<{ devices: z.infer<typeof DeviceInfoSchema>[] }>(
-        `${API_BASE}/devices`
+        `${getApiUrl()}/devices`
       ).then((data) => data.devices),
     retry: 2,
     staleTime: 10000,
@@ -95,7 +94,7 @@ export function useSelectDevice() {
   return useMutation({
     mutationFn: (udid: string | null) =>
       apiFetch<{ udid: string; platform: string }>(
-        `${API_BASE}/device/select`,
+        `${getApiUrl()}/device/select`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -120,8 +119,8 @@ export function useHierarchy(udid?: string) {
     queryFn: () =>
       apiFetch<{ tree: z.infer<typeof UiNodeSchema> }>(
         udid
-          ? `${API_BASE}/hierarchy?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/hierarchy`
+          ? `${getApiUrl()}/hierarchy?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/hierarchy`
       ),
     staleTime: 1000,
     gcTime: 30000,
@@ -135,8 +134,8 @@ export function useHierarchyAndScreenshot(udid?: string) {
     queryKey: ["hierarchy-and-screenshot", udid],
     queryFn: async () => {
       const url = udid
-        ? `${API_BASE}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
-        : `${API_BASE}/hierarchy-and-screenshot`;
+        ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
+        : `${getApiUrl()}/hierarchy-and-screenshot`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch hierarchy and screenshot");
       const data = await res.json() as { hierarchy: z.infer<typeof UiNodeSchema>; screenshot: string };
@@ -158,8 +157,8 @@ export function useTapDevice() {
     mutationFn: ({ x, y, udid }: { x: number; y: number; udid?: string }) =>
       apiFetch<void>(
         udid
-          ? `${API_BASE}/tap?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/tap`,
+          ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/tap`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -182,8 +181,8 @@ export function useExecuteCommand() {
     mutationFn: ({ type, params, udid }: { type: string; params?: Record<string, unknown>; udid?: string }) =>
       apiFetch<{ success: boolean; output: string; error?: string }>(
         udid
-          ? `${API_BASE}/commands/execute?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/commands/execute`,
+          ? `${getApiUrl()}/commands/execute?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/commands/execute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -216,7 +215,7 @@ export function useLocators(nodeId: string | null) {
     queryKey: ["locators", nodeId],
     queryFn: () =>
       apiFetch<LocatorResult>(
-        `${API_BASE}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || "")}`
+        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || "")}`
       ),
     enabled: !!nodeId,
     staleTime: 30000,
@@ -231,8 +230,8 @@ export function useAdbCommand() {
     mutationFn: ({ command, udid }: { command: string; udid?: string }) =>
       apiFetch<{ output: string; error: string | null; exitCode: number }>(
         udid
-          ? `${API_BASE}/device/adb?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/device/adb`,
+          ? `${getApiUrl()}/device/adb?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/device/adb`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -262,8 +261,8 @@ export function useGestureExecute() {
     }) =>
       apiFetch<{ success: boolean; message?: string }>(
         udid
-          ? `${API_BASE}/gesture/execute?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/gesture/execute`,
+          ? `${getApiUrl()}/gesture/execute?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/gesture/execute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -286,8 +285,8 @@ export function useExecuteScript() {
     }) =>
       apiFetch<{ success: boolean; output: string; error?: string | null; exitCode: number }>(
         udid
-          ? `${API_BASE}/execute?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/execute`,
+          ? `${getApiUrl()}/execute?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/execute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -319,7 +318,7 @@ export interface AuditResult {
 export function useAccessibilityAudit() {
   return useMutation({
     mutationFn: () =>
-      apiFetch<AuditResult>(`${API_BASE}/hierarchy/audit`, {
+      apiFetch<AuditResult>(`${getApiUrl()}/hierarchy/audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -339,7 +338,7 @@ export function useDeviceContexts(udid?: string) {
     queryKey: ["device-contexts", udid],
     queryFn: () =>
       apiFetch<{ contexts: ContextInfo[] }>(
-        udid ? `${API_BASE}/device/contexts?udid=${encodeURIComponent(udid)}` : `${API_BASE}/device/contexts`
+        udid ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/contexts`
       ),
     staleTime: 15000,
     gcTime: 30000,
@@ -352,8 +351,8 @@ export function useSwitchContext() {
     mutationFn: ({ contextId, udid }: { contextId: string; udid?: string }) =>
       apiFetch<{ success: boolean }>(
         udid
-          ? `${API_BASE}/device/switch-context?udid=${encodeURIComponent(udid)}`
-          : `${API_BASE}/device/switch-context`,
+          ? `${getApiUrl()}/device/switch-context?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/device/switch-context`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -399,8 +398,8 @@ export function useInstalledPackages(enabled: boolean = false, udid?: string | n
     queryKey: ["installed-packages", udid],
     queryFn: () => {
       const url = udid
-        ? `${API_BASE}/commands/execute?udid=${encodeURIComponent(udid)}`
-        : `${API_BASE}/commands/execute`;
+        ? `${getApiUrl()}/commands/execute?udid=${encodeURIComponent(udid)}`
+        : `${getApiUrl()}/commands/execute`;
       return apiFetch<{ success: boolean; output: string }>(
         url,
         {
@@ -425,7 +424,7 @@ export function useAppInfo(packageName: string | null, udid?: string | null) {
   return useQuery({
     queryKey: ["app-info", packageName, udid],
     queryFn: () => {
-      let url = `${API_BASE}/app/commands/info?package=${encodeURIComponent(packageName || "")}`;
+      let url = `${getApiUrl()}/app/commands/info?package=${encodeURIComponent(packageName || "")}`;
       if (udid) url += `&udid=${encodeURIComponent(udid)}`;
       return apiFetch<AppInfo>(url);
     },
@@ -446,8 +445,8 @@ export function useRecorder() {
     udid?: string;
   }) => {
     const url = data.udid
-      ? `${API_BASE}/recorder/record?udid=${encodeURIComponent(data.udid)}`
-      : `${API_BASE}/recorder/record`;
+      ? `${getApiUrl()}/recorder/record?udid=${encodeURIComponent(data.udid)}`
+      : `${getApiUrl()}/recorder/record`;
     return apiFetch<{ stepCount: number }>(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -468,15 +467,15 @@ export function useRecorder() {
     udid?: string;
   }) => {
     const url = params.udid
-      ? `${API_BASE}/recorder/export?sessionId=${params.sessionId}&lang=${params.lang}&platform=${params.platform}&udid=${encodeURIComponent(params.udid)}`
-      : `${API_BASE}/recorder/export?sessionId=${params.sessionId}&lang=${params.lang}&platform=${params.platform}`;
+      ? `${getApiUrl()}/recorder/export?sessionId=${params.sessionId}&lang=${params.lang}&platform=${params.platform}&udid=${encodeURIComponent(params.udid)}`
+      : `${getApiUrl()}/recorder/export?sessionId=${params.sessionId}&lang=${params.lang}&platform=${params.platform}`;
     return apiFetch<{ script: string; filename: string; stepCount: number }>(url);
   };
 
   const clearRecording = (params: { sessionId: string; udid?: string }) => {
     const url = params.udid
-      ? `${API_BASE}/recorder/clear?sessionId=${params.sessionId}&udid=${encodeURIComponent(params.udid)}`
-      : `${API_BASE}/recorder/clear?sessionId=${params.sessionId}`;
+      ? `${getApiUrl()}/recorder/clear?sessionId=${params.sessionId}&udid=${encodeURIComponent(params.udid)}`
+      : `${getApiUrl()}/recorder/clear?sessionId=${params.sessionId}`;
     return apiFetch<{ cleared: boolean }>(url, { method: "POST" });
   };
 

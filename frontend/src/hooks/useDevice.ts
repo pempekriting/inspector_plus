@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+import { getApiUrl } from "../config/apiConfig";
 
 export async function fetchHierarchy(udid?: string): Promise<unknown> {
-  const url = udid ? `${API_BASE}/hierarchy?udid=${encodeURIComponent(udid)}` : `${API_BASE}/hierarchy`;
+  const url = udid ? `${getApiUrl()}/hierarchy?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/hierarchy`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch hierarchy");
   return res.json();
@@ -16,14 +15,14 @@ export async function searchHierarchy(
 ): Promise<{ matches: unknown[]; count: number }> {
   const params = new URLSearchParams({ query, filter });
   if (udid) params.set("udid", udid);
-  const url = `${API_BASE}/hierarchy/search?${params.toString()}`;
+  const url = `${getApiUrl()}/hierarchy/search?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to search hierarchy");
   return res.json();
 }
 
 export async function tapDevice(x: number, y: number, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/tap?udid=${encodeURIComponent(udid)}` : `${API_BASE}/tap`;
+  const url = udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -55,20 +54,20 @@ export interface DeviceStatus {
 }
 
 export async function checkDeviceStatus(): Promise<DeviceStatus> {
-  const res = await fetch(`${API_BASE}/device/status`);
+  const res = await fetch(`${getApiUrl()}/device/status`);
   if (!res.ok) return { connected: false, devices: [], selected: null };
   return res.json();
 }
 
 export async function listDevices(): Promise<DeviceInfo[]> {
-  const res = await fetch(`${API_BASE}/devices`);
+  const res = await fetch(`${getApiUrl()}/devices`);
   if (!res.ok) throw new Error("Failed to list devices");
   const data = await res.json();
   return data.devices;
 }
 
 export async function selectDevice(udid: string | null): Promise<{ udid: string; platform: string }> {
-  const res = await fetch(`${API_BASE}/device/select`, {
+  const res = await fetch(`${getApiUrl()}/device/select`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ udid }),
@@ -78,7 +77,7 @@ export async function selectDevice(udid: string | null): Promise<{ udid: string;
 }
 
 export async function getScreenshot(udid?: string): Promise<string> {
-  const url = udid ? `${API_BASE}/screenshot?udid=${encodeURIComponent(udid)}` : `${API_BASE}/screenshot`;
+  const url = udid ? `${getApiUrl()}/screenshot?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/screenshot`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to get screenshot");
   const blob = await res.blob();
@@ -86,7 +85,7 @@ export async function getScreenshot(udid?: string): Promise<string> {
 }
 
 export async function inputDeviceText(text: string, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/input/text?udid=${encodeURIComponent(udid)}` : `${API_BASE}/input/text`;
+  const url = udid ? `${getApiUrl()}/input/text?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/input/text`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
