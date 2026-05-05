@@ -277,6 +277,7 @@ export function useGestureExecute() {
 
 // Input text to device
 export function useInputText() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ text, udid }: { text: string; udid?: string }) =>
       apiFetch<{ success: boolean }>(
@@ -291,6 +292,10 @@ export function useInputText() {
       ),
     onError: (error) => {
       console.error("Input text failed:", error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hierarchy-and-screenshot"] });
+      queryClient.invalidateQueries({ queryKey: ["hierarchy"] });
     },
   });
 }
