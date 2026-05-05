@@ -3,10 +3,12 @@ import { useRecording } from "../hooks/useRecording";
 import { useRecorder } from "../services/api";
 import { useThemeStore } from "../stores/themeStore";
 import { useDeviceStore } from "../stores/deviceStore";
+import { useRecorderStore } from "../stores/recorderStore";
 
 export function RecorderPanel() {
-  const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } = useRecording();
-  const [lang, setLang] = useState<"python" | "java" | "javascript">("python");
+  const langFromStore = useRecorderStore(s => s.lang);
+  const setLangInStore = useRecorderStore(s => s.setLang);
+  const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } = useRecording(langFromStore);
   const [frameworkOpen, setFrameworkOpen] = useState(false);
   const frameworkRef = useRef<HTMLDivElement>(null);
   const { exportRecording } = useRecorder();
@@ -18,7 +20,7 @@ export function RecorderPanel() {
   const platform = selectedDeviceInfo?.platform === "ios" ? "ios" : "android";
 
   const handleExport = async () => {
-    const result = await exportRecording({ sessionId, lang, platform });
+    const result = await exportRecording({ sessionId, lang: langFromStore, platform });
     const blob = new Blob([result.script], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -137,7 +139,7 @@ export function RecorderPanel() {
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
               </svg>
-              <span className="max-w-[80px] truncate capitalize">{lang}</span>
+              <span className="max-w-[80px] truncate capitalize">{langFromStore}</span>
               <svg className={`w-3 h-3 transition-transform ${frameworkOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M6 9l6 6 6-6" />
               </svg>
@@ -156,13 +158,13 @@ export function RecorderPanel() {
                   <button
                     key={l}
                     onClick={() => {
-                      setLang(l);
+                      setLangInStore(l);
                       setFrameworkOpen(false);
                     }}
                     className="w-full px-3 py-2.5 text-left text-[11px] font-medium transition-colors flex items-center gap-2"
                     style={{
-                      color: lang === l ? "var(--accent-cyan)" : "var(--text-secondary)",
-                      background: lang === l ? "var(--bg-tertiary)" : "transparent",
+                      color: langFromStore === l ? "var(--accent-cyan)" : "var(--text-secondary)",
+                      background: langFromStore === l ? "var(--bg-tertiary)" : "transparent",
                       borderBottom: "1px solid var(--border-subtle)",
                     }}
                   >

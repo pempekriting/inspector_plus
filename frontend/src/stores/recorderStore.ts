@@ -1,14 +1,18 @@
 import { create } from "zustand";
 import type { RecordingStep } from "../types/shared";
 
+type Lang = "python" | "java" | "javascript";
+
 interface RecorderState {
   isRecording: boolean;
   sessionId: string;
   steps: RecordingStep[];
+  lang: Lang;
   setRecording: (v: boolean) => void;
   addStep: (step: RecordingStep) => void;
   clearSteps: () => void;
   setSessionId: (id: string) => void;
+  setLang: (lang: Lang) => void;
 }
 
 const generateSessionId = () => `session_${Date.now()}`;
@@ -17,6 +21,7 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
   isRecording: false,
   sessionId: generateSessionId(),
   steps: [],
+  lang: "python",
 
   setRecording: (v: boolean) => {
     if (v) {
@@ -37,5 +42,9 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
 
   setSessionId: (id: string) => {
     set({ sessionId: id });
+  },
+
+  setLang: (lang: Lang) => {
+    set({ lang });
   },
 }));
