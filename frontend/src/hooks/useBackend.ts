@@ -23,10 +23,14 @@ export function useBackendStatus() {
         }
       } catch (e) {
         if (!cancelled) {
-          setBackendStatus(prev => ({
-            ...prev,
-            status: "stopped" as const,
-          }));
+          // In non-Tauri web mode, backend status from Tauri invoke will fail.
+          // We assume backend is running in web mode (user manages it manually).
+          const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI__;
+          if (!isTauri) {
+            setBackendStatus(prev => ({ ...prev, status: "running" }));
+          } else {
+            setBackendStatus(prev => ({ ...prev, status: "stopped" }));
+          }
         }
       }
     }
