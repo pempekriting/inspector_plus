@@ -1,18 +1,6 @@
 import { useHierarchyStore } from "../stores/hierarchyStore";
 import { useEffect, useState, memo } from "react";
 import { useThemeStore } from "../stores/themeStore";
-import type { UiCapability } from "../types/shared";
-
-const CAPABILITY_COLORS: Record<string, string> = {
-  scroll: "#fbbf24",
-  input:  "#a78bfa",
-  long:   "#fb923c",
-  link:   "#34d399",
-};
-
-function capabilityColor(type: string): string {
-  return CAPABILITY_COLORS[type] ?? "#6b7280";
-}
 
 interface ImageLayout {
   left: number;
@@ -157,91 +145,6 @@ const InfoTooltip = memo(function InfoTooltip({
   );
 });
 
-interface CapabilityBadgeProps {
-  capability: UiCapability;
-  left: number;
-  top: number;
-}
-
-const CapabilityBadge = memo(function CapabilityBadge({
-  capability,
-  left,
-  top,
-}: CapabilityBadgeProps) {
-  const color = capabilityColor(capability.type);
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        left: `${left}px`,
-        top: `${top}px`,
-        background: color,
-        opacity: 0.88,
-        borderRadius: '3px',
-        padding: '2px 5px',
-        pointerEvents: 'none',
-        zIndex: 10001,
-        boxShadow: '1px 1px 0 rgba(0,0,0,0.3)',
-        backdropFilter: 'blur(2px)',
-      }}
-    >
-      <span
-        className="font-mono text-[9px] font-bold"
-        style={{ color: '#0a0a0c' }}
-      >
-        {capability.badge}
-      </span>
-    </div>
-  );
-});
-
-interface CapabilityBadgesProps {
-  bounds: { x: number; y: number; width: number; height: number };
-  capabilities: UiCapability[];
-  layout: ImageLayout;
-}
-
-const CapabilityBadges = memo(function CapabilityBadges({
-  bounds,
-  capabilities,
-  layout,
-}: CapabilityBadgesProps) {
-  if (!capabilities || capabilities.length === 0) return null;
-
-  const imgRight = layout.imgLeft + layout.scale * layout.width;
-  const imgBottom = layout.imgTop + layout.scale * layout.height;
-
-  return (
-    <>
-      {capabilities
-          .filter(cap => cap.type !== 'tap' && cap.type !== 'focus')
-          .map((cap, i) => {
-        const leftRaw =
-          layout.imgLeft +
-          bounds.x * layout.scale +
-          (i % 2 === 0 ? 4 : bounds.width * layout.scale - 40);
-        const topRaw = layout.imgTop + bounds.y * layout.scale + 4;
-        const clampedLeft = Math.max(
-          layout.imgLeft,
-          Math.min(leftRaw, imgRight - 44)
-        );
-        const clampedTop = Math.max(
-          layout.imgTop,
-          Math.min(topRaw, imgBottom - 20)
-        );
-        return (
-          <CapabilityBadge
-            key={cap.type}
-            capability={cap}
-            left={clampedLeft}
-            top={clampedTop}
-          />
-        );
-      })}
-    </>
-  );
-});
-
 export function Overlay() {
   const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
@@ -292,19 +195,10 @@ export function Overlay() {
 
   if (!activeNode?.bounds || !layout) return null;
 
-  const { capabilities } = activeNode;
-
   return (
     <>
       <HighlightBox bounds={activeNode.bounds} layout={layout} isDark={isDark} locked={!!lockedNode} />
       <InfoTooltip bounds={activeNode.bounds} layout={layout} node={activeNode} isDark={isDark} />
-      {capabilities && capabilities.length > 0 && (
-        <CapabilityBadges
-          bounds={activeNode.bounds}
-          capabilities={capabilities}
-          layout={layout}
-        />
-      )}
     </>
   );
 }
