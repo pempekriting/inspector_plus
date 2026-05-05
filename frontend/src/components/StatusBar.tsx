@@ -7,10 +7,11 @@ function BackendStatusBadge() {
   const statusConfig = {
     starting: { label: "Starting...", color: "#f59e0b" },
     running: { label: "Running", color: "#22c55e" },
+    stopped: { label: "Stopped", color: "#ef4444" },
     error: { label: "Error", color: "#ef4444" },
   };
 
-  const config = statusConfig[status as keyof typeof statusConfig] || { label: "Unknown", color: "#ef4444" };
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.stopped;
 
   return (
     <div className="flex items-center gap-1">
