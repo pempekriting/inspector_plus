@@ -69,7 +69,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
   }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef} style={{ maxWidth: '100%' }}>
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[10px] font-bold transition-all duration-150"
@@ -80,14 +80,14 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
           boxShadow: "2px 2px 0 var(--border-default)",
         }}
       >
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <rect x="5" y="2" width="14" height="20" rx="2" />
           <line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
         </svg>
-        <span className="max-w-[80px] truncate">
+        <span className="truncate max-w-[140px]">
           {currentDevice ? (currentDevice.name || currentDevice.model || currentDevice.udid || currentDevice.serial) : 'Select'}
         </span>
-        <svg className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
@@ -99,7 +99,8 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
             background: "var(--bg-secondary)",
             border: "var(--nb-border)",
             boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
-            minWidth: "220px",
+            minWidth: "280px",
+            maxWidth: "360px",
           }}
         >
           <div
@@ -137,9 +138,9 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                     : "var(--accent-amber)",
                 }}
               />
-              <div className="flex flex-col min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-bold">{device.name || device.model || 'Unknown'}</span>
+              <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="truncate font-bold flex-1 min-w-0">{device.name || device.model || 'Unknown'}</span>
                   {device.platform === 'ios' && device.os_version && (
                     <span
                       className="text-[9px] px-1.5 py-0.5 rounded font-mono flex-shrink-0"
@@ -174,7 +175,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                     </span>
                   )}
                 </div>
-                <span className="text-[9px] font-mono" style={{ color: "var(--text-tertiary)" }}>
+                <span className="text-[9px] font-mono truncate" style={{ color: "var(--text-tertiary)" }}>
                   {deviceKey}
                 </span>
               </div>
