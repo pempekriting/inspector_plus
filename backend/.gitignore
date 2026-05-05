@@ -1,19 +1,19 @@
-# Virtual environment
-.venv/
-venv/
-ENV/
-env/
-
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg
 *.egg-info/
 dist/
 build/
-*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
 
 # Testing
 .pytest_cache/
@@ -27,9 +27,6 @@ htmlcov/
 *.swp
 *.swo
 *~
-
-# uv lock file - DO NOT IGNORE (commit this)
-# uv.lock is committed per CLAUDE.md
 
 # OS
 .DS_Store
