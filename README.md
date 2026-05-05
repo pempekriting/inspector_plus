@@ -16,8 +16,8 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 - Click-to-tap on device screen
 - Multi-device selection via dropdown
 - Element property inspection (class, package, resource-id, text, bounds)
-- Dark/light Neo-Brutalism theme
-- Desktop app via Tauri (or browser-based dev mode)
+- Dark/light Neo-Brutalism theme with runtime switching
+- Desktop app via Tauri 2 (or browser-based dev mode)
 - F2 Test Recorder — record and export as Python/Java/JS
 - F3 WebView Contexts — switch between native and webview
 - F4 Hierarchy Search — regex, xpath/resource-id/text filter
@@ -27,6 +27,7 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 - ADB Command Panel — execute allowlisted shell commands
 - Locator Generation — Appium strategies
 - APK Info Panel — version, SDK, permissions
+- Runtime port switching — configure BE/MCP ports via Settings panel (Tauri desktop)
 
 ---
 

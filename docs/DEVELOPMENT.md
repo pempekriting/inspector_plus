@@ -25,7 +25,7 @@ inspector_plus/
 │   │   └── ios_app_commands.py
 │   └── mcp/                    # MCP server (Node.js)
 │       ├── src/
-│       │   ├── server.ts
+│       │   ├── server.ts         # Express + StreamableHTTP MCP server
 │       │   ├── types/
 │       │   ├── services/
 │       │   ├── cache/
@@ -34,20 +34,34 @@ inspector_plus/
 │
 ├── frontend/                   # React + TypeScript + Vite
 │   ├── src/
-│   │   ├── App.tsx
+│   │   ├── App.tsx              # Main layout
 │   │   ├── components/
-│   │   ├── stores/           # Zustand
-│   │   ├── services/api.ts    # TanStack Query + Zod
+│   │   │   ├── SettingsPanel.tsx  # Runtime port config + server spawn
+│   │   │   ├── DevicePanel.tsx
+│   │   │   └── ...             # All other components
+│   │   ├── stores/
+│   │   │   ├── settingsStore.ts  # Persistent settings
+│   │   │   ├── hierarchyStore.ts
+│   │   │   ├── deviceStore.ts
+│   │   │   └── themeStore.ts
+│   │   ├── config/
+│   │   │   └── apiConfig.ts     # Separate BE/MCP URL config
+│   │   ├── services/api.ts      # TanStack Query + Zod
 │   │   └── types/
-│   └── src-tauri/             # Tauri desktop
+│   └── src-tauri/              # Tauri desktop
+│       ├── src/
+│       │   ├── main.rs          # Entry + server lifecycle
+│       │   ├── backend_manager.rs  # Python/FastAPI process manager
+│       │   ├── mcp_manager.rs   # Node.js MCP process manager
+│       │   └── commands.rs      # Tauri IPC commands
 │
 ├── docs/
-│   ├── ARCHITECTURE.md         # System design
-│   └── DEVELOPMENT.md          # This file
+│   ├── ARCHITECTURE.md          # System design
+│   └── DEVELOPMENT.md            # This file
 │
-├── SPEC.md                    # Technical reference
-├── README.md                  # Quick overview
-└── CLAUDE.md                  # Claude Code instructions
+├── SPEC.md                     # Technical reference
+├── README.md                   # Quick overview
+└── CLAUDE.md                   # Claude Code instructions
 ```
 
 ## Backend Setup
@@ -166,6 +180,14 @@ which adb
 ```bash
 lsof -i :8001
 kill -9 <PID>
+# Or use Settings panel in Tauri app to restart on different port
+```
+
+### Port 8002 in use (MCP server)
+```bash
+lsof -i :8002
+kill -9 <PID>
+# Or set MCP_PORT env var before starting
 ```
 
 ### Python 3.14 detected

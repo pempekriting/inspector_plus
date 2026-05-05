@@ -65,8 +65,7 @@ Stores in `frontend/src/stores/`:
 - `hierarchyStore.ts` — UI tree, hovered/selected nodes, search state, refresh counters
 - `deviceStore.ts` — device list, selected device, resolution
 - `themeStore.ts` — dark/light theme toggle
-
-**Polling pattern:** Use `useDevicePolling()` hook (exports `isLoading` + `error` state), polls `checkDeviceStatus` every 5s.
+- `settingsStore.ts` — persistent settings (BE/MCP URLs)
 
 ### Frontend API Layer
 
@@ -74,13 +73,15 @@ Stores in `frontend/src/stores/`:
 
 **Env var:** `VITE_API_URL` (defaults to `http://localhost:8001` if not set).
 
+**Separate MCP URL config:** `frontend/src/config/apiConfig.ts` manages backend and MCP URLs independently, with localStorage override.
+
 ## File Layout
 
 ```
 inspector_plus/
 ├── backend/
 │   ├── main.py                  # FastAPI entry + typed errors + routes
-│   ├── test_app.py              # 35 pytest tests (covers all endpoints)
+│   ├── test_app.py              # pytest tests (all endpoints + error handling)
 │   ├── pyproject.toml
 │   ├── Dockerfile
 │   ├── mcp/                     # MCP server for AI tool consumption
@@ -96,24 +97,37 @@ inspector_plus/
 │       └── app_commands.py      # Appium-like command executor
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx              # Main layout (~149 lines, composes panels)
+│   │   ├── App.tsx              # Main layout (~297 lines, composes panels)
 │   │   ├── components/
-│   │   │   ├── DevicePanel.tsx   # Device selector, status, theme toggle
+│   │   │   ├── DevicePanel.tsx   # Device selector dropdown
 │   │   │   ├── HierarchyPanel.tsx # Tree view, search bar, polling
 │   │   │   ├── PropertiesPanel.tsx # Node properties using PropertyRow
 │   │   │   ├── StatusBar.tsx    # Status bar with version badge
 │   │   │   ├── HierarchyTree.tsx # Recursive tree rendering
 │   │   │   ├── PropertyRow.tsx   # Property row for node details
 │   │   │   ├── CommandsPanel.tsx # Command execution UI
+│   │   │   ├── SettingsPanel.tsx  # Runtime port config + server spawn
 │   │   │   └── ...
-│   │   ├── stores/              # Zustand stores (well-tested with vitest)
+│   │   ├── stores/
+│   │   │   ├── hierarchyStore.ts
+│   │   │   ├── deviceStore.ts
+│   │   │   ├── themeStore.ts
+│   │   │   └── settingsStore.ts  # Persistent settings (BE/MCP URLs)
+│   │   ├── config/
+│   │   │   └── apiConfig.ts      # Separate BE + MCP URL config
 │   │   ├── hooks/useDevice.ts   # API hooks + useDevicePolling
 │   │   └── services/api.ts      # API base URL from VITE_API_URL
-│   └── package.json
+│   └── src-tauri/
+│       ├── src/
+│       │   ├── main.rs           # Tauri entry + server lifecycle
+│       │   ├── backend_manager.rs  # Python/FastAPI child process
+│       │   ├── mcp_manager.rs   # Node.js MCP child process
+│       │   └── commands.rs      # Tauri IPC commands
+│       └── Cargo.toml
 ├── docs/
 │   ├── ARCHITECTURE.md          # API reference, data models
 │   └── DEVELOPMENT.md
-└── SPEC.md                      # Feature spec (partially stale — verify against actual code)
+└── SPEC.md                      # Feature spec (verify against code)
 ```
 
 ## Testing
@@ -171,6 +185,23 @@ npm run dev                    # or npm run tauri dev for desktop
 
 ## Architecture Notes
 
+### Runtime Port Switching (Tauri Desktop)
+
+Both backend (port 8001) and MCP (port 8002) can be restarted on different ports via Settings panel in the Tauri desktop app.
+
+**Tauri-managed server lifecycle:**
+- `BackendManager` — spawns/manages Python/FastAPI process
+- `McpManager` — spawns/manages Node.js MCP server process
+- `restart_backend(port?)` / `restart_mcp(port?)` — Tauri IPC commands
+
+**SettingsPanel flow:**
+1. User changes port in Settings → clicks "Apply"
+2. Frontend calls `invoke("restart_backend", { port })` + `invoke("restart_mcp", { port })`
+3. Rust managers stop old processes, start new ones on new ports
+4. Frontend saves URLs to localStorage via `settingsStore`
+
+**Browser dev mode limitation:** Cannot spawn processes from browser. Apply button only saves URLs — servers must be started manually via terminal.
+
 ### Refresh Mechanism
 - Screenshot uses combined `/hierarchy-and-screenshot` endpoint with TanStack Query (staleTime 2000ms)
 - Hierarchy refresh: `triggerHierarchyRefresh()` increments `refreshCounter`
@@ -206,6 +237,8 @@ npm install
 **Start:** `cd backend/mcp && npm run dev`
 **Endpoints:** `POST /mcp` (tools), `GET /health`, `GET /subscribe/:deviceId` (SSE)
 **Tools:** `get_hierarchy`, `get_node`, `get_children`, `get_path`, `get_ancestors`, `search_nodes`
+
+**CORS:** Enabled for all origins to allow browser-based health checks.
 
 **Troubleshooting:**
 - If curl returns type placeholders instead of values, use `rtk proxy curl` instead

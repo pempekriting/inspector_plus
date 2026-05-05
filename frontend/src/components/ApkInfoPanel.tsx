@@ -4,8 +4,7 @@ import { useDeviceStore } from "../stores/deviceStore";
 import { useInstalledPackages, useAppInfo } from "../services/api";
 import { useMutation } from "@tanstack/react-query";
 import { apiFetch } from "../services/api";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+import { getApiUrl } from "../config/apiConfig";
 
 // SDK version to name map
 const SDK_NAMES: Record<number, string> = {
@@ -78,8 +77,8 @@ export function ApkInfoPanel({ isDark }: { isDark: boolean }) {
   const launchMutation = useMutation({
     mutationFn: (pkg: string) => {
       const url = selectedDevice
-        ? `${API_BASE}/commands/execute?udid=${encodeURIComponent(selectedDevice)}`
-        : `${API_BASE}/commands/execute`;
+        ? `${getApiUrl()}/commands/execute?udid=${encodeURIComponent(selectedDevice)}`
+        : `${getApiUrl()}/commands/execute`;
       return apiFetch<{ success: boolean; output: string }>(
         url,
         {

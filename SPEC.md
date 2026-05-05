@@ -30,17 +30,19 @@ Open `http://localhost:5173`
 ```
 Frontend (React + Zustand + Tailwind)
 ├── ScreenshotCanvas    ← screenshot display, zoom/pan, click-to-tap, click-to-lock
-├── HierarchyTree       ← recursive tree, search, keyboard nav, lock on click
 ├── Overlay             ← hover/selected/locked highlight on canvas
-├── HierarchyPanel
-│   ├── DeviceActionsBar  ← tap, swipe, drag, pinch, input text, system keys (extracted from Properties)
-│   ├── HierarchyTree    ← recursive tree
-│   └── PropertiesPanel   ← read-only: Identity, State, Geometry, Locators (StylePanel removed)
-├── SubTabBar           ← Hierarchy | Accessibility sub-tabs
-├── CommandsDrawer      ← App Commands + ADB Shell in bottom drawer
-├── DevicePanel         ← device selector, online/offline status
+├── Header toolbar
+│   ├── DevicePanel    ← device selector dropdown
+│   ├── ThemeToggle    ← dark/light switch
+│   ├── KeyboardShortcuts
+│   └── SettingsButton ← opens SettingsPanel modal
 ├── TabBar              ← inspector | commands tabs
-└── BottomDrawer        ← collapsible, shared by CommandsDrawer
+└── Inspector content
+    ├── SubTabBar       ← hierarchy | accessibility | recorder sub-tabs
+    ├── HierarchyPanel
+    │   └── SearchBar + HierarchyTree (recursive)
+    ├── AccessibilityPanel
+    └── RecorderPanel
 
 Backend (FastAPI)
 ├── REST: /screenshot, /hierarchy, /tap, /input/text, /device/status, /devices
@@ -51,7 +53,18 @@ MCP Server (TypeScript - port 8002)
 ├── Tools: get_hierarchy, get_node, get_children, get_path, get_ancestors, search_nodes
 ├── Transport: Streamable HTTP (JSON-RPC 2.0)
 └── SSE: /subscribe/:deviceId for real-time tree updates
+
+SettingsPanel (Tauri desktop)
+├── Backend URL: text input + Verify + Scan buttons
+├── MCP URL: text input + Verify + Scan buttons
+├── Apply: restart servers on new ports via Tauri IPC
+└── Reset Defaults
 ```
+
+**Runtime Port Switching (Tauri only):**
+- Backend (port 8001) and MCP (port 8002) can be restarted on different ports via Settings panel
+- Tauri manages child processes via `BackendManager` and `McpManager` Rust structs
+- Browser dev mode: Apply only saves URLs, cannot spawn processes
 
 ---
 
@@ -62,22 +75,21 @@ MCP Server (TypeScript - port 8002)
 | ScreenshotCanvas | `components/ScreenshotCanvas.tsx` | Screenshot display, zoom (0.3x default), click-to-tap, element lock |
 | HierarchyTree | `components/HierarchyTree.tsx` | Recursive tree, search, keyboard nav, lock on click/Enter |
 | Overlay | `components/Overlay.tsx` | Canvas highlight: locked=yellow, selected/hovered=cyan |
-| HierarchyPanel | `components/HierarchyPanel.tsx` | Wrapper: DeviceActionsBar + HierarchyTree + PropertiesPanel |
-| DeviceActionsBar | `components/DeviceActionsBar.tsx` | Device interactions: tap, swipe, drag, pinch, input text, system keys. iOS: tap/swipe/text/home work; drag/pinch/zoom/back/recent disabled |
-| SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility sub-tab navigation |
+| HierarchyPanel | `components/HierarchyPanel.tsx` | Wrapper: SearchBar + HierarchyTree + PropertiesPanel |
+| SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility / Recorder sub-tab navigation |
 | PropertiesPanel | `components/PropertiesPanel.tsx` | Node props (read-only): Identity, State, Geometry, Locators |
-| DevicePanel | `components/DevicePanel.tsx` | Device selector, auto-selects first device on reconnect |
-| CommandsDrawer | `components/CommandsDrawer.tsx` | App Commands + ADB Shell in bottom drawer |
-| BottomDrawer | `components/BottomDrawer.tsx` | Collapsible drawer container |
-| StatusBar | `components/StatusBar.tsx` | Connection status, version |
+| DevicePanel | `components/DevicePanel.tsx` | Device selector dropdown, auto-selects first device on reconnect |
+| SettingsPanel | `components/SettingsPanel.tsx` | Runtime port config: BE/MCP URL fields, Verify/Scan, Apply to restart servers |
 | TabBar | `components/TabBar.tsx` | inspector / commands tabs |
+| RecorderPanel | `components/RecorderPanel.tsx` | Record test steps and export |
+| AccessibilityPanel | `components/AccessibilityPanel.tsx` | WCAG accessibility audit |
+| StatusBar | `components/StatusBar.tsx` | Connection status, version |
 | ErrorBoundary | `components/ErrorBoundary.tsx` | Error boundary for component tree |
 | EmptyState | `components/EmptyState.tsx` | Icon + title + description + optional action |
 | ErrorState | `components/ErrorState.tsx` | Error display with retry |
 | SkeletonLoader | `components/SkeletonLoader.tsx` | Shimmer loaders for tree + canvas |
 | SearchBar | `components/SearchBar.tsx` | Search input in tree header |
 | PropertyRow | `components/PropertyRow.tsx` | Key-value row in PropertiesPanel |
-| StylePanel | `components/StylePanel.tsx` | Layout chips: backgroundColor, textColor, padding, elevation |
 
 **Implemented:** `ApkInfoPanel` — 3rd tab in TabBar, shows APK details (version, SDK, permissions)
 

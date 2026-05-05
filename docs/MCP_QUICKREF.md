@@ -20,6 +20,8 @@ npm run dev
 
 Server runs on port 8002 (or `MCP_PORT` env var).
 
+**CORS:** Enabled for all origins — browser-based health checks are supported.
+
 ## Endpoints
 
 | Method | Path | Description |

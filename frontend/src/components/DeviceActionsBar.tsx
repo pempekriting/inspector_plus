@@ -5,10 +5,10 @@ import { useThemeStore } from "../stores/themeStore";
 import { inputDeviceText } from "../hooks/useDevice";
 import { LayoutChips } from "./StylePanel";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+import { getApiUrl } from "../config/apiConfig";
 
 async function pressKey(key: string, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/device/press-key?udid=${encodeURIComponent(udid)}` : `${API_BASE}/device/press-key`;
+  const url = udid ? `${getApiUrl()}/device/press-key?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/press-key`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -18,7 +18,7 @@ async function pressKey(key: string, udid?: string): Promise<void> {
 }
 
 async function swipeDevice(startX: number, startY: number, endX: number, endY: number, duration?: number, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/device/swipe?udid=${encodeURIComponent(udid)}` : `${API_BASE}/device/swipe`;
+  const url = udid ? `${getApiUrl()}/device/swipe?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/swipe`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -28,7 +28,7 @@ async function swipeDevice(startX: number, startY: number, endX: number, endY: n
 }
 
 async function dragDevice(startX: number, startY: number, endX: number, endY: number, duration?: number, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/device/drag?udid=${encodeURIComponent(udid)}` : `${API_BASE}/device/drag`;
+  const url = udid ? `${getApiUrl()}/device/drag?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/drag`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -38,7 +38,7 @@ async function dragDevice(startX: number, startY: number, endX: number, endY: nu
 }
 
 async function pinchDevice(x: number, y: number, scale: number, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/device/pinch?udid=${encodeURIComponent(udid)}` : `${API_BASE}/device/pinch`;
+  const url = udid ? `${getApiUrl()}/device/pinch?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/pinch`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,7 +48,7 @@ async function pinchDevice(x: number, y: number, scale: number, udid?: string): 
 }
 
 async function tapDevice(x: number, y: number, udid?: string): Promise<void> {
-  const url = udid ? `${API_BASE}/tap?udid=${encodeURIComponent(udid)}` : `${API_BASE}/tap`;
+  const url = udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

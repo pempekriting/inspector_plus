@@ -101,6 +101,7 @@ Serve tree hierarchy data to AI clients (Claude Code) via MCP protocol for POM (
 - **MCP SDK:** @modelcontextprotocol/sdk 1.29+
 - **Transport:** Streamable HTTP (JSON-RPC 2.0)
 - **Framework:** Express.js
+- **CORS:** Enabled for all origins (browser-based health checks)
 
 ### File Structure
 
@@ -175,17 +176,25 @@ useLocators()
 App
 ├── ScreenshotCanvas (60% width)
 │   └── Overlay (hover/selected/locked highlight)
-├── DevicePanel (header toolbar)
-├── TabBar (inspector | commands | apk-info)
+├── Header toolbar
+│   ├── DevicePanel (device selector dropdown)
+│   ├── ThemeToggle (dark/light)
+│   ├── KeyboardShortcuts (?)
+│   └── SettingsButton (opens SettingsPanel modal)
+├── TabBar (inspector | commands)
 └── Inspector (tab content)
+    ├── SubTabBar (hierarchy | accessibility | recorder)
     ├── HierarchyPanel
-    │   ├── DeviceActionsBar
     │   ├── SearchBar
     │   └── HierarchyTree → TreeNode (recursive)
-    ├── PropertiesPanel
-    │   ├── PropertyRow
-    │   └── LocatorPanel
+    ├── AccessibilityPanel
     └── RecorderPanel
+
+SettingsPanel (modal overlay)
+├── Backend URL field + Verify + Scan buttons
+├── MCP URL field + Verify + Scan buttons
+├── Apply button → restart servers on new ports
+└── Reset Defaults button
 ```
 
 ### State Management (Zustand)
@@ -195,6 +204,7 @@ App
 | `hierarchyStore` | Tree, nodes, search, refresh |
 | `deviceStore` | Devices, resolution, selection |
 | `themeStore` | Dark/light theme |
+| `settingsStore` | Persistent BE/MCP URLs |
 | `recorderStore` | Recording session |
 
 ### Canvas Modes

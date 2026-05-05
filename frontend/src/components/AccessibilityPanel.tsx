@@ -4,6 +4,7 @@ import { useHierarchyStore } from "../stores/hierarchyStore";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useThemeStore } from "../stores/themeStore";
 import type { UiNode } from "../types/shared";
+import { getApiUrl } from "../config/apiConfig";
 
 interface AccessibilityIssue {
   nodeId: string;
@@ -23,10 +24,9 @@ interface AuditResult {
 export function useAccessibilityAudit() {
   return useMutation({
     mutationFn: async (udid: string | undefined): Promise<AuditResult> => {
-      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
       const url = udid
-        ? `${API_BASE}/hierarchy/audit?udid=${encodeURIComponent(udid)}`
-        : `${API_BASE}/hierarchy/audit`;
+        ? `${getApiUrl()}/hierarchy/audit?udid=${encodeURIComponent(udid)}`
+        : `${getApiUrl()}/hierarchy/audit`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

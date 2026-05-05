@@ -3,8 +3,7 @@ import { useThemeStore } from "../stores/themeStore";
 import { useCommands, CommandResult } from "../hooks/useCommands";
 import { useAdbCommand, useGestureExecute, useExecuteScript, useInstalledPackages, useAppInfo } from "../services/api";
 import { useDeviceStore } from "../stores/deviceStore";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+import { getApiUrl } from "../config/apiConfig";
 
 type Platform = "android" | "ios" | "both";
 
