@@ -1,10 +1,8 @@
-import { useState } from "react";
-import { useBackendStatus, restartBackend } from "../hooks/useBackend";
+import { useBackendStatus } from "../hooks/useBackend";
 import { useThemeStore } from "../stores/themeStore";
 
 function BackendStatusBadge() {
   const { status } = useBackendStatus();
-  const [isRestarting, setIsRestarting] = useState(false);
 
   const statusConfig = {
     starting: { label: "Starting...", color: "#f59e0b" },
@@ -15,38 +13,13 @@ function BackendStatusBadge() {
 
   const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.stopped;
 
-  const handleRestart = async () => {
-    setIsRestarting(true);
-    try {
-      await restartBackend();
-    } finally {
-      setIsRestarting(false);
-    }
-  };
-
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1">
-        <div
-          className="w-2 h-2 rounded-full animate-pulse"
-          style={{ backgroundColor: config.color }}
-        />
-        <span style={{ color: config.color }}>{config.label}</span>
-      </div>
-      {(status === "stopped" || status === "error") && (
-        <button
-          onClick={handleRestart}
-          disabled={isRestarting}
-          className="px-2 py-1 rounded text-[9px] font-bold uppercase transition-transform active:scale-95 disabled:opacity-50"
-          style={{
-            background: "#1f1f23",
-            border: "1.5px solid #3f3f46",
-            color: "#e4e4e7",
-          }}
-        >
-          {isRestarting ? "..." : "Restart"}
-        </button>
-      )}
+    <div className="flex items-center gap-1">
+      <div
+        className="w-2 h-2 rounded-full animate-pulse"
+        style={{ backgroundColor: config.color }}
+      />
+      <span style={{ color: config.color }}>{config.label}</span>
     </div>
   );
 }
