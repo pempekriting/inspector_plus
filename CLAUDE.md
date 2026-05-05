@@ -198,4 +198,69 @@ Separate TypeScript MCP server for AI tool consumption. Exposes the same hierarc
 **Start:** `cd backend/mcp && npm run dev`
 **Endpoints:** `POST /mcp` (tools), `GET /health`, `GET /subscribe/:deviceId` (SSE)
 **Tools:** `get_hierarchy`, `get_node`, `get_children`, `get_path`, `get_ancestors`, `search_nodes`
-**Docs:** `docs/MCP_SERVER.md` and `docs/MCP_QUICKREF.md`
+
+### Connecting Claude Code to MCP Server
+
+The MCP server exposes AI tools for POM (Page Object Model) generation. To use with Claude Code:
+
+**Option 1: Claude Code CLI**
+```bash
+# Add MCP server to Claude Code
+claude mcp add inspector-plus -- npx tsx backend/mcp/src/server.ts
+
+# Or if already running on port 8002
+claude mcp add inspector-plus -- http://localhost:8002/mcp
+```
+
+**Option 2: Via config file (~/.claude/mcp.json)**
+```json
+{
+  "mcpServers": {
+    "inspector-plus": {
+      "command": "npx",
+      "args": ["tsx", "/Users/azzamnizar/Documents/project/inspector_plus/backend/mcp/src/server.ts"]
+    }
+  }
+}
+```
+
+**Available Tools after connection:**
+- `get_hierarchy` - Fetch full UI tree for a device
+- `get_node` - Get specific node by ID
+- `get_children` - Paginated children of a node
+- `get_path` - Path from root to node
+- `get_ancestors` - All ancestor nodes
+- `search_nodes` - Search by text, xpath, or regex
+
+**Manual testing with cURL:**
+```bash
+# Initialize
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}}}'
+
+# List tools
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Call get_hierarchy
+curl -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_hierarchy","arguments":{"deviceId":"YOUR_DEVICE_SERIAL"}}}'
+```
+
+## RTK Rewrite Bypass
+
+This project uses `rtk proxy curl` to bypass RTK (Rust Token Killer) rewrite for API calls. The RTK hook can corrupt JSON responses when using plain `curl`:
+
+```bash
+# Use rtk proxy to get actual data
+rtk proxy curl -s http://localhost:8001/devices
+
+# MCP server with rtk proxy
+rtk proxy curl -s -X POST http://localhost:8002/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}}}'
+```

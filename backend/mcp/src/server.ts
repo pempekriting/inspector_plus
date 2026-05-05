@@ -15,176 +15,183 @@ import { getHierarchy, getNode, getChildren, getAncestors, getPath, searchNodes,
 const PORT = parseInt(process.env.MCP_PORT || "8002", 10);
 
 // =============================================================================
-// MCP Server Setup
+// MCP Server Factory - create new instance per session
 // =============================================================================
 
-const server = new McpServer({
-  name: "inspector-mcp",
-  version: "0.1.0",
-});
+function createMcpServer(): McpServer {
+  const s = new McpServer({
+    name: "inspector-mcp",
+    version: "0.1.0",
+  });
+
+  registerTools(s);
+  return s;
+}
 
 // =============================================================================
-// Tool Registration
+// Tool Registration (reusable)
 // =============================================================================
 
-server.registerTool(
-  "get_hierarchy",
-  {
-    title: "Get Hierarchy",
-    description: "Fetch the full UI tree hierarchy for a connected device. Returns nested tree structure with node IDs, labels, bounds, and available actions.",
-    inputSchema: z.object({
-      deviceId: z.string().describe("Device UDID"),
-      maxDepth: z.number().optional().describe("Maximum depth to traverse"),
-    }),
-  },
-  async ({ deviceId, maxDepth }) => {
-    try {
-      const result = await getHierarchy(deviceId, maxDepth);
-      return {
-        content: [{ type: "text", text: JSON.stringify({
-          data: {
-            tree: result.tree,
-            path: [],
-            stats: result.stats,
-          },
-          _meta: result._meta,
-        }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+function registerTools(server: McpServer): void {
+  server.registerTool(
+    "get_hierarchy",
+    {
+      title: "Get Hierarchy",
+      description: "Fetch the full UI tree hierarchy for a connected device. Returns nested tree structure with node IDs, labels, bounds, and available actions.",
+      inputSchema: z.object({
+        deviceId: z.string().describe("Device UDID"),
+        maxDepth: z.number().optional().describe("Maximum depth to traverse"),
+      }),
+    },
+    async ({ deviceId, maxDepth }) => {
+      try {
+        const result = await getHierarchy(deviceId, maxDepth);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            data: {
+              tree: result.tree,
+              path: [],
+              stats: result.stats,
+            },
+            _meta: result._meta,
+          }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
 
-server.registerTool(
-  "get_node",
-  {
-    title: "Get Node",
-    description: "Retrieve a specific node by its ID and get the path from root.",
-    inputSchema: z.object({
-      nodeId: z.string().describe("Unique node identifier"),
-    }),
-  },
-  async ({ nodeId }) => {
-    try {
-      const result = await getNode(nodeId, undefined);
-      return {
-        content: [{ type: "text", text: JSON.stringify({
-          data: { node: result.node, path: result.path },
-          _meta: { source: "android" },
-        }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  server.registerTool(
+    "get_node",
+    {
+      title: "Get Node",
+      description: "Retrieve a specific node by its ID and get the path from root.",
+      inputSchema: z.object({
+        nodeId: z.string().describe("Unique node identifier"),
+      }),
+    },
+    async ({ nodeId }) => {
+      try {
+        const result = await getNode(nodeId, undefined);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            data: { node: result.node, path: result.path },
+            _meta: { source: "android" },
+          }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
 
-server.registerTool(
-  "get_children",
-  {
-    title: "Get Children",
-    description: "Get direct children of a node with cursor-based pagination.",
-    inputSchema: z.object({
-      nodeId: z.string().describe("Parent node ID"),
-      cursor: z.string().optional().describe("Pagination cursor"),
-      pageSize: z.number().optional().describe("Number of children to return"),
-    }),
-  },
-  async ({ nodeId, cursor, pageSize }) => {
-    try {
-      const result = await getChildren(nodeId, undefined, cursor, pageSize);
-      return {
-        content: [{ type: "text", text: JSON.stringify({
-          data: { children: result.data, parentId: result.parentId },
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-          _meta: { source: "android", totalCount: result.data.length },
-        }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  server.registerTool(
+    "get_children",
+    {
+      title: "Get Children",
+      description: "Get direct children of a node with cursor-based pagination.",
+      inputSchema: z.object({
+        nodeId: z.string().describe("Parent node ID"),
+        cursor: z.string().optional().describe("Pagination cursor"),
+        pageSize: z.number().optional().describe("Number of children to return"),
+      }),
+    },
+    async ({ nodeId, cursor, pageSize }) => {
+      try {
+        const result = await getChildren(nodeId, undefined, cursor, pageSize);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            data: { children: result.data, parentId: result.parentId },
+            nextCursor: result.nextCursor,
+            hasMore: result.hasMore,
+            _meta: { source: "android", totalCount: result.data.length },
+          }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
 
-server.registerTool(
-  "get_path",
-  {
-    title: "Get Path",
-    description: "Get the path from root to a node.",
-    inputSchema: z.object({
-      nodeId: z.string().describe("Target node ID"),
-    }),
-  },
-  async ({ nodeId }) => {
-    try {
-      const path = await getPath(nodeId, undefined);
-      return {
-        content: [{ type: "text", text: JSON.stringify({ path }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  server.registerTool(
+    "get_path",
+    {
+      title: "Get Path",
+      description: "Get the path from root to a node.",
+      inputSchema: z.object({
+        nodeId: z.string().describe("Target node ID"),
+      }),
+    },
+    async ({ nodeId }) => {
+      try {
+        const path = await getPath(nodeId, undefined);
+        return {
+          content: [{ type: "text", text: JSON.stringify({ path }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
 
-server.registerTool(
-  "get_ancestors",
-  {
-    title: "Get Ancestors",
-    description: "Get all ancestor nodes from root to target.",
-    inputSchema: z.object({
-      nodeId: z.string().describe("Target node ID"),
-    }),
-  },
-  async ({ nodeId }) => {
-    try {
-      const result = await getAncestors(nodeId, undefined);
-      return {
-        content: [{ type: "text", text: JSON.stringify({
-          data: result,
-          path: result.ancestors.map((a: { label: string }) => a.label),
-        }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  server.registerTool(
+    "get_ancestors",
+    {
+      title: "Get Ancestors",
+      description: "Get all ancestor nodes from root to target.",
+      inputSchema: z.object({
+        nodeId: z.string().describe("Target node ID"),
+      }),
+    },
+    async ({ nodeId }) => {
+      try {
+        const result = await getAncestors(nodeId, undefined);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            data: result,
+            path: result.ancestors.map((a: { label: string }) => a.label),
+          }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
 
-server.registerTool(
-  "search_nodes",
-  {
-    title: "Search Nodes",
-    description: "Search the UI tree for nodes matching text, xpath, or regex.",
-    inputSchema: z.object({
-      deviceId: z.string().describe("Device UDID"),
-      query: z.string().describe("Search query"),
-      matchType: z.enum(["text", "xpath", "regex"]).default("text").describe("Match type"),
-      limit: z.number().optional().describe("Maximum results"),
-    }),
-  },
-  async ({ deviceId, query, matchType, limit }) => {
-    try {
-      const result = await searchNodes(deviceId, query, matchType || "text", limit);
-      return {
-        content: [{ type: "text", text: JSON.stringify({
-          data: { matches: result.matches, query, matchType },
-          _meta: { source: "android", totalMatches: result.totalMatches },
-        }) }],
-      };
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  server.registerTool(
+    "search_nodes",
+    {
+      title: "Search Nodes",
+      description: "Search the UI tree for nodes matching text, xpath, or regex.",
+      inputSchema: z.object({
+        deviceId: z.string().describe("Device UDID"),
+        query: z.string().describe("Search query"),
+        matchType: z.enum(["text", "xpath", "regex"]).default("text").describe("Match type"),
+        limit: z.number().optional().describe("Maximum results"),
+      }),
+    },
+    async ({ deviceId, query, matchType, limit }) => {
+      try {
+        const result = await searchNodes(deviceId, query, matchType || "text", limit);
+        return {
+          content: [{ type: "text", text: JSON.stringify({
+            data: { matches: result.matches, query, matchType },
+            _meta: { source: "android", totalMatches: result.totalMatches },
+          }) }],
+        };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+      }
     }
-  }
-);
+  );
+}
 
 // =============================================================================
 // Express App with MCP Endpoint
@@ -192,6 +199,12 @@ server.registerTool(
 
 const app = express();
 app.use(express.json());
+
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log('[Debug]', req.method, req.path, 'sessionId:', req.headers['mcp-session-id'], 'body method:', req.body?.method);
+  next();
+});
 
 // Health check
 app.get("/health", (req: Request, res: Response) => {
@@ -208,27 +221,71 @@ const transports = new Map<string, StreamableHTTPServerTransport>();
 
 // MCP endpoint
 app.post("/mcp", async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const sessionId = (req.headers["mcp-session-id"] || req.headers["MCP-Session-ID"]) as string | undefined;
+
+  console.log('[MCP] POST method:', req.body?.method, 'sessionId:', sessionId);
 
   if (sessionId && transports.has(sessionId)) {
-    const transport = transports.get(sessionId)!;
-    await transport.handleRequest(req, res, req.body);
+    await transports.get(sessionId)!.handleRequest(req, res, req.body);
   } else if (!sessionId && isInitializeRequest(req.body)) {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: (sid: string) => { transports.set(sid, transport); },
+      onsessioninitialized: (sid: string) => {
+        console.log('[MCP] Session created:', sid);
+        transports.set(sid, transport);
+      },
     });
 
     transport.onclose = () => {
       if (transport.sessionId) {
+        console.log('[MCP] Session closed:', transport.sessionId);
         transports.delete(transport.sessionId);
       }
     };
 
+    const server = createMcpServer();
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } else {
-    res.status(400).json({ error: "Invalid request" });
+    // For non-initialize requests without session, check if maybe client is stateless
+    // If body has a method, assume it's a valid JSON-RPC request without session (stateless mode)
+    if (req.body && req.body.method && typeof req.body.method === 'string') {
+      console.log('[MCP] Stateless request detected, method:', req.body.method);
+      // Create stateless transport (no session management)
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,  // Stateless mode
+      });
+      const server = createMcpServer();
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } else {
+      console.log('[MCP] Invalid request - sessionId:', sessionId, 'isInit:', isInitializeRequest(req.body), 'body method:', req.body?.method);
+      res.status(400).json({ error: "Invalid request" });
+    }
+  }
+});
+
+// GET endpoint for SSE streams (required by MCP spec)
+app.get("/mcp", async (req: Request, res: Response) => {
+  const sessionId = (req.headers["mcp-session-id"] || req.headers["MCP-Session-ID"]) as string | undefined;
+  console.log('[MCP] GET sessionId:', sessionId);
+
+  if (sessionId && transports.has(sessionId)) {
+    await transports.get(sessionId)!.handleRequest(req, res);
+  } else {
+    res.status(400).send('Invalid or missing session ID');
+  }
+});
+
+// DELETE endpoint for session termination (required by MCP spec)
+app.delete("/mcp", async (req: Request, res: Response) => {
+  const sessionId = (req.headers["mcp-session-id"] || req.headers["MCP-Session-ID"]) as string | undefined;
+  console.log('[MCP] DELETE sessionId:', sessionId);
+
+  if (sessionId && transports.has(sessionId)) {
+    await transports.get(sessionId)!.handleRequest(req, res);
+  } else {
+    res.status(400).send('Invalid or missing session ID');
   }
 });
 

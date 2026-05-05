@@ -9,6 +9,7 @@ dependencies = [
     "websockets==12.0",
     "setuptools<82",
     "lxml>=5.0.0",
+    "slowapi>=0.1.9",
 ]
 
 [dependency-groups]
