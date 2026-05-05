@@ -42,6 +42,10 @@ function registerTools(server: McpServer): void {
         deviceId: z.string().describe("Device UDID"),
         maxDepth: z.number().optional().describe("Maximum depth to traverse"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ deviceId, maxDepth }) => {
       try {
@@ -70,11 +74,16 @@ function registerTools(server: McpServer): void {
       description: "Retrieve a specific node by its ID and get the path from root.",
       inputSchema: z.object({
         nodeId: z.string().describe("Unique node identifier"),
+        deviceId: z.string().optional().describe("Device UDID (optional, for faster lookup)"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ nodeId }) => {
+    async ({ nodeId, deviceId }) => {
       try {
-        const result = await getNode(nodeId, undefined);
+        const result = await getNode(nodeId, deviceId);
         return {
           content: [{ type: "text", text: JSON.stringify({
             data: { node: result.node, path: result.path },
@@ -95,13 +104,18 @@ function registerTools(server: McpServer): void {
       description: "Get direct children of a node with cursor-based pagination.",
       inputSchema: z.object({
         nodeId: z.string().describe("Parent node ID"),
+        deviceId: z.string().optional().describe("Device UDID (optional, for faster lookup)"),
         cursor: z.string().optional().describe("Pagination cursor"),
         pageSize: z.number().optional().describe("Number of children to return"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ nodeId, cursor, pageSize }) => {
+    async ({ nodeId, deviceId, cursor, pageSize }) => {
       try {
-        const result = await getChildren(nodeId, undefined, cursor, pageSize);
+        const result = await getChildren(nodeId, deviceId, cursor, pageSize);
         return {
           content: [{ type: "text", text: JSON.stringify({
             data: { children: result.data, parentId: result.parentId },
@@ -124,11 +138,16 @@ function registerTools(server: McpServer): void {
       description: "Get the path from root to a node.",
       inputSchema: z.object({
         nodeId: z.string().describe("Target node ID"),
+        deviceId: z.string().optional().describe("Device UDID (optional, for faster lookup)"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ nodeId }) => {
+    async ({ nodeId, deviceId }) => {
       try {
-        const path = await getPath(nodeId, undefined);
+        const path = await getPath(nodeId, deviceId);
         return {
           content: [{ type: "text", text: JSON.stringify({ path }) }],
         };
@@ -146,11 +165,16 @@ function registerTools(server: McpServer): void {
       description: "Get all ancestor nodes from root to target.",
       inputSchema: z.object({
         nodeId: z.string().describe("Target node ID"),
+        deviceId: z.string().describe("Device UDID"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
-    async ({ nodeId }) => {
+    async ({ nodeId, deviceId }) => {
       try {
-        const result = await getAncestors(nodeId, undefined);
+        const result = await getAncestors(nodeId, deviceId);
         return {
           content: [{ type: "text", text: JSON.stringify({
             data: result,
@@ -175,6 +199,10 @@ function registerTools(server: McpServer): void {
         matchType: z.enum(["text", "xpath", "regex"]).default("text").describe("Match type"),
         limit: z.number().optional().describe("Maximum results"),
       }),
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ deviceId, query, matchType, limit }) => {
       try {

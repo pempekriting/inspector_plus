@@ -256,7 +256,7 @@ export async function getChildren(
 }
 
 /**
- * Get ancestors of a node.
+ * Get ancestors of a node (full node objects, not just labels).
  */
 export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
   ancestors: AiFriendlyNode[];
@@ -264,10 +264,42 @@ export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
 }> {
   const { node, path } = await getNode(nodeId, deviceId);
 
-  // We need to walk again to get ancestor nodes, not just path labels
-  // For now return simplified version - would need path traversal in production
+  // Walk the hierarchy to find actual ancestor nodes (not just path labels)
+  const hierarchy = deviceId
+    ? (await getHierarchy(deviceId)).tree
+    : null;
+
+  if (!hierarchy) {
+    return { ancestors: [], node };
+  }
+
+  // Find path from root to target node and collect ancestors
   const ancestors: AiFriendlyNode[] = [];
-  const pathParts = path.slice(0, -1); // Exclude self
+
+  function findNodeWithAncestors(
+    nodes: AiFriendlyNode[],
+    targetId: string,
+    currentAncestors: AiFriendlyNode[]
+  ): AiFriendlyNode | null {
+    for (const n of nodes) {
+      const newAncestors = [...currentAncestors, n];
+      if (n.id === targetId) {
+        // Found target - return ancestors (excluding self)
+        ancestors.push(...currentAncestors);
+        return n;
+      }
+      if (n.children) {
+        const found = findNodeWithAncestors(n.children, targetId, newAncestors);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  const found = findNodeWithAncestors([hierarchy], nodeId, []);
+  if (!found) {
+    return { ancestors: [], node };
+  }
 
   return { ancestors, node };
 }
