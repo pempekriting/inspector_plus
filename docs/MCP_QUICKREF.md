@@ -1,5 +1,25 @@
 # MCP Server Quick Reference
 
+## Installation
+
+### Prerequisites
+- Node.js 18+
+- npm
+
+### Setup
+```bash
+cd backend/mcp
+npm install
+```
+
+### Start Server
+```bash
+cd backend/mcp
+npm run dev
+```
+
+Server runs on port 8002 (or `MCP_PORT` env var).
+
 ## Endpoints
 
 | Method | Path | Description |
@@ -72,3 +92,31 @@ Or add to `~/.claude/mcp.json`:
 | Var | Default | Description |
 |-----|---------|-------------|
 | `MCP_PORT` | `8002` | Server port |
+
+## Troubleshooting
+
+### RTK Hook Corrupts JSON Responses
+If you see type placeholders like `"string"` instead of actual values in responses, the RTK (Rust Token Killer) hook may be intercepting and corrupting curl requests.
+
+**Fix:** Use `rtk proxy curl` instead of plain `curl`:
+```bash
+rtk proxy curl -s http://localhost:8002/health
+rtk proxy curl -s -X POST http://localhost:8002/mcp ...
+```
+
+Or disable RTK by adding to project `CLAUDE.md`:
+```bash
+## Disable RTK Rewrite
+Use `rtk proxy curl` to bypass RTK rewrite for API calls.
+```
+
+### Claude Code MCP Shows "Failed to Connect"
+Ensure the MCP server is running:
+```bash
+curl -s http://localhost:8002/health
+```
+
+If server is running but Claude Code still fails, check:
+1. Port 8002 is not in use by another process: `lsof -ti :8002`
+2. Try restarting the server: `cd backend/mcp && npm run dev`
+3. Check Claude Code MCP status: `claude mcp list`

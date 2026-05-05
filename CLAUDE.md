@@ -195,9 +195,22 @@ npm run dev                    # or npm run tauri dev for desktop
 ### MCP Server (Port 8002)
 Separate TypeScript MCP server for AI tool consumption. Exposes the same hierarchy data via MCP protocol.
 
+**Prerequisites:** Node.js 18+, npm
+
+**Setup:**
+```bash
+cd backend/mcp
+npm install
+```
+
 **Start:** `cd backend/mcp && npm run dev`
 **Endpoints:** `POST /mcp` (tools), `GET /health`, `GET /subscribe/:deviceId` (SSE)
 **Tools:** `get_hierarchy`, `get_node`, `get_children`, `get_path`, `get_ancestors`, `search_nodes`
+
+**Troubleshooting:**
+- If curl returns type placeholders instead of values, use `rtk proxy curl` instead
+- If Claude Code shows "Failed to Connect", check server: `curl -s http://localhost:8002/health`
+- Port conflicts: `lsof -ti :8002 | xargs kill -9`
 
 ### Connecting Claude Code to MCP Server
 
@@ -264,3 +277,5 @@ rtk proxy curl -s -X POST http://localhost:8002/mcp \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}}}'
 ```
+
+For detailed MCP server documentation, see `docs/MCP_QUICKREF.md`.
