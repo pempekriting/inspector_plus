@@ -11,7 +11,7 @@ vi.mock("@/stores/themeStore", () => ({
 describe("StatusBar", () => {
   it("renders version label", () => {
     render(<StatusBar />);
-    expect(screen.getByText("v1.1.0")).toBeInTheDocument();
+    expect(screen.getByText("v0.0.1")).toBeInTheDocument();
   });
 
   it("renders without crashing", () => {

@@ -68,7 +68,7 @@ export function StatusBar() {
         <BackendStatusBadge />
       </div>
       <div className="flex items-center gap-4">
-        <span>v1.1.0</span>
+        <span>v0.0.1</span>
       </div>
     </div>
   );
