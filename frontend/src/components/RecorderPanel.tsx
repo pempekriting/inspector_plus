@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRecording } from "../hooks/useRecording";
 import { useRecorder } from "../services/api";
 import { useThemeStore } from "../stores/themeStore";
+import { useDeviceStore } from "../stores/deviceStore";
 
 export function RecorderPanel() {
   const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } = useRecording();
@@ -11,9 +12,13 @@ export function RecorderPanel() {
   const { exportRecording } = useRecorder();
   const { theme } = useThemeStore();
   const isDark = theme === "dark";
+  const { devices, selectedDevice } = useDeviceStore();
+
+  const selectedDeviceInfo = devices.find(d => d.udid === selectedDevice || d.serial === selectedDevice);
+  const platform = selectedDeviceInfo?.platform === "ios" ? "ios" : "android";
 
   const handleExport = async () => {
-    const result = await exportRecording({ sessionId, lang, platform: "android" });
+    const result = await exportRecording({ sessionId, lang, platform });
     const blob = new Blob([result.script], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
