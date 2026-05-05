@@ -34,9 +34,20 @@ export function HierarchyPanel() {
     }
   }, [isLoading, data]);
 
+  // Immediately show loading state when device changes
   useEffect(() => {
-    triggerHierarchyRefresh();
-  }, [selectedDevice, triggerHierarchyRefresh]);
+    if (selectedDevice) {
+      setUiTree(null);
+      useHierarchyStore.setState({
+        isRefreshing: true,
+        isLoadingScreenshot: true,
+        combinedScreenshotUrl: null,
+        lockedNode: null,
+        selectedNode: null,
+        hoveredNode: null,
+      });
+    }
+  }, [selectedDevice, setUiTree]);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">

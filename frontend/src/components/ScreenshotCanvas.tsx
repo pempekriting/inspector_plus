@@ -95,7 +95,12 @@ export function ScreenshotCanvas() {
 
   // Load screenshot from combined /hierarchy-and-screenshot endpoint
   useEffect(() => {
-    if (!combinedScreenshotUrl) return;
+    // Device switch: combinedScreenshotUrl becomes null → show skeleton immediately
+    if (!combinedScreenshotUrl) {
+      setImageUrl(null);
+      setImageSize({ width: 0, height: 0 });
+      return;
+    }
 
     const img = new Image();
     img.onload = () => {
@@ -310,32 +315,34 @@ export function ScreenshotCanvas() {
       )}
 
       {isLoadingScreenshot && !imageUrl && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: isDark ? '#1a1a1f' : '#ffffff' }}>
-          <div className="w-16 h-16 mb-4 animate-br-spin" style={{ background: isDark ? '#242429' : '#f0eeeb', border: `3px solid ${isDark ? '#3f3f46' : '#1a1a1a'}` }}>
-            <div className="w-full h-full flex items-center justify-center">
-              <svg className="w-8 h-8" style={{ color: isDark ? 'var(--accent-cyan)' : '#047857' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5h.008z" />
-              </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ background: isDark ? 'rgba(15, 15, 18, 0.95)' : 'rgba(250, 249, 247, 0.95)' }}>
+          {/* Scan line container */}
+          <div className="relative mb-6" style={{ width: 120, height: 120 }}>
+            {/* Outer ring */}
+            <div className="absolute inset-0 rounded-full border-2 animate-pulse-slow" style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.2)' : 'rgba(4, 120, 87, 0.2)' }} />
+            {/* Middle ring */}
+            <div className="absolute inset-3 rounded-full border border-dashed animate-spin-slow" style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.35)' : 'rgba(4, 120, 87, 0.35)' }} />
+            {/* Inner crosshair */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: isDark ? '#1a1a1f' : '#ffffff', border: `2px solid ${isDark ? 'rgba(0, 245, 212, 0.6)' : 'rgba(4, 120, 87, 0.6)'}` }}>
+                <svg className="w-5 h-5" style={{ color: isDark ? 'var(--accent-cyan)' : '#047857' }} fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" />
+                  <line x1="12" y1="18" x2="12" y2="18.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
             </div>
+            {/* Scanning line */}
+            <div className="absolute left-0 right-0 h-0.5 animate-scan-line" style={{ background: `linear-gradient(90deg, transparent, ${isDark ? 'var(--accent-cyan)' : '#047857'}, transparent)` }} />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#6b6b78' : '#7a7a8c' }}>Capturing screenshot...</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse-text" style={{ color: isDark ? '#52525b' : '#a3a3a3', letterSpacing: '0.15em' }}>Preparing device view</span>
+          <span className="text-[9px] mt-1 animate-pulse-text" style={{ color: isDark ? '#3f3f46' : '#d4d4d4', animationDelay: '0.15s' }}>capturing screen</span>
         </div>
       )}
 
       {isLoadingScreenshot && imageUrl && (
-        <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(10, 10, 12, 0.7)', backdropFilter: 'blur(4px)' }}>
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 animate-br-spin" style={{ background: isDark ? '#242429' : '#f0eeeb', border: `3px solid ${isDark ? '#3f3f46' : '#1a1a1a'}` }}>
-              <div className="w-full h-full flex items-center justify-center">
-                <svg className="w-6 h-6" style={{ color: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#a8a8b3' : '#4a4a5c' }}>Loading screenshot...</span>
-          </div>
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg z-20 animate-pulse-subtle" style={{ background: isDark ? 'rgba(26, 26, 31, 0.92)' : 'rgba(255, 255, 255, 0.92)', backdropFilter: 'blur(6px)', border: `1.5px solid ${isDark ? 'rgba(0, 245, 212, 0.4)' : 'rgba(4, 120, 87, 0.4)'}` }}>
+          <div className="w-2 h-2 rounded-full animate-ping-slow" style={{ background: isDark ? 'var(--accent-cyan)' : '#047857' }} />
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#a1a1aa' : '#4a4a5c' }}>Updating</span>
         </div>
       )}
 
