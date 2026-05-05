@@ -74,7 +74,3 @@ export class TreeCache<T> {
 
 // Global cache instance for tree data
 export const treeCache = new TreeCache<object>();
-
-// Specialized cache instances
-export const hierarchyCache = new TreeCache<object>();
-export const nodeCache = new TreeCache<object>();

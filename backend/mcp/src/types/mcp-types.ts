@@ -183,7 +183,11 @@ export function encodeCursor(cursor: PaginationCursor): string {
  * Decode base64 cursor string back to PaginationCursor.
  */
 export function decodeCursor(cursor: string): PaginationCursor {
-  return JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"));
+  const decoded = JSON.parse(Buffer.from(cursor, "base64").toString("utf-8"));
+  if (typeof decoded.index !== "number" || typeof decoded.parentId !== "string") {
+    throw new Error("Invalid cursor: missing required fields");
+  }
+  return decoded;
 }
 
 // =============================================================================

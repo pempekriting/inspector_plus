@@ -13,11 +13,11 @@ const DEFAULT_PAGE_SIZE = 50;
 // Data Transformation (UiNode → AiFriendlyNode)
 // =============================================================================
 
-function isAndroidSource(source: string): boolean {
+export function isAndroidSource(source: string): boolean {
   return source === "android" || !source;
 }
 
-function countNodes(node: AiFriendlyNode): number {
+export function countNodes(node: AiFriendlyNode): number {
   let count = 1;
   if (node.children) {
     for (const child of node.children) {
@@ -27,7 +27,7 @@ function countNodes(node: AiFriendlyNode): number {
   return count;
 }
 
-function getDepth(node: AiFriendlyNode, currentDepth: number = 0): number {
+export function getDepth(node: AiFriendlyNode, currentDepth: number = 0): number {
   let maxDepth = currentDepth;
   if (node.children && node.children.length > 0) {
     for (const child of node.children) {
@@ -38,30 +38,21 @@ function getDepth(node: AiFriendlyNode, currentDepth: number = 0): number {
   return maxDepth;
 }
 
-function buildPath(node: AiFriendlyNode, parentPath: string[] = []): string[] {
-  const currentPath = [...parentPath, node.label || node.nodeType];
-  if (node.children) {
-    for (const child of node.children) {
-      buildPath(child, currentPath);
-    }
-  }
-  return parentPath;
-}
-
 /**
  * Transform raw UiNode to AI-friendly AiFriendlyNode.
  */
-function transformNode(raw: any, depth: number = 0, parentPath: string[] = []): AiFriendlyNode {
+export function transformNode(raw: any, depth: number = 0, parentPath: string[] = []): AiFriendlyNode {
   const path = [...parentPath, raw.className || raw.nodeType || "unknown"];
 
   // Determine actions from capabilities
   const actions: ("tap" | "input" | "scroll" | "long_press" | "focus" | "check")[] = [];
-  if (raw.clickable || raw.tap) actions.push("tap");
-  if (raw.enabled === false) {} // disabled, no actions
-  if (raw.scrollable) actions.push("scroll");
-  if (raw.longClickable || raw.long_press) actions.push("long_press");
-  if (raw.focusable) actions.push("focus");
-  if (raw.checkable) actions.push("check");
+  if (raw.enabled !== false) {
+    if (raw.clickable || raw.tap) actions.push("tap");
+    if (raw.scrollable) actions.push("scroll");
+    if (raw.longClickable || raw.long_press) actions.push("long_press");
+    if (raw.focusable) actions.push("focus");
+    if (raw.checkable) actions.push("check");
+  }
 
   // Build attributes object with all relevant properties
   const attributes: Record<string, string | boolean | number> = {};
@@ -171,9 +162,10 @@ export async function getHierarchy(deviceId: string, maxDepth?: number): Promise
 /**
  * Get a specific node by ID.
  */
-export async function getNode(nodeId: string, deviceId?: string): Promise<{
+export async function getNode(nodeId: string, deviceId?: string, returnHierarchy: boolean = false): Promise<{
   node: AiFriendlyNode;
   path: string[];
+  hierarchy?: AiFriendlyNode;
 }> {
   // Fetch full hierarchy and find node
   const hierarchy = deviceId
@@ -217,7 +209,7 @@ export async function getNode(nodeId: string, deviceId?: string): Promise<{
 
   const path = findPath([hierarchy], nodeId) || [];
 
-  return { node, path };
+  return returnHierarchy ? { node, path, hierarchy } : { node, path };
 }
 
 /**
@@ -262,15 +254,11 @@ export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
   ancestors: AiFriendlyNode[];
   node: AiFriendlyNode;
 }> {
-  const { node, path } = await getNode(nodeId, deviceId);
+  const result = await getNode(nodeId, deviceId, true);
 
-  // Walk the hierarchy to find actual ancestor nodes (not just path labels)
-  const hierarchy = deviceId
-    ? (await getHierarchy(deviceId)).tree
-    : null;
-
+  const hierarchy = result.hierarchy;
   if (!hierarchy) {
-    return { ancestors: [], node };
+    return { ancestors: [], node: result.node };
   }
 
   // Find path from root to target node and collect ancestors
@@ -282,14 +270,13 @@ export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
     currentAncestors: AiFriendlyNode[]
   ): AiFriendlyNode | null {
     for (const n of nodes) {
-      const newAncestors = [...currentAncestors, n];
       if (n.id === targetId) {
-        // Found target - return ancestors (excluding self)
+        // Found target - set ancestors to current path (excluding self)
         ancestors.push(...currentAncestors);
         return n;
       }
       if (n.children) {
-        const found = findNodeWithAncestors(n.children, targetId, newAncestors);
+        const found = findNodeWithAncestors(n.children, targetId, [...currentAncestors, n]);
         if (found) return found;
       }
     }
@@ -298,10 +285,10 @@ export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
 
   const found = findNodeWithAncestors([hierarchy], nodeId, []);
   if (!found) {
-    return { ancestors: [], node };
+    return { ancestors: [], node: result.node };
   }
 
-  return { ancestors, node };
+  return { ancestors, node: result.node };
 }
 
 /**
@@ -323,6 +310,12 @@ export async function searchNodes(
 ): Promise<{ matches: AiFriendlyNode[]; totalMatches: number }> {
   const cacheKey = `search:${deviceId}:${matchType}:${query}`;
 
+  // Check cache first
+  const cached = treeCache.get(cacheKey) as any;
+  if (cached) {
+    return { ...cached, matches: cached.matches.slice(0, limit) };
+  }
+
   // Use FastAPI search endpoint
   const filter = matchType === "text" ? "text" : matchType === "xpath" ? "xpath" : "text";
   const url = `/hierarchy/search?query=${encodeURIComponent(query)}&filter=${filter}${deviceId ? `&udid=${encodeURIComponent(deviceId)}` : ""}`;
@@ -334,12 +327,17 @@ export async function searchNodes(
   }
 
   // Transform results
-  const matches = (results.results || results.nodes || []).slice(0, limit).map((r: any) => {
+  const matches = (results.results || results.nodes || []).map((r: any) => {
     const node = r.node || r;
     return transformNode(node);
   });
 
-  return { matches, totalMatches: matches.length };
+  const result = { matches, totalMatches: matches.length };
+
+  // Cache for 60 seconds
+  treeCache.set(cacheKey, result, 60000);
+
+  return { ...result, matches: result.matches.slice(0, limit) };
 }
 
 // =============================================================================
