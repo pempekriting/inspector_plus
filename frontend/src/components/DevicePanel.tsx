@@ -6,6 +6,7 @@ import { useDeviceStatus } from "../services/api";
 
 interface DevicePanelProps {
   onDeviceChange?: () => void;
+  onShowShortcuts?: () => void;
 }
 
 interface ToolbarButtonProps {
@@ -21,7 +22,7 @@ function ToolbarButton({ onClick, children, title, active, isDark }: ToolbarButt
     <button
       onClick={onClick}
       title={title}
-      className="w-9 h-9 flex items-center justify-center rounded-lg transition-all active:scale-95"
+      className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
       style={{
         background: active
           ? (isDark ? '#27272a' : '#e5e5e5')
@@ -29,8 +30,8 @@ function ToolbarButton({ onClick, children, title, active, isDark }: ToolbarButt
         color: active
           ? (isDark ? '#e4e4e7' : '#1a1a1a')
           : (isDark ? '#a1a1aa' : '#525252'),
-        border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-        boxShadow: isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a',
+        border: isDark ? '2px solid var(--border-default, #3f3f46)' : '2px solid var(--border-default, #1a1a1a)',
+        boxShadow: isDark ? '2px 2px 0 var(--border-default, #3f3f46)' : '2px 2px 0 var(--border-default, #1a1a1a)',
       }}
     >
       {children}
@@ -38,7 +39,7 @@ function ToolbarButton({ onClick, children, title, active, isDark }: ToolbarButt
   );
 }
 
-export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
+export function DevicePanel({ onDeviceChange, onShowShortcuts }: DevicePanelProps) {
   const { devices, selectedDevice, setDevices, setSelectedDevice, setConnected } = useDeviceStore();
   const { data: status } = useDeviceStatus();
   const connected = status?.connected ?? false;
@@ -100,7 +101,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
   }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       {/* Theme Toggle */}
       <ToolbarButton onClick={toggleTheme} title="Toggle theme" isDark={isDark}>
         {isDark ? (
@@ -117,17 +118,15 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
 
       {/* Connection Status */}
       <div
-        className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider"
+        className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider"
         style={{
           background: connected
-            ? (isDark ? 'rgba(52, 211, 153, 0.2)' : 'rgba(0, 102, 204, 0.15)')
-            : (isDark ? 'rgba(251, 113, 133, 0.2)' : 'rgba(220, 38, 38, 0.15)'),
+            ? (isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(0, 102, 204, 0.12)')
+            : (isDark ? 'rgba(251, 113, 133, 0.15)' : 'rgba(220, 38, 38, 0.12)'),
           color: connected
             ? (isDark ? '#10b981' : '#047857')
             : (isDark ? '#fb7185' : '#dc2626'),
-          border: connected
-            ? (isDark ? '2px solid #10b981' : '2px solid #047857')
-            : (isDark ? '2px solid #fb7185' : '2px solid #dc2626'),
+          border: isDark ? '2px solid var(--border-default, #3f3f46)' : '2px solid var(--border-default, #c5c2bb)',
         }}
       >
         <span className="w-2 h-2 rounded-full" style={{ background: connected ? '#10b981' : '#fb7185' }} />
@@ -138,12 +137,12 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-150"
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[10px] font-bold transition-all duration-150"
           style={{
             background: isDark ? '#1f1f23' : '#ffffff',
             color: isDark ? '#a1a1aa' : '#4a4a4a',
-            border: isDark ? '2px solid #3f3f46' : '2px solid #1a1a1a',
-            boxShadow: isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a',
+            border: isDark ? '2px solid var(--border-default, #3f3f46)' : '2px solid var(--border-default, #1a1a1a)',
+            boxShadow: isDark ? '2px 2px 0 var(--border-default, #3f3f46)' : '2px 2px 0 var(--border-default, #1a1a1a)',
           }}
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -260,6 +259,16 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
           </div>
         )}
       </div>
+
+      {/* Shortcuts button */}
+      {onShowShortcuts && (
+        <ToolbarButton onClick={onShowShortcuts} title="Keyboard shortcuts (?)" isDark={isDark}>
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" />
+          </svg>
+        </ToolbarButton>
+      )}
     </div>
   );
 }
