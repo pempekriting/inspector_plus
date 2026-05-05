@@ -28,7 +28,7 @@ impl McpManager {
             port,
             mcp_dir,
             child: None,
-            status: McpStatus::Stopped,
+            status: McpStatus::Running,
         }
     }
 

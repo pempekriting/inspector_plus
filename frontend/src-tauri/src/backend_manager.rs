@@ -28,7 +28,7 @@ impl BackendManager {
             port,
             backend_dir,
             child: None,
-            status: BackendStatus::Stopped,
+            status: BackendStatus::Running,
         }
     }
 
