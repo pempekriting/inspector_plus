@@ -1,0 +1,29 @@
+{
+  "sources": {
+    ".raw/articles/trading-price-action-reversals.pdf": {
+      "hash": "11.7MB PDF",
+      "ingested_at": "2026-05-06",
+      "pages_created": [
+        "wiki/sources/Trading-Price-Action-Reversals.md",
+        "wiki/concepts/Trend-Reversal.md",
+        "wiki/concepts/Wedge-Pattern.md",
+        "wiki/concepts/Climactic-Reversal.md",
+        "wiki/concepts/Final-Flag.md",
+        "wiki/concepts/Always-In.md",
+        "wiki/concepts/Breakout-Trading.md",
+        "wiki/entities/AL-Brooks.md"
+      ],
+      "pages_updated": []
+    }
+  },
+  "address_map": {
+    "wiki/sources/Trading-Price-Action-Reversals.md": "c-000001",
+    "wiki/concepts/Trend-Reversal.md": "c-000002",
+    "wiki/concepts/Wedge-Pattern.md": "c-000003",
+    "wiki/concepts/Climactic-Reversal.md": "c-000004",
+    "wiki/concepts/Final-Flag.md": "c-000005",
+    "wiki/concepts/Always-In.md": "c-000006",
+    "wiki/concepts/Breakout-Trading.md": "c-000007",
+    "wiki/entities/AL-Brooks.md": "c-000008"
+  }
+}
