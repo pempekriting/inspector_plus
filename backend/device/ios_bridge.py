@@ -81,9 +81,20 @@ class IOSDeviceBridge(DeviceBridgeBase):
     def get_devices(self) -> list[dict]:
         try:
             result = _idb_cmd(["list-targets", "--json"], timeout=10)
-            targets = json.loads(result.stdout)
+            # idb outputs newline-delimited JSON (JSON Lines), not a single JSON array
             devices = []
-            for target in targets:
+            for line in result.stdout.strip().split("\n"):
+                if not line.strip():
+                    continue
+                try:
+                    target = json.loads(line)
+                except json.JSONDecodeError:
+                    # Skip malformed lines (e.g., injected XSS in DeviceName field)
+                    print(f"get_devices: skipped malformed JSON line: {line[:50]}...")
+                    continue
+                # Only include booted devices that can be inspected
+                if target.get("state") != "Booted":
+                    continue
                 devices.append({
                     "udid": target.get("udid", ""),
                     "name": target.get("name", "Unknown"),
@@ -456,17 +467,25 @@ class IOSDeviceBridge(DeviceBridgeBase):
                 timeout=15,
             )
             if result.returncode != 0:
-                raise Exception(f"screenshot failed: {result.stderr}")
+                raise Exception(f"screenshot failed (exit {result.returncode}): {result.stderr or 'unknown error'}")
+            # Verify file exists and has content
+            if not os.path.exists("/tmp/ios_screenshot.png"):
+                raise Exception("screenshot file not created")
+            file_size = os.path.getsize("/tmp/ios_screenshot.png")
+            if file_size == 0:
+                raise Exception("screenshot file is empty")
+            logger.info(f"idb screenshot captured: {file_size} bytes")
             return result
         try:
             _retry_with_backoff(do_screenshot, retries=3, base_delay=1.0)
         except Exception as e:
+            logger.error(f"Failed to capture screenshot after retries: {str(e)}")
             raise Exception(f"Failed to capture screenshot: {str(e)}")
         try:
             with open("/tmp/ios_screenshot.png", "rb") as f:
                 return f.read()
         except FileNotFoundError:
-            raise Exception("idb not found. Install with: brew install idb-companion")
+            raise Exception("screenshot file not found after capture")
     def fetch_hierarchy_and_screenshot(self) -> tuple[dict, bytes]:
         """Fetch hierarchy + screenshot sequentially (no combined command for iOS).
         Runs: idb ui describe-all --json --nested then idb screenshot.

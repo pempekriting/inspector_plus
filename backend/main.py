@@ -195,8 +195,14 @@ def _get_ios_devices() -> list[dict]:
     try:
         result = run_idb(["list-targets", "--json"], timeout=30)
         if result.returncode == 0:
-            targets = json.loads(result.stdout)
-            for target in targets:
+            # idb outputs newline-delimited JSON (JSON Lines), not a single array
+            for line in result.stdout.strip().split("\n"):
+                if not line.strip():
+                    continue
+                try:
+                    target = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
                 if target.get("state") == "Booted":
                     devices.append({
                         "udid": target.get("udid", ""),

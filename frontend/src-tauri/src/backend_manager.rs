@@ -59,13 +59,41 @@ impl BackendManager {
     }
 
     fn get_uvicorn_cmd(&self) -> String {
-        // Source .zshrc to get Android SDK in PATH
+        // Try to find ANDROID_HOME and add to PATH
+        let android_path = Self::find_android_sdk();
+        let path_setup = android_path
+            .map(|ap| {
+                format!(
+                    "export ANDROID_HOME='{}'; export PATH=\"$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin\";",
+                    ap.display()
+                )
+            })
+            .unwrap_or_default();
+
         format!(
-            "source ~/.zshrc && cd '{}' && '{}' -m uvicorn main:app --port {} --host 127.0.0.1",
+            "{} cd '{}' && '{}' -m uvicorn main:app --port {} --host 127.0.0.1",
+            path_setup,
             self.backend_dir.display(),
             self.get_python_path().display(),
             self.port
         )
+    }
+
+    fn find_android_sdk() -> Option<PathBuf> {
+        let home = std::env::var("HOME").ok().unwrap_or_default();
+        let candidates = [
+            PathBuf::from("/Users/azzamnizar/Library/Android/sdk"),
+            PathBuf::from(&home).join("Library/Android/sdk"),
+            PathBuf::from(&home).join("Android/Sdk"),
+        ];
+        for candidate in candidates {
+            if candidate.join("platform-tools/adb").exists() {
+                log::info!("Found Android SDK at: {}", candidate.display());
+                return Some(candidate);
+            }
+        }
+        log::info!("Android SDK not found in common locations");
+        None
     }
 
     pub fn get_url(&self) -> String {
@@ -103,8 +131,8 @@ impl BackendManager {
 
         self.status = BackendStatus::Starting;
 
-        let python_child = Command::new("sh")
-            .args(["-c", &self.get_uvicorn_cmd()])
+        let python_child = Command::new("bash")
+            .args(["-l", "-c", &self.get_uvicorn_cmd()])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn();
