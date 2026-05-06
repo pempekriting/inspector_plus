@@ -28,7 +28,7 @@ impl McpManager {
             port,
             mcp_dir,
             child: None,
-            status: McpStatus::Running,
+            status: McpStatus::Stopped,
         }
     }
 
@@ -40,26 +40,17 @@ impl McpManager {
         let candidates = [
             // Dev: src-tauri/target/debug/inspector_plus -> project root -> backend/mcp
             exe_dir.as_ref().map(|p| p.join("../../../../backend/mcp")),
-            // Release: src-tauri/target/release/bundle/macos/InspectorPlus.app/Contents/MacOS/inspector_plus -> backend/mcp
-            exe_dir.as_ref().map(|p| p.join("../../../../../../../backend/mcp")),
+            // Release: macOS bundle -> project root -> backend/mcp (9 levels up)
+            exe_dir.as_ref().map(|p| p.join("../../../../../../../../../backend/mcp")),
         ];
 
         for candidate in candidates.iter().flatten() {
-            let package_json = candidate.join("package.json");
-            if package_json.exists() {
+            if candidate.join("package.json").exists() {
                 return candidate.clone();
             }
         }
 
         PathBuf::from("./backend/mcp")
-    }
-
-    fn get_node_cmd(&self) -> String {
-        format!(
-            "source ~/.zshrc && cd '{}' && MCP_PORT={} npm run dev",
-            self.mcp_dir.display(),
-            self.port
-        )
     }
 
     pub fn get_url(&self) -> String {
@@ -81,57 +72,6 @@ impl McpManager {
         .is_ok()
     }
 
-    pub fn start(&mut self) -> Result<(), String> {
-        if self.status == McpStatus::Running {
-            return Ok(());
-        }
-
-        self.status = McpStatus::Starting;
-
-        let node_child = Command::new("sh")
-            .args(["-c", &self.get_node_cmd()])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn();
-
-        match node_child {
-            Ok(child) => {
-                log::info!("MCP server started with PID: {}", child.id());
-                self.child = Some(child);
-                // Wait briefly for port to open
-                if Self::wait_for_port(self.port, 10) {
-                    self.status = McpStatus::Running;
-                    Ok(())
-                } else {
-                    self.status = McpStatus::Error("MCP process started but port not open".to_string());
-                    Err("MCP process started but port not open".to_string())
-                }
-            }
-            Err(e) => {
-                let err = format!("Failed to spawn MCP process: {}", e);
-                log::error!("{}", err);
-                self.status = McpStatus::Error(err.clone());
-                Err(err)
-            }
-        }
-    }
-
-    pub fn stop(&mut self) -> Result<(), String> {
-        if let Some(mut child) = self.child.take() {
-            log::info!("Stopping MCP server...");
-            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
-            self.status = McpStatus::Stopped;
-            log::info!("MCP server stopped");
-        }
-        Ok(())
-    }
-
-    pub fn restart_on_port(&mut self, port: u16) -> Result<(), String> {
-        self.stop()?;
-        self.port = port;
-        self.start()
-    }
-
     fn wait_for_port(port: u16, timeout_secs: u64) -> bool {
         let mut retries = timeout_secs * 10;
         while retries > 0 {
@@ -143,12 +83,66 @@ impl McpManager {
         }
         false
     }
+
+    pub fn start(&mut self) -> Result<(), String> {
+        if self.status == McpStatus::Running {
+            return Ok(());
+        }
+
+        self.status = McpStatus::Starting;
+
+        let mcp_dir = self.mcp_dir.display();
+        let port = self.port;
+
+        let cmd = format!(
+            "cd '{}' && MCP_PORT={} npm run dev",
+            mcp_dir,
+            port
+        );
+
+        let node_child = Command::new("bash")
+            .args(["-l", "-c", &cmd])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+
+        match node_child {
+            Ok(child) => {
+                if Self::wait_for_port(self.port, 15) {
+                    self.child = Some(child);
+                    self.status = McpStatus::Running;
+                    Ok(())
+                } else {
+                    self.status = McpStatus::Error("MCP process started but port not open".to_string());
+                    Err("MCP process started but port not open".to_string())
+                }
+            }
+            Err(e) => {
+                let err = format!("Failed to spawn MCP process: {}", e);
+                self.status = McpStatus::Error(err.clone());
+                Err(err)
+            }
+        }
+    }
+
+    pub fn stop(&mut self) -> Result<(), String> {
+        if let Some(mut child) = self.child.take() {
+            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+            self.status = McpStatus::Stopped;
+        }
+        Ok(())
+    }
+
+    pub fn restart_on_port(&mut self, port: u16) -> Result<(), String> {
+        self.stop()?;
+        self.port = port;
+        self.start()
+    }
 }
 
 impl Drop for McpManager {
     fn drop(&mut self) {
         if let Some(ref mut child) = self.child {
-            log::info!("App closing - stopping MCP server");
             let _ = child.kill();
         }
     }

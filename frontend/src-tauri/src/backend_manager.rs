@@ -28,7 +28,7 @@ impl BackendManager {
             port,
             backend_dir,
             child: None,
-            status: BackendStatus::Running,
+            status: BackendStatus::Stopped,
         }
     }
 
@@ -40,13 +40,12 @@ impl BackendManager {
         let candidates = [
             // Dev: src-tauri/target/debug/inspector_plus -> project root -> backend
             exe_dir.as_ref().map(|p| p.join("../../../../backend")),
-            // Release: src-tauri/target/release/bundle/macos/InspectorPlus.app/Contents/MacOS/inspector_plus -> backend
-            exe_dir.as_ref().map(|p| p.join("../../../../../../../backend")),
+            // Release: macOS bundle InspectorPlus.app/Contents/MacOS/inspector_plus -> project root -> backend
+            exe_dir.as_ref().map(|p| p.join("../../../../../../../../../backend")),
         ];
 
         for candidate in candidates.iter().flatten() {
-            let python_path = candidate.join(".venv/bin/python");
-            if python_path.exists() {
+            if candidate.join("pyproject.toml").exists() {
                 return candidate.clone();
             }
         }
@@ -56,44 +55,6 @@ impl BackendManager {
 
     fn get_python_path(&self) -> PathBuf {
         self.backend_dir.join(".venv/bin/python")
-    }
-
-    fn get_uvicorn_cmd(&self) -> String {
-        // Try to find ANDROID_HOME and add to PATH
-        let android_path = Self::find_android_sdk();
-        let path_setup = android_path
-            .map(|ap| {
-                format!(
-                    "export ANDROID_HOME='{}'; export PATH=\"$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin\";",
-                    ap.display()
-                )
-            })
-            .unwrap_or_default();
-
-        format!(
-            "{} cd '{}' && '{}' -m uvicorn main:app --port {} --host 127.0.0.1",
-            path_setup,
-            self.backend_dir.display(),
-            self.get_python_path().display(),
-            self.port
-        )
-    }
-
-    fn find_android_sdk() -> Option<PathBuf> {
-        let home = std::env::var("HOME").ok().unwrap_or_default();
-        let candidates = [
-            PathBuf::from("/Users/azzamnizar/Library/Android/sdk"),
-            PathBuf::from(&home).join("Library/Android/sdk"),
-            PathBuf::from(&home).join("Android/Sdk"),
-        ];
-        for candidate in candidates {
-            if candidate.join("platform-tools/adb").exists() {
-                log::info!("Found Android SDK at: {}", candidate.display());
-                return Some(candidate);
-            }
-        }
-        log::info!("Android SDK not found in common locations");
-        None
     }
 
     pub fn get_url(&self) -> String {
@@ -124,6 +85,18 @@ impl BackendManager {
         None
     }
 
+    fn wait_for_port(port: u16, timeout_secs: u64) -> bool {
+        let mut retries = timeout_secs * 10;
+        while retries > 0 {
+            if Self::is_port_open(port) {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(100));
+            retries -= 1;
+        }
+        false
+    }
+
     pub fn start(&mut self) -> Result<(), String> {
         if self.status == BackendStatus::Running {
             return Ok(());
@@ -131,18 +104,27 @@ impl BackendManager {
 
         self.status = BackendStatus::Starting;
 
+        let python_path = self.get_python_path();
+        let backend_dir = self.backend_dir.display();
+        let port = self.port;
+
+        let cmd = format!(
+            "cd '{}' && '{}' -m uvicorn main:app --port {} --host 127.0.0.1",
+            backend_dir,
+            python_path.display(),
+            port
+        );
+
         let python_child = Command::new("bash")
-            .args(["-l", "-c", &self.get_uvicorn_cmd()])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .args(["-c", &cmd])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn();
 
         match python_child {
-            Ok(child) => {
-                log::info!("Python backend started with PID: {}", child.id());
-                self.child = Some(child);
-                // Check port immediately; if not open, mark as Error
-                if Self::is_port_open(self.port) {
+            Ok(mut child) => {
+                if Self::wait_for_port(self.port, 15) {
+                    self.child = Some(child);
                     self.status = BackendStatus::Running;
                     Ok(())
                 } else {
@@ -152,7 +134,6 @@ impl BackendManager {
             }
             Err(e) => {
                 let err = format!("Failed to spawn backend process: {}", e);
-                log::error!("{}", err);
                 self.status = BackendStatus::Error(err.clone());
                 Err(err)
             }
@@ -161,10 +142,8 @@ impl BackendManager {
 
     pub fn stop(&mut self) -> Result<(), String> {
         if let Some(mut child) = self.child.take() {
-            log::info!("Stopping Python backend...");
             child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
             self.status = BackendStatus::Stopped;
-            log::info!("Python backend stopped");
         }
         Ok(())
     }
@@ -179,13 +158,11 @@ impl BackendManager {
         let mut retries = timeout_secs * 2;
         while retries > 0 {
             if Self::is_port_open(self.port) {
-                log::info!("Backend is ready!");
                 return true;
             }
             thread::sleep(Duration::from_millis(500));
             retries -= 1;
         }
-        log::warn!("Backend may not be ready, continuing anyway...");
         false
     }
 }
@@ -193,7 +170,6 @@ impl BackendManager {
 impl Drop for BackendManager {
     fn drop(&mut self) {
         if let Some(ref mut child) = self.child {
-            log::info!("App closing - stopping backend");
             let _ = child.kill();
         }
     }
@@ -209,7 +185,6 @@ pub fn create_backend_manager() -> SharedBackendManager {
     let port = match requested_port {
         Some(p) => p,
         None => {
-            // Try default 8001; if busy, find available port starting from 8002
             if BackendManager::is_port_open(8001) {
                 BackendManager::find_available_port(8002).unwrap_or(8001)
             } else {
