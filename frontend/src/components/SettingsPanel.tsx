@@ -21,6 +21,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [scanProgress, setScanProgress] = useState(0);
   const [isRestarting, setIsRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<{ be: number | null; mcp: number | null } | null>(null);
 
   const accentColor = isDark ? "#00e5cc" : "#0066cc";
   const accentBg = isDark ? "rgba(0,229,204,0.12)" : "rgba(0,102,204,0.08)";
@@ -45,6 +46,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setScanProgress(0);
       setIsRestarting(false);
       setRestartError(null);
+      setScanResult(null);
     }
   }, [isOpen, backendUrl, mcpUrl]);
 
@@ -114,6 +116,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     setEditedMcp("http://localhost:8002");
     setVerifyStatus({ be: "idle", mcp: "idle" });
     setDetectedPort(null);
+    setScanResult(null);
     queryClient.invalidateQueries();
   };
 
@@ -172,9 +175,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     for (let port = 8001; port < 8100; port++) {
       setScanProgress(((port - 8001) / 99) * 100);
       try {
-        const res = await fetch(`http://127.0.0.1:${port}/health`, {
+        const res = await fetch(`http://localhost:${port}/health`, {
           method: "GET",
-          signal: AbortSignal.timeout(150),
+          signal: AbortSignal.timeout(500),
         });
         if (res.ok) {
           const data = await res.json();
@@ -193,9 +196,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       if (port === bePort) continue;
       setScanProgress(((port - 8001) / 99) * 100);
       try {
-        const res = await fetch(`http://127.0.0.1:${port}/health`, {
+        const res = await fetch(`http://localhost:${port}/health`, {
           method: "GET",
-          signal: AbortSignal.timeout(150),
+          signal: AbortSignal.timeout(500),
         });
         if (res.ok) {
           const data = await res.json();
@@ -211,6 +214,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
     if (!bePort) setVerifyStatus(prev => ({ ...prev, be: "fail" }));
     if (!mcpPort) setVerifyStatus(prev => ({ ...prev, mcp: "fail" }));
+    setScanResult({ be: bePort, mcp: mcpPort });
     setScanProgress(100);
   };
 
@@ -316,18 +320,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: textMuted }}>
                 Backend API
               </span>
-              {beStatus === "ok" && detectedPort && (
-                <span
-                  className="ml-auto px-2 py-px rounded text-[8px] font-black uppercase"
-                  style={{
-                    background: isDark ? "rgba(16,185,129,0.15)" : "#f0fdf4",
-                    color: successColor,
-                    border: `1.5px solid ${successColor}`,
-                  }}
-                >
-                  Port {detectedPort}
-                </span>
-              )}
             </div>
             <input
               type="text"
@@ -380,19 +372,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           </div>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 -my-1">
+          <div className="flex items-center gap-3 py-3">
             <div className="flex-1 h-px" style={{ background: isDark ? "#27272a" : "#e5e5e5" }} />
-            <span className="text-[8px] font-bold uppercase" style={{ color: textDim }}>
+            <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{ color: textDim }}>
               Actions
             </span>
             <div className="flex-1 h-px" style={{ background: isDark ? "#27272a" : "#e5e5e5" }} />
           </div>
 
           {/* Action buttons */}
-          <div
-            className="grid grid-cols-2 gap-2"
-            style={{ marginTop: (beStatus === "idle" && mcpStatus === "idle") ? "0" : "1.25rem" }}
-          >
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={handleVerifyBoth}
               disabled={isVerifying}
@@ -437,12 +426,38 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           </div>
 
           {/* Scan progress bar */}
-          {isScanning && scanProgress > 0 && (
+          {isScanning && (
             <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? "#27272a" : "#e5e5e5" }}>
               <div
                 className="absolute left-0 top-0 h-full rounded-full transition-all duration-150"
                 style={{ width: `${scanProgress}%`, background: accentColor }}
               />
+            </div>
+          )}
+
+          {/* Scan result */}
+          {scanResult && !isScanning && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-medium"
+              style={{
+                background: isDark ? "rgba(16,185,129,0.12)" : "#f0fdf4",
+                color: successColor,
+                border: `2px solid ${successColor}`,
+              }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span>
+                {scanResult.be && scanResult.mcp
+                  ? `Backend (${scanResult.be}) + MCP (${scanResult.mcp}) found`
+                  : scanResult.be
+                  ? `Backend found on port ${scanResult.be}`
+                  : scanResult.mcp
+                  ? `MCP found on port ${scanResult.mcp}`
+                  : "No servers found"}
+              </span>
             </div>
           )}
 
@@ -468,6 +483,24 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                   ? "Backend offline — check if backend is running"
                   : "MCP offline — check if MCP server is running"}
               </span>
+            </div>
+          )}
+
+          {/* Verify success */}
+          {verifyAllOk && !isVerifying && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-medium"
+              style={{
+                background: isDark ? "rgba(16,185,129,0.12)" : "#f0fdf4",
+                color: successColor,
+                border: `2px solid ${successColor}`,
+              }}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span>Backend + MCP servers are running and reachable</span>
             </div>
           )}
 
