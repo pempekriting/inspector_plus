@@ -463,7 +463,7 @@ class TestIOSDeviceBridge:
     @patch("device.ios_bridge._idb_cmd")
     def test_get_devices_parses_json(self, mock_idb):
         mock_idb.return_value = mock_proc(
-            stdout='[{"udid": "abc", "name": "iPhone 15", "os_version": "17.0", "state": "Booted", "architecture": "arm64"}]',
+            stdout='{"udid": "abc", "name": "iPhone 15", "os_version": "17.0", "state": "Booted", "architecture": "arm64"}\n',
             returncode=0,
         )
         bridge = IOSDeviceBridge()

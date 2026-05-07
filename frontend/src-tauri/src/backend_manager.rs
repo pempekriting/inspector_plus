@@ -54,7 +54,16 @@ impl BackendManager {
     }
 
     fn get_python_path(&self) -> PathBuf {
-        self.backend_dir.join(".venv/bin/python")
+        let candidates = [
+            self.backend_dir.join(".venv/bin/python"),
+            self.backend_dir.join(".venv/bin/python3"),
+            self.backend_dir.join("venv/bin/python"),
+            self.backend_dir.join("venv/bin/python3"),
+        ];
+        candidates
+            .into_iter()
+            .find(|p| p.exists())
+            .unwrap_or_else(|| self.backend_dir.join(".venv/bin/python"))
     }
 
     pub fn get_url(&self) -> String {

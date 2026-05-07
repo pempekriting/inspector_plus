@@ -7,6 +7,7 @@ import time
 import os
 import logging
 import threading
+import tempfile
 from typing import Optional, List, Dict
 import httpx
 from device.base import DeviceBridgeBase
@@ -460,18 +461,20 @@ class IOSDeviceBridge(DeviceBridgeBase):
     def pinch(self, x: int, y: int, scale: float) -> bool:
         raise NotImplementedError("Pinch gesture is not supported on iOS devices")
     def get_screenshot(self) -> bytes:
+        tmp_dir = tempfile.gettempdir()
+        screenshot_path = os.path.join(tmp_dir, "ios_screenshot.png")
         def do_screenshot():
             result = _idb_cmd(
-                ["screenshot", "/tmp/ios_screenshot.png"],
+                ["screenshot", screenshot_path],
                 udid=self.udid,
                 timeout=15,
             )
             if result.returncode != 0:
                 raise Exception(f"screenshot failed (exit {result.returncode}): {result.stderr or 'unknown error'}")
             # Verify file exists and has content
-            if not os.path.exists("/tmp/ios_screenshot.png"):
+            if not os.path.exists(screenshot_path):
                 raise Exception("screenshot file not created")
-            file_size = os.path.getsize("/tmp/ios_screenshot.png")
+            file_size = os.path.getsize(screenshot_path)
             if file_size == 0:
                 raise Exception("screenshot file is empty")
             logger.info(f"idb screenshot captured: {file_size} bytes")
@@ -482,7 +485,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
             logger.error(f"Failed to capture screenshot after retries: {str(e)}")
             raise Exception(f"Failed to capture screenshot: {str(e)}")
         try:
-            with open("/tmp/ios_screenshot.png", "rb") as f:
+            with open(screenshot_path, "rb") as f:
                 return f.read()
         except FileNotFoundError:
             raise Exception("screenshot file not found after capture")

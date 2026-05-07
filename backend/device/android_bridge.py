@@ -9,8 +9,8 @@ import xml.etree.ElementTree as ET
 from typing import Optional, List, Dict
 import httpx
 logger = logging.getLogger(__name__)
-# Module-level temp dir (set once from env or default to /tmp)
-_TMP_BASE = os.environ.get("TMP_BASE_DIR", "/tmp")
+# Module-level temp dir (set once from env or default to system temp)
+_TMP_BASE = os.environ.get("TMP_BASE_DIR", tempfile.gettempdir())
 _INSPECTOR_TMP = os.path.join(_TMP_BASE, "inspectorplus")
 os.makedirs(_INSPECTOR_TMP, exist_ok=True)
 try:

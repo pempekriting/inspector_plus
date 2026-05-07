@@ -34,13 +34,17 @@ def client():
 
 @pytest.fixture(autouse=True)
 def reset_bridges():
-    """Reset bridge singletons between tests to avoid state leakage."""
+    """Reset bridge singletons and rate limiter between tests to avoid state leakage."""
     import main
     main._android_bridge = None
+    main._android_bridges = {}
     main._ios_bridges = {}
+    main.limiter.reset()
     yield
     main._android_bridge = None
+    main._android_bridges = {}
     main._ios_bridges = {}
+    main.limiter.reset()
 
 
 @pytest.fixture

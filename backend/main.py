@@ -12,6 +12,7 @@ from io import BytesIO
 import asyncio
 import base64
 import logging
+import tempfile
 import os
 import uuid
 import time
