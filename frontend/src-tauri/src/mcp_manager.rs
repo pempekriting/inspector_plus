@@ -40,7 +40,7 @@ impl McpManager {
         let candidates = [
             // Dev: src-tauri/target/debug/inspector_plus -> project root -> backend/mcp
             exe_dir.as_ref().map(|p| p.join("../../../../backend/mcp")),
-            // Release: macOS bundle -> project root -> backend/mcp (9 levels up)
+            // Release: macOS bundle -> project root -> backend/mcp (9 levels up for .app with symlinks)
             exe_dir.as_ref().map(|p| p.join("../../../../../../../../../backend/mcp")),
         ];
 
@@ -91,17 +91,13 @@ impl McpManager {
 
         self.status = McpStatus::Starting;
 
-        let mcp_dir = self.mcp_dir.display();
+        let mcp_dir = self.mcp_dir.clone();
         let port = self.port;
 
-        let cmd = format!(
-            "cd '{}' && MCP_PORT={} npm run dev",
-            mcp_dir,
-            port
-        );
-
-        let node_child = Command::new("bash")
-            .args(["-l", "-c", &cmd])
+        let node_child = Command::new("npm")
+            .current_dir(&mcp_dir)
+            .args(["run", "dev"])
+            .env("MCP_PORT", port.to_string())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn();
@@ -127,7 +123,21 @@ impl McpManager {
 
     pub fn stop(&mut self) -> Result<(), String> {
         if let Some(mut child) = self.child.take() {
-            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+            // First kill the bash wrapper
+            let _ = child.kill();
+            // The node/tsx processes may survive bash death - use lsof to find and kill the actual process on this port
+            let port = self.port;
+            let output = Command::new("lsof")
+                .args(["-ti", &format!(":{}", port)])
+                .output();
+            if let Ok(output) = output {
+                let pids = String::from_utf8_lossy(&output.stdout);
+                for pid in pids.split_whitespace() {
+                    let _ = Command::new("kill")
+                        .args(["-9", pid])
+                        .spawn();
+                }
+            }
             self.status = McpStatus::Stopped;
         }
         Ok(())

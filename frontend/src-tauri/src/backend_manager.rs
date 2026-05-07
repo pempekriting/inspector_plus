@@ -40,7 +40,7 @@ impl BackendManager {
         let candidates = [
             // Dev: src-tauri/target/debug/inspector_plus -> project root -> backend
             exe_dir.as_ref().map(|p| p.join("../../../../backend")),
-            // Release: macOS bundle InspectorPlus.app/Contents/MacOS/inspector_plus -> project root -> backend
+            // Release: macOS bundle InspectorPlus.app/Contents/MacOS/inspector_plus -> project root -> backend (9 levels up for .app with symlinks)
             exe_dir.as_ref().map(|p| p.join("../../../../../../../../../backend")),
         ];
 
@@ -105,18 +105,12 @@ impl BackendManager {
         self.status = BackendStatus::Starting;
 
         let python_path = self.get_python_path();
-        let backend_dir = self.backend_dir.display();
+        let backend_dir = self.backend_dir.clone();
         let port = self.port;
 
-        let cmd = format!(
-            "cd '{}' && '{}' -m uvicorn main:app --port {} --host 127.0.0.1",
-            backend_dir,
-            python_path.display(),
-            port
-        );
-
-        let python_child = Command::new("bash")
-            .args(["-c", &cmd])
+        let python_child = Command::new(python_path)
+            .current_dir(&backend_dir)
+            .args(["-m", "uvicorn", "main:app", "--port", &port.to_string(), "--host", "127.0.0.1"])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn();
