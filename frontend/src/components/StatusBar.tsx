@@ -1,14 +1,14 @@
 import { useBackendStatus } from "../hooks/useBackend";
 import { useThemeStore } from "../stores/themeStore";
 
-function BackendStatusBadge() {
+function BackendStatusBadge({ isDark }: { isDark: boolean }) {
   const { status } = useBackendStatus();
 
   const statusConfig = {
-    starting: { label: "Starting...", color: "#f59e0b" },
-    running: { label: "Running", color: "#22c55e" },
-    stopped: { label: "Stopped", color: "#ef4444" },
-    error: { label: "Error", color: "#ef4444" },
+    starting: { label: "Starting...", color: isDark ? "#f59e0b" : "#d97706" },
+    running: { label: "Running", color: isDark ? "#22c55e" : "#059669" },
+    stopped: { label: "Stopped", color: isDark ? "#ef4444" : "#dc2626" },
+    error: { label: "Error", color: isDark ? "#ef4444" : "#dc2626" },
   };
 
   const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.stopped;
@@ -38,7 +38,7 @@ export function StatusBar() {
       }}
     >
       <div className="flex items-center gap-4">
-        <BackendStatusBadge />
+        <BackendStatusBadge isDark={isDark} />
       </div>
       <div className="flex items-center gap-4">
         <span>v0.0.1</span>

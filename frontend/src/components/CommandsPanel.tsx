@@ -507,10 +507,10 @@ export function CommandsPanel() {
       );
     }
     return (
-      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${cmdPlatform === 'ios' ? 'bg-gray-100 text-gray-800' : 'bg-cyan-900 text-cyan-300'}`} style={
+      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase`} style={
         cmdPlatform === 'ios'
-          ? { background: '#f5f5f5', color: '#1a1a1a' }
-          : { background: '#1f1f23', color: 'var(--accent-cyan, #00e5cc)' }
+          ? { background: isDark ? '#f5f5f5' : '#e5e5e5', color: isDark ? '#1a1a1a' : '#1a1a1a' }
+          : { background: isDark ? '#1f1f23' : '#1e3a5f', color: isDark ? 'var(--accent-cyan, #00e5cc)' : 'var(--accent-blue, #2563eb)' }
       }>
         {cmdPlatform === 'ios' ? 'iOS' : 'Android'}
       </span>
