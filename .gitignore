@@ -30,7 +30,6 @@ build/
 # Logs
 *.log
 npm-debug.log*
-uv.lock
 
 # Testing
 coverage/
@@ -53,6 +52,17 @@ env/
 # Tauri (desktop app)
 src-tauri/target/
 src-tauri/.cargo/
+
+# Android VPN app (inspector_vpn)
+backend/inspector_vpn/.gradle/
+backend/inspector_vpn/app/build/
+backend/inspector_vpn/build/
+backend/inspector_vpn/gradle/wrapper/gradle-wrapper.jar
+backend/inspector_vpn/local.properties
+*.apk
+
+# uv lock (managed by pyproject.toml)
+uv.lock
 
 # Misc
 Thumbs.db
