@@ -1,6 +1,6 @@
 # InspectorPlus
 
-Real-time Android/iOS device UI inspection tool with hierarchical view exploration, tap-to-inspect, and desktop GUI.
+Real-time Android/iOS device UI inspection tool with live screenshot streaming, hierarchical view exploration, tap-to-inspect, and desktop GUI.
 
 **Version:** 0.0.1
 
@@ -10,24 +10,51 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 
 ## Features
 
-- Screenshot streaming via combined `/hierarchy-and-screenshot` endpoint
-- Hierarchical UI element tree with expand/collapse
-- Hover-to-highlight on canvas (shows element bounds)
-- Click-to-tap on device screen
-- Multi-device selection via dropdown
-- Element property inspection (class, package, resource-id, text, bounds)
-- Dark/light Neo-Brutalism theme with runtime switching
-- Desktop app via Tauri 2 (or browser-based dev mode)
-- F2 Test Recorder — record and export as Python/Java/JS
-- F3 WebView Contexts — switch between native and webview
-- F4 Hierarchy Search — regex, xpath/resource-id/text filter
-- F6 WCAG Accessibility Audit
-- D2 Canvas Modes — inspect/coordinate/layout, zoom 0.25x-4x
-- iOS Device Support via idb
+### Core Inspection
+- **Screenshot streaming** — combined `/hierarchy-and-screenshot` endpoint with base64 PNG
+- **Hierarchical UI tree** — expand/collapse, node IDs, bounds, text, resource-id
+- **Hover-to-highlight** — element bounds overlay on canvas
+- **Click-to-tap** — tap device screen by clicking canvas
+- **Multi-device selection** — dropdown for Android/iOS devices
+- **D2 Canvas Modes** — inspect / coordinate / layout, zoom 0.25x–4x with Ctrl+scroll
+
+### Advanced Panels (SubTabBar)
+
+| Tab | Feature | Description |
+|-----|---------|-------------|
+| Hierarchy | F4 Search | regex, xpath, resource-id/text filter |
+| Accessibility | F6 WCAG Audit | accessibility issue detection with severity |
+| Recorder | F2 Test Recorder | record steps, export as Python/Java/JS |
+| **Network** | **D7 Network Debug** | **mitmproxy App Proxy + VPN Full Intercept** |
+
+### Device & Interaction
+- iOS device support via idb-companion
 - ADB Command Panel — execute allowlisted shell commands
-- Locator Generation — Appium strategies
-- APK Info Panel — version, SDK, permissions
-- Runtime port switching — configure BE/MCP ports via Settings panel (Tauri desktop)
+- Locator Generation — Appium strategies (id, xpath, text, etc.)
+- APK Info Panel — version, SDK, permissions, install type
+- F3 WebView Contexts — switch between native and webview contexts
+- Multi-pointer gesture execution (drag, pinch, swipe, custom)
+
+### Desktop & Runtime
+- Tauri 2 desktop app (Rust shell)
+- Runtime port switching — configure BE/MCP ports via Settings panel
+- Dark/light Neo-Brutalism theme with runtime switching
+- Onboarding modal for first-run setup
+
+### Network Debug (New)
+
+**Two interception modes:**
+
+| Mode | Technique | Catches |
+|------|-----------|---------|
+| **App Proxy** | `settings put global http_proxy` + `adb reverse` | Only apps honoring system proxy |
+| **Full Intercept** | VPN Service on device (10.0.0.2/32, route 0.0.0.0/0) | ALL device traffic including apps with certificate pinning |
+
+- Live traffic stream via WebSocket
+- Filter by URL, method, status code
+- Request/response headers and body viewer
+- MITM certificate push-to-device
+- Android VPN app with AUTO_START support
 
 ---
 
@@ -35,20 +62,22 @@ Real-time Android/iOS device UI inspection tool with hierarchical view explorati
 
 ### Prerequisites
 
-- Python 3.13+ (not 3.14 — WebSocket compatibility issue)
+- Python 3.13+ (not 3.14 — WebSocket incompatibility)
 - Node.js 18+
 - ADB in PATH
+- For Network Debug: `pip install mitmproxy`
+- For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
 
 ### Browser Dev Mode
 
-**Terminal 1 - Backend:**
+**Terminal 1 — Backend:**
 ```bash
 cd backend
 uv sync --python python3.13
-uvicorn main:app --reload --port 8001
+uv run uvicorn main:app --reload --port 8001
 ```
 
-**Terminal 2 - Frontend:**
+**Terminal 2 — Frontend:**
 ```bash
 cd frontend
 npm install
@@ -77,6 +106,8 @@ npm run tauri dev
 | Backend | FastAPI 0.115 (Python 3.13) |
 | Android | ADB + uiautomator |
 | iOS | idb-companion |
+| Network Proxy | mitmproxy |
+| Network Interception | Android VpnService API |
 
 ---
 
@@ -85,8 +116,10 @@ npm run tauri dev
 | Document | Description |
 |----------|-------------|
 | [SPEC.md](SPEC.md) | Technical reference: API, architecture, MCP server |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, testing |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design details |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Dev setup, testing, troubleshooting |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, REST API, component hierarchy |
+| [docs/NETWORK.md](docs/NETWORK.md) | Network debug architecture, VPN app, APK build |
+| [docs/MCP_QUICKREF.md](docs/MCP_QUICKREF.md) | MCP server tools reference |
 
 ---
 
