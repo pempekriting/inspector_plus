@@ -11,11 +11,12 @@ import { CommandsDrawer } from "./components/CommandsDrawer";
 import { RecorderPanel } from "./components/RecorderPanel";
 import { OnboardingModal } from "./components/OnboardingModal";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { NetworkPanel } from "./components/NetworkPanel";
 import { useHierarchyStore } from "./stores/hierarchyStore";
 import { useThemeStore } from "./stores/themeStore";
 
 export type TabType = 'inspector' | 'commands';
-export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder';
+export type InspectorSubTab = 'hierarchy' | 'accessibility' | 'recorder' | 'network';
 
 function App() {
   const { hoveredNode, lockedNode } = useHierarchyStore();
@@ -200,6 +201,9 @@ function App() {
                 </div>
                 <div style={{ display: activeInspectorTab === 'recorder' ? 'block' : 'none', height: '100%' }}>
                   <RecorderPanel />
+                </div>
+                <div style={{ display: activeInspectorTab === 'network' ? 'block' : 'none', height: '100%' }}>
+                  <NetworkPanel />
                 </div>
               </div>
             </div>

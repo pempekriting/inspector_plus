@@ -506,3 +506,146 @@ export function useRecorder() {
 
   return { addStep, exportRecording, clearRecording };
 }
+
+// Network Debug hooks
+export function useProxyStatus() {
+  return useQuery({
+    queryKey: ["proxy-status"],
+    queryFn: () => apiFetch<{ running: boolean; port: number; flow_file: string | null; flows_count: number }>(
+      `${getApiUrl()}/network/proxy/status`
+    ),
+    refetchInterval: 5000,
+    staleTime: 1000,
+  });
+}
+
+export function useStartProxy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ port, udid }: { port?: number; udid?: string }) =>
+      apiFetch<{ success: boolean; running: boolean; port: number; error?: string }>(
+        `${getApiUrl()}/network/proxy/start`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ port: port || 8080, udid }),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proxy-status"] });
+    },
+  });
+}
+
+export function useStopProxy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean; running: boolean }>(`${getApiUrl()}/network/proxy/stop`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proxy-status"] });
+    },
+  });
+}
+
+export function useNetworkTraffic(since: number = 0, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["network-traffic", since, enabled],
+    queryFn: async () => {
+      if (!enabled) return { flows: [], count: 0 };
+      return apiFetch<{ flows: unknown[]; count: number }>(
+        `${getApiUrl()}/network/traffic?since=${since}`
+      );
+    },
+    enabled,
+    refetchInterval: enabled ? 12000 : false, // slow fallback poll (12s), WS is primary
+    staleTime: 500,
+  });
+}
+
+export function useNetworkInfo(udid?: string) {
+  return useQuery({
+    queryKey: ["network-info", udid],
+    queryFn: () => {
+      const url = udid
+        ? `${getApiUrl()}/network/info?udid=${encodeURIComponent(udid)}`
+        : `${getApiUrl()}/network/info`;
+      return apiFetch<{ ip_addresses: unknown[]; connections: unknown[]; dns: unknown[] }>(url);
+    },
+    staleTime: 10000,
+  });
+}
+
+export function useInstallCert() {
+  return useMutation({
+    mutationFn: ({ udid }: { udid?: string }) =>
+      apiFetch<{
+        success: boolean;
+        cert_path?: string;
+        installed?: boolean;
+        note?: string;
+        manual_steps?: string[];
+        instructions?: string[];
+        error?: string
+      }>(
+        `${getApiUrl()}/network/cert/install`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ udid }),
+        }
+      ),
+  });
+}
+
+export function useVpnStatus(udid?: string) {
+  return useQuery({
+    queryKey: ["vpn-status", udid],
+    queryFn: () => {
+      const url = udid
+        ? `${getApiUrl()}/network/proxy/vpn/status?udid=${encodeURIComponent(udid)}`
+        : `${getApiUrl()}/network/proxy/vpn/status`;
+      return apiFetch<{ running: boolean; error?: string }>(url);
+    },
+    refetchInterval: 5000,
+    staleTime: 1000,
+  });
+}
+
+export function useStartVpn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ port, udid }: { port?: number; udid?: string }) =>
+      apiFetch<{ success: boolean; vpn_mode?: string; tunnel?: string; error?: string }>(
+        `${getApiUrl()}/network/proxy/vpn/start`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ port: port || 8080, udid }),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vpn-status"] });
+    },
+  });
+}
+
+export function useStopVpn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ udid }: { udid?: string }) =>
+      apiFetch<{ success: boolean; error?: string }>(
+        `${getApiUrl()}/network/proxy/vpn/stop`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ udid }),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vpn-status"] });
+    },
+  });
+}

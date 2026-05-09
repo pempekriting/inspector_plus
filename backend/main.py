@@ -25,6 +25,7 @@ from device import create_bridge_for_device, AndroidDeviceBridge, DeviceBridgeBa
 from device.ios_bridge import IOSDeviceBridge
 from commands.app_commands import AppCommands
 from commands.ios_app_commands import IOSAppCommands
+from network.routes import router as network_router
 
 
 # --- App version from env or default ---
@@ -49,6 +50,12 @@ async def lifespan(app: FastAPI):
     logger.info("InspectorPlus backend starting up")
     yield
     logger.info("InspectorPlus backend shutting down")
+    # Shutdown mitmproxy
+    try:
+        from network.mitm_manager import MitmproxyManager
+        MitmproxyManager.get_instance().stop()
+    except Exception:
+        pass
     # Shutdown all bridges
     if _android_bridge is not None:
         _android_bridge.shutdown()
@@ -178,6 +185,11 @@ class ScreenshotError(AppError):
 class UnsupportedOnPlatformError(AppError):
     def __init__(self, action: str, platform: str):
         super().__init__(f"{action} is not supported on {platform}", "UNSUPPORTED_ACTION", 400)
+
+
+class NetworkError(AppError):
+    def __init__(self, detail: str = "Network operation failed"):
+        super().__init__(detail, "NETWORK_ERROR", 500)
 
 
 def _get_ios_devices() -> list[dict]:
@@ -1311,6 +1323,9 @@ async def execute_command(req: CommandRequest, udid: Optional[str] = None):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Command execution failed: {str(e)}")
+
+
+app.include_router(network_router, prefix="/network", tags=["network"])
 
 
 @app.options("/tap")

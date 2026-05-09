@@ -759,6 +759,79 @@ class IOSDeviceBridge(DeviceBridgeBase):
         """Clear the recording for this session_id."""
         session = self.get_recorder_session(session_id)
         session.clear()
+
+    def setup_network_proxy(self, port: int = 8080) -> dict:
+        """iOS proxy setup. Simulator uses host networking automatically."""
+        if self._is_physical_device():
+            return {
+                "success": True,
+                "proxy_host": "localhost",
+                "proxy_port": port,
+                "tunnel": "rvictl-required",
+                "instructions": ["sudo rvictl -s " + self.udid + " to capture packets"],
+            }
+        return {
+            "success": True,
+            "proxy_host": "localhost",
+            "proxy_port": port,
+            "tunnel": "simulator-auto",
+            "note": "iOS Simulator traffic goes through macOS host network"
+        }
+
+    def get_network_traffic(self, duration: int = 30, format: str = "json") -> dict:
+        """Read mitmproxy flows captured on host."""
+        from network.mitm_manager import MitmproxyManager
+        manager = MitmproxyManager.get_instance()
+        flows = manager.get_flows()
+        return {"flows": flows, "count": len(flows), "format": format}
+
+    def install_certificate(self) -> dict:
+        """iOS cert install - add to macOS keychain for simulator."""
+        cert_path = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
+        if self._is_physical_device():
+            return {
+                "success": False,
+                "instructions": [
+                    "1. Open Safari on iOS device",
+                    "2. Navigate to http://mitm.it",
+                    "3. Select iOS profile",
+                    "4. Download and install profile",
+                    "5. Go to Settings > General > VPN & Device Management",
+                    "6. Enable the mitmproxy CA certificate",
+                ],
+            }
+        return {
+            "success": True,
+            "cert_path": cert_path,
+            "instructions": ["Import mitmproxy cert to macOS keychain: security add-certificate -T -d -i " + cert_path],
+        }
+
+    def get_network_info(self) -> dict:
+        """Get iOS network info via idb."""
+        return {
+            "ip_addresses": [],
+            "connections": [],
+            "dns": [],
+        }
+
+    def setup_vpn_proxy(self, port: int = 8080) -> dict:
+        """VPN interception is not supported on iOS."""
+        return {"success": False, "error": "VPN interception is not supported on iOS", "vpn_mode": "unsupported"}
+
+    def stop_vpn_proxy(self) -> dict:
+        """Stop VPN interception — not applicable on iOS."""
+        return {"success": True}
+
+    def is_vpn_running(self) -> bool:
+        """Check if VPN is running — always False on iOS."""
+        return False
+
+    def _is_physical_device(self) -> bool:
+        """Check if this is a physical iOS device (not simulator)."""
+        if not self.udid:
+            return False
+        return len(self.udid) > 24
+
     def shutdown(self) -> None:
         """Clean up resources on application shutdown."""
         self._cached_hierarchy = None

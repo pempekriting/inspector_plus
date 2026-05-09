@@ -10,6 +10,7 @@ dependencies = [
     "setuptools<82",
     "lxml>=5.0.0",
     "slowapi>=0.1.9",
+    "mitmproxy>=12.2.2",
 ]
 
 [dependency-groups]

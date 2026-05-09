@@ -920,6 +920,335 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         from device.accessibility_utils import AndroidMapper, walk_and_audit, build_audit_result
         issues, total_nodes = walk_and_audit(tree, AndroidMapper())
         return build_audit_result(issues, total_nodes)
+
+    def setup_network_proxy(self, port: int = 8080) -> dict:
+        """Set up proxy tunnel via adb reverse AND configure device proxy settings."""
+        try:
+            # List all connected devices to check if multiple
+            list_result = subprocess.run(
+                self._adb_cmd(["devices"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            device_lines = [
+                l.strip() for l in list_result.stdout.strip().split("\n")[1:]
+                if l.strip() and "\t" in l
+            ]
+            serials = [l.split("\t")[0].strip() for l in device_lines if l.split("\t")[0].strip()]
+
+            if len(serials) > 1 and not self.serial:
+                return {
+                    "success": False,
+                    "error": f"Multiple devices connected: {serials}. Select a specific device first.",
+                    "proxy_host": None,
+                    "proxy_port": port,
+                    "tunnel": "multi-device-error",
+                }
+
+            # Step 1: Configure global proxy on device (Android emulator needs this)
+            # This tells the device to route HTTP traffic through the proxy
+            proxy_set_result = subprocess.run(
+                self._adb_cmd(["shell", "settings", "put", "global", "http_proxy", f"127.0.0.1:{port}"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            logger.info(f"[setup_network_proxy] proxy set result: {proxy_set_result.returncode} {proxy_set_result.stderr}")
+
+            # Step 2: adb reverse so emulator's localhost:{port} -> host:{port}
+            adb_reverse_result = subprocess.run(
+                self._adb_cmd(["reverse", f"tcp:{port}", f"tcp:{port}"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            logger.info(f"[setup_network_proxy] adb reverse result: {adb_reverse_result.returncode} {adb_reverse_result.stderr}")
+
+            if adb_reverse_result.returncode != 0:
+                # Fallback to adb forward
+                subprocess.run(
+                    self._adb_cmd(["forward", f"tcp:{port}", f"tcp:{port}"]),
+                    capture_output=True, timeout=10,
+                )
+                tunnel = "adb-forward"
+            else:
+                tunnel = "adb-reverse"
+
+            return {
+                "success": True,
+                "proxy_host": "127.0.0.1",
+                "proxy_port": port,
+                "tunnel": tunnel,
+                "note": f"Device proxy configured to 127.0.0.1:{port}. adb reverse {tunnel}."
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e), "proxy_host": None, "proxy_port": port}
+
+    def get_network_traffic(self, duration: int = 30, format: str = "json") -> dict:
+        """Read captured flows from mitmproxy flow file."""
+        from network.mitm_manager import MitmproxyManager
+        manager = MitmproxyManager.get_instance()
+        flows = manager.get_flows()
+        return {"flows": flows, "count": len(flows), "format": format}
+
+    def install_certificate(self) -> dict:
+        """Push MITM cert to device as world-readable DER format for CA installation."""
+        cert_source = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
+        if not os.path.exists(cert_source):
+            logger.info("[install_certificate] mitmproxy cert not found, generating...")
+            try:
+                subprocess.run(
+                    ["mitmdump", "--set", "confdir=/tmp/mitm_gen", "-q"],
+                    capture_output=True, timeout=5,
+                )
+                cert_source = "/tmp/mitm_gen/.mitmproxy/mitmproxy-ca-cert.pem"
+                if not os.path.exists(cert_source):
+                    return {"success": False, "error": "mitmproxy cert not found. Run 'mitmdump' once to generate.", "cert_path": None}
+            except Exception:
+                return {"success": False, "error": "mitmproxy cert not found. Run 'mitmdump' once to generate.", "cert_path": None}
+
+        cert_dest = os.path.join(_INSPECTOR_TMP, "mitmproxy-ca-cert.crt")
+        try:
+            import shutil as sh
+            # Convert PEM to DER format (Android CA installer expects DER)
+            result = subprocess.run(
+                ["openssl", "x509", "-inform", "PEM", "-outform", "DER", "-in", cert_source, "-out", cert_dest],
+                capture_output=True, timeout=10,
+            )
+            if result.returncode != 0:
+                sh.copy(cert_source, cert_dest.replace(".crt", ".pem"))
+                cert_dest = cert_dest.replace(".crt", ".pem")
+
+            # Push to /data/local/tmp/ (world-readable, app can read from there)
+            push_result = subprocess.run(
+                self._adb_cmd(["push", cert_dest, "/data/local/tmp/mitmproxy-ca-cert.crt"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            logger.info(f"[install_certificate] push result: {push_result.returncode}")
+
+            if push_result.returncode == 0:
+                # Make world-readable
+                subprocess.run(
+                    self._adb_cmd(["shell", "chmod", "644", "/data/local/tmp/mitmproxy-ca-cert.crt"]),
+                    capture_output=True, timeout=5,
+                )
+                # Also push to Downloads as backup
+                subprocess.run(
+                    self._adb_cmd(["push", cert_dest, "/sdcard/Download/mitmproxy-ca-cert.crt"]),
+                    capture_output=True, timeout=10,
+                )
+                cert_path = "/data/local/tmp/mitmproxy-ca-cert.crt"
+            else:
+                # Fallback to Downloads
+                subprocess.run(
+                    self._adb_cmd(["push", cert_dest, "/sdcard/Download/mitmproxy-ca-cert.crt"]),
+                    capture_output=True, timeout=10,
+                )
+                cert_path = "/sdcard/Download/mitmproxy-ca-cert.crt"
+
+            # Try opening via Settings > Encryption (the proper path for CA install)
+            settings_result = subprocess.run(
+                self._adb_cmd([
+                    "shell", "am", "start",
+                    "-a", "android.settings.SECURITY_SETTINGS",
+                    "-n", "com.android.settings/.SecuritySettings"
+                ]),
+                capture_output=True, text=True, timeout=10,
+            )
+            logger.info(f"[install_certificate] settings result: {settings_result.returncode}")
+
+            return {
+                "success": True,
+                "cert_path": cert_path,
+                "installed": False,
+                "note": "Settings > Security > Encryption > Install CA cert. Navigate to Downloads > mitmproxy-ca-cert.crt",
+                "manual_steps": [
+                    f"File location: {cert_path}",
+                    "1. Open Settings > Security > Encryption & credentials",
+                    "2. Tap Install a certificate > CA certificates",
+                    "3. Navigate to Downloads > mitmproxy-ca-cert.crt",
+                    "4. If that fails, file is at /data/local/tmp/mitmproxy-ca-cert.crt"
+                ]
+            }
+        except Exception as e:
+            logger.error(f"[install_certificate] error: {e}")
+            return {"success": False, "error": str(e), "cert_path": None}
+
+    def get_network_info(self) -> dict:
+        """Get network diagnostics via shell commands."""
+        import re
+        def shell(cmd: str) -> str:
+            result = subprocess.run(self._adb_cmd(["shell", cmd]), capture_output=True, text=True, timeout=10)
+            return result.stdout.strip()
+        try:
+            ip_addr = shell("ip addr show")
+            netstat = shell("netstat -tlnp 2>/dev/null || netstat -tln")
+            dns = shell("getprop net.dns1")
+            ips = re.findall(r'inet (\d+\.\d+\.\d+\.\d+)', ip_addr)
+            return {
+                "ip_addresses": [{"iface": "wlan0", "address": ip, "family": "IPv4"} for ip in ips],
+                "connections": netstat.split("\n"),
+                "dns": [dns] if dns else [],
+            }
+        except Exception as e:
+            return {"error": str(e), "ip_addresses": [], "connections": [], "dns": []}
+
+    def get_host_ip(self) -> Optional[str]:
+        """Parse host gateway IP from `ip route` output."""
+        import re
+        try:
+            result = subprocess.run(
+                self._adb_cmd(["shell", "ip", "route"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            # "default via 192.168.1.1 dev wlan0" → extract gateway
+            match = re.search(r"default via (\d+\.\d+\.\d+\.\d+)", result.stdout)
+            if match:
+                return match.group(1)
+            # Fallback: first inet in ip addr
+            ips = re.findall(r"inet (\d+\.\d+\.\d+\.\d+)", result.stdout)
+            return ips[0] if ips else None
+        except Exception:
+            return None
+
+    def install_vpn_app(self, apk_path: str) -> dict:
+        """Install InspectorVPN APK on device. Returns {success, installed, error}."""
+        if not os.path.exists(apk_path):
+            return {"success": False, "installed": False, "error": f"APK not found: {apk_path}"}
+        try:
+            # Check if already installed
+            result = subprocess.run(
+                self._adb_cmd(["shell", "pm", "list", "packages", "com.inspectorplus.vpn"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            if "com.inspectorplus.vpn" in result.stdout:
+                logger.info("[install_vpn_app] already installed, upgrading...")
+                install_result = subprocess.run(
+                    self._adb_cmd(["install", "-r", apk_path]),
+                    capture_output=True, text=True, timeout=60,
+                )
+            else:
+                install_result = subprocess.run(
+                    self._adb_cmd(["install", "-r", apk_path]),
+                    capture_output=True, text=True, timeout=60,
+                )
+            if install_result.returncode == 0:
+                return {"success": True, "installed": True}
+            return {"success": False, "installed": False, "error": install_result.stderr or "install failed"}
+        except Exception as e:
+            return {"success": False, "installed": False, "error": str(e)}
+
+    def setup_vpn_proxy(self, port: int = 8080) -> dict:
+        """Start VPN-based interception via InspectorVPN app.
+
+        Requires the InspectorVPN APK to be installed. The VPN intercepts ALL device
+        traffic and forwards to mitmdump via adb reverse tunnel.
+
+        Traffic flow: VPN → device:8081 → adb reverse → host:mitmdump
+        """
+        from network.mitm_manager import MitmproxyManager
+
+        try:
+            # Step 1: Determine APK path relative to backend
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            apk_path = os.path.join(backend_dir, "inspector_vpn", "app", "build", "outputs", "apk", "debug", "inspector_vpn.apk")
+
+            # Step 2: Install APK if not present
+            install_result = self.install_vpn_app(apk_path)
+            if not install_result["success"]:
+                return install_result
+
+            # Step 3: Start mitmdump if not running
+            manager = MitmproxyManager.get_instance()
+            if not manager.is_running():
+                start_result = manager.start(port)
+                if not start_result.get("success"):
+                    return {"success": False, "error": f"mitmdump start failed: {start_result.get('error')}"}
+
+            actual_port = manager.get_status()["port"]
+
+            # Step 4: Configure adb reverse tunnel for VPN → mitmdump
+            # VPN app connects to device localhost:8081, we reverse that to host:mitmdump
+            reverse_result = subprocess.run(
+                self._adb_cmd(["reverse", f"tcp:8081", f"tcp:{actual_port}"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            if reverse_result.returncode != 0:
+                # Fallback to forward if reverse fails
+                subprocess.run(
+                    self._adb_cmd(["forward", f"tcp:8081", f"tcp:{actual_port}"]),
+                    capture_output=True, timeout=10,
+                )
+                tunnel = "adb-forward"
+            else:
+                tunnel = "adb-reverse"
+
+            # Step 5: Start VPN via MainActivity auto_start action
+            # MainActivity auto-starts VPN when launched with auto_start action, then closes
+            start_vpn_result = subprocess.run(
+                self._adb_cmd([
+                    "shell", "am", "start",
+                    "-n", "com.inspectorplus.vpn/.MainActivity",
+                    "-a", "com.inspectorplus.vpn.AUTO_START",
+                    "--es", "mitm_port", str(actual_port),
+                ]),
+                capture_output=True, text=True, timeout=10,
+            )
+
+            if start_vpn_result.returncode != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to start VPN: {start_vpn_result.stderr}",
+                    "tunnel": tunnel,
+                }
+
+            logger.info(f"[setup_vpn_proxy] VPN started, tunnel={tunnel}, mitmdump_port={actual_port}")
+            return {
+                "success": True,
+                "vpn_mode": "full-intercept",
+                "tunnel": tunnel,
+                "mitm_port": actual_port,
+                "note": "VPN interception active. All device traffic is being captured.",
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def stop_vpn_proxy(self) -> dict:
+        """Stop VPN interception and clean up tunnel."""
+        try:
+            # Stop VPN service
+            subprocess.run(
+                self._adb_cmd(["shell", "am", "force-stop", "com.inspectorplus.vpn"]),
+                capture_output=True, timeout=10,
+            )
+            # Remove adb reverse entry
+            subprocess.run(
+                self._adb_cmd(["reverse", "--remove", "tcp:8081"]),
+                capture_output=True, timeout=5,
+            )
+            # Also stop mitmdump - VPN and mitmdump share lifecycle
+            from network.mitm_manager import MitmproxyManager
+            manager = MitmproxyManager.get_instance()
+            if manager.is_running():
+                manager.stop()
+            logger.info("[stop_vpn_proxy] VPN stopped")
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def is_vpn_running(self) -> bool:
+        """Check if InspectorVPN service is active via dumpsys."""
+        try:
+            result = subprocess.run(
+                self._adb_cmd(["shell", "dumpsys", "vpn"]),
+                capture_output=True, text=True, timeout=10,
+            )
+            output = result.stdout
+            logger.info(f"[is_vpn_running] dumpsys vpn output: {output[:500]}")
+            # Check for our package in VPN service status — be lenient about format
+            has_pkg = "com.inspectorplus.vpn" in output
+            has_iface = "tun0" in output or "10.0.0" in output
+            logger.info(f"[is_vpn_running] has_pkg={has_pkg}, has_iface={has_iface}")
+            return has_pkg or has_iface
+        except Exception as e:
+            logger.warning(f"[is_vpn_running] error: {e}")
+            return False
+
     def shutdown(self) -> None:
         """Clean up resources on application shutdown.
         Cancels in-flight background refresh threads by setting a shutdown flag.

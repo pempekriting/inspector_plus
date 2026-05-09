@@ -38,6 +38,53 @@ class DeviceBridgeBase(ABC):
         """Get screenshot as PNG bytes."""
         pass
 
+    @abstractmethod
+    def setup_network_proxy(self, port: int = 8080) -> dict:
+        """Establish proxy tunnel to host mitmproxy.
+        Returns {"success": bool, "proxy_host": str, "proxy_port": int, "tunnel": str}
+        """
+        pass
+
+    @abstractmethod
+    def get_network_traffic(self, duration: int = 30, format: str = "json") -> dict:
+        """Capture network traffic for given duration.
+        Returns {"flows": list, "flow_file": str, "count": int}
+        """
+        pass
+
+    @abstractmethod
+    def install_certificate(self) -> dict:
+        """Install MITM certificate on device.
+        Returns {"success": bool, "cert_path": str, "installed": bool, "instructions": list}
+        """
+        pass
+
+    @abstractmethod
+    def get_network_info(self) -> dict:
+        """Get network diagnostic info (IP, connections, DNS).
+        Returns {"ip_addresses": list, "connections": list, "dns": list}
+        """
+        pass
+
+    @abstractmethod
+    def setup_vpn_proxy(self, port: int = 8080) -> dict:
+        """Start VPN-based interception via InspectorVPN app.
+        Returns {"success": bool, "vpn_mode": str, "note": str}
+        """
+        pass
+
+    @abstractmethod
+    def stop_vpn_proxy(self) -> dict:
+        """Stop VPN interception.
+        Returns {"success": bool}
+        """
+        pass
+
+    @abstractmethod
+    def is_vpn_running(self) -> bool:
+        """Check if VPN interception is active."""
+        pass
+
 
 def create_bridge(udid: Optional[str] = None) -> DeviceBridgeBase:
     """Factory to create appropriate bridge based on device type."""
