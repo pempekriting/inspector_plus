@@ -38,7 +38,7 @@ Server runs on port 8002 (or `MCP_PORT` env var).
 | `get_node` | `nodeId: string` | Single node details |
 | `get_children` | `nodeId: string`, `cursor?: string`, `pageSize?: number` | Paginated children |
 | `get_path` | `nodeId: string` | Root to node path |
-| `get_ancestors` | `nodeId: string` | All ancestors |
+| `get_ancestors` | `nodeId: string`, `deviceId: string` | All ancestors |
 | `search_nodes` | `deviceId: string`, `query: string`, `matchType?: "text"\|"xpath"\|"regex"`, `limit?: number` | Search nodes |
 
 ## cURL Examples
@@ -83,7 +83,7 @@ Or add to `~/.claude/mcp.json`:
   "mcpServers": {
     "inspector-plus": {
       "command": "npx",
-      "args": ["tsx", "/Users/azzamnizar/Documents/project/inspector_plus/backend/mcp/src/server.ts"]
+      "args": ["tsx", "backend/mcp/src/server.ts"]
     }
   }
 }
@@ -106,8 +106,9 @@ rtk proxy curl -s http://localhost:8002/health
 rtk proxy curl -s -X POST http://localhost:8002/mcp ...
 ```
 
-Or disable RTK by adding to project `CLAUDE.md`:
-```bash
+Or add this to the project's `CLAUDE.md` to disable RTK rewriting for API calls:
+
+```
 ## Disable RTK Rewrite
 Use `rtk proxy curl` to bypass RTK rewrite for API calls.
 ```

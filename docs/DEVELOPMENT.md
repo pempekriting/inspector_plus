@@ -7,6 +7,7 @@
 - npm or yarn
 - ADB in PATH
 - For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
+- For Network Debug: `pip install mitmproxy`
 
 ## Project Structure
 
@@ -20,9 +21,18 @@ inspector_plus/
 │   │   ├── base.py             # DeviceBridgeBase abstract
 │   │   ├── android_bridge.py  # ADB + uiautomator
 │   │   └── ios_bridge.py       # idb + WDA
+│   ├── network/
+│   │   ├── routes.py           # Network debug endpoints
+│   │   ├── mitm_manager.py    # mitmdump process lifecycle
+│   │   └── flow_parser.py     # mitmproxy flow file parser
 │   ├── commands/
 │   │   ├── app_commands.py
 │   │   └── ios_app_commands.py
+│   ├── inspector_vpn/          # Android VPN app (Gradle)
+│   │   └── app/src/main/java/com/inspectorplus/vpn/
+│   │       ├── InspectorVpnService.java
+│   │       ├── MainActivity.java
+│   │       └── AndroidManifest.xml
 │   └── mcp/                    # MCP server (Node.js)
 │       ├── src/
 │       │   ├── server.ts         # Express + StreamableHTTP MCP server
@@ -36,18 +46,26 @@ inspector_plus/
 │   ├── src/
 │   │   ├── App.tsx              # Main layout
 │   │   ├── components/
+│   │   │   ├── NetworkPanel.tsx   # Traffic table, proxy/VPN controls
 │   │   │   ├── SettingsPanel.tsx  # Runtime port config + server spawn
+│   │   │   ├── RecorderPanel.tsx  # Test recorder
+│   │   │   ├── AccessibilityPanel.tsx
+│   │   │   ├── SubTabBar.tsx
+│   │   │   ├── OnboardingModal.tsx
+│   │   │   ├── CommandsDrawer.tsx
 │   │   │   ├── DevicePanel.tsx
-│   │   │   └── ...             # All other components
+│   │   │   └── ...             # Other components
 │   │   ├── stores/
 │   │   │   ├── settingsStore.ts  # Persistent settings
 │   │   │   ├── hierarchyStore.ts
 │   │   │   ├── deviceStore.ts
-│   │   │   └── themeStore.ts
+│   │   │   ├── themeStore.ts
+│   │   │   └── networkStore.ts   # Traffic flows, proxy/VPN status
 │   │   ├── config/
 │   │   │   └── apiConfig.ts     # Separate BE/MCP URL config
 │   │   ├── services/api.ts      # TanStack Query + Zod
 │   │   └── types/
+│   │       └── network.ts       # NetworkFlow, ProxyStatus, NetworkInfo
 │   └── src-tauri/              # Tauri desktop
 │       ├── src/
 │       │   ├── main.rs          # Entry + server lifecycle
@@ -57,11 +75,13 @@ inspector_plus/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md          # System design
-│   └── DEVELOPMENT.md            # This file
+│   ├── DEVELOPMENT.md           # This file
+│   ├── NETWORK.md               # Network debug / VPN interception
+│   └── MCP_QUICKREF.md         # MCP server reference
 │
-├── SPEC.md                     # Technical reference
-├── README.md                   # Quick overview
-└── CLAUDE.md                   # Claude Code instructions
+├── SPEC.md                      # Technical reference
+├── README.md                    # Quick overview
+└── CLAUDE.md                    # Claude Code instructions
 ```
 
 ## Backend Setup
@@ -161,10 +181,15 @@ export async function getNodeTool(input) {
 
 // backend/mcp/src/server.ts
 server.registerTool('get_node', {
+  title: 'Get Node',
   description: '...',
-  inputSchema: z.object({ nodeId: z.string() }),
+  inputSchema: z.object({ nodeId: z.string().describe("Unique node identifier") }),
+  annotations: { readOnlyHint: true, openWorldHint: true },
 }, async ({ nodeId }) => {
-  return handleToolCall('get_node', { nodeId });
+  const result = await getNode(nodeId);
+  return {
+    content: [{ type: "text", text: JSON.stringify({ data: result }) }],
+  };
 });
 ```
 
@@ -174,6 +199,12 @@ server.registerTool('get_node', {
 ```bash
 which adb
 # Install Android SDK platform tools if missing
+```
+
+### mitmdump not found
+```bash
+pip install mitmproxy
+# or: uv pip install mitmproxy
 ```
 
 ### Port 8001 in use
@@ -210,6 +241,14 @@ npm install
 npm run build
 # Check for TypeScript errors
 ```
+
+### Network Debug: mitmdump starts but no traffic appears
+- Ensure the device is configured to use the proxy: `adb reverse tcp:8081 tcp:8081` (VPN tunnel uses local port 8081)
+- For Full Intercept (VPN) mode, ensure the InspectorVPN app is installed and the VPN permission was granted
+- Check mitmdump logs in the backend process output
+
+### Network Debug: VPN permission dialog not appearing
+- On first VPN start, Android shows a permission dialog. If it was previously denied, the user must manually grant it in Settings > Apps > InspectorVPN > VPN.
 
 ## Code Style
 

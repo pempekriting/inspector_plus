@@ -9,7 +9,7 @@
 │  │              React Frontend (localhost:5173)              │  │
 │  │   ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │  │
 │  │   │ Screenshot  │  │  Hierarchy  │  │  Overlay        │  │  │
-│  │   │  Canvas     │  │    Tree     │  │  (hover highlight)│  │  │
+│  │   │  Canvas     │  │    Tree     │  │  (hover highlight)│ │  │
 │  │   └──────┬──────┘  └──────┬──────┘  └──────────┬────────┘  │  │
 │  │          └───────────────┼─────────────────────┘           │  │
 │  │   ┌─────────────────────┴──────────────────────────┐     │  │
@@ -35,6 +35,11 @@
 │    │ Android │              │ iOS Dev   │                   │
 │    │ Device  │              │ /Simulator│                   │
 │    └─────────┘              └───────────┘                    │
+│         │                        │                           │
+│  ┌──────┴────────────────────────┴──────┐                   │
+│  │          backend/network/             │                   │
+│  │   (mitmproxy manager, VPN routes)     │                   │
+│  └───────────────────────────────────────┘                   │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────┼────────────────────────────────┐
@@ -72,11 +77,15 @@ Bridges are cached per UDID for consistent node IDs across requests.
 |----------|-----------|
 | Health | `GET /health`, `GET /ready` |
 | Hierarchy | `GET /hierarchy`, `GET /hierarchy-and-screenshot`, `GET /hierarchy/search`, `GET /hierarchy/find`, `GET /hierarchy/locators`, `POST /hierarchy/audit` |
-| Interactions | `POST /tap`, `POST /input/text`, `POST /device/press-key`, `POST /device/swipe`, `POST /device/drag`, `POST /device/pinch` |
+| Interactions | `POST /tap`, `POST /input/text`, `POST /device/press-key`, `POST /device/swipe`, `POST /device/drag`, `POST /device/pinch`, `POST /gesture/execute` |
 | Device | `GET /device/status`, `GET /devices`, `POST /device/select`, `GET /device/contexts`, `POST /device/switch-context`, `POST /device/adb` |
 | Screenshot | `GET /screenshot` |
 | App Commands | `GET /app/commands/info`, `POST /commands/execute` |
 | Recorder | `POST /recorder/record`, `GET /recorder/export`, `POST /recorder/clear` |
+| Network Debug (via `network_router`, prefix `/network`) | `GET /proxy/status`, `POST /proxy/start`, `POST /proxy/stop`, `GET /traffic`, `GET /info`, `POST /cert/install`, WebSocket `/stream` |
+| Network Debug (registered on `main.py` directly) | `POST /proxy/vpn/start`, `POST /proxy/vpn/stop`, `GET /proxy/vpn/status` |
+
+See [NETWORK.md](./NETWORK.md) for full details on both interception modes.
 
 ### Hierarchy Data Flow
 
@@ -88,6 +97,17 @@ Bridges are cached per UDID for consistent node IDs across requests.
 5. Convert bounds [x1,y1,x2,y2] → {x, y, width, height}
 6. Return nested UiNode tree
 ```
+
+## Network Debug Architecture
+
+Two interception modes:
+
+| Mode | Technique | Catches |
+|------|-----------|---------|
+| **App Proxy** | `settings put global http_proxy` + `adb reverse` | Only apps honoring system proxy |
+| **Full Intercept** | VPN Service on device | ALL device traffic |
+
+See [NETWORK.md](./NETWORK.md) for full details including VPN app structure, traffic flow, and APK build instructions.
 
 ## MCP Server Architecture
 
@@ -166,8 +186,13 @@ const UiNodeSchema = z.object({
 // Query hooks
 useHierarchyAndScreenshot()  // Combined endpoint, staleTime 2000ms
 useDeviceStatus()          // Polling every 10s
+useDevices()               // List connected devices
+useSelectDevice()         // Switch active device
 useTapDevice()
 useLocators()
+useRecorder()              // Test recorder addStep/export/clear
+useProxyStatus()           // mitmdump process status
+useVpnStatus()             // Android VPN running state
 ```
 
 ### Component Hierarchy
@@ -183,12 +208,13 @@ App
 │   └── SettingsButton (opens SettingsPanel modal)
 ├── TabBar (inspector | commands)
 └── Inspector (tab content)
-    ├── SubTabBar (hierarchy | accessibility | recorder)
+    ├── SubTabBar (hierarchy | accessibility | recorder | network)
     ├── HierarchyPanel
     │   ├── SearchBar
     │   └── HierarchyTree → TreeNode (recursive)
     ├── AccessibilityPanel
-    └── RecorderPanel
+    ├── RecorderPanel
+    └── NetworkPanel (traffic table, proxy/VPN controls, cert install)
 
 SettingsPanel (modal overlay)
 ├── Backend URL field + Verify + Scan buttons
@@ -205,7 +231,8 @@ SettingsPanel (modal overlay)
 | `deviceStore` | Devices, resolution, selection |
 | `themeStore` | Dark/light theme |
 | `settingsStore` | Persistent BE/MCP URLs |
-| `recorderStore` | Recording session |
+| `networkStore` | Traffic flows, proxy/VPN status, WebSocket state |
+| `recorderStore` | Recording session, steps, language |
 
 ### Canvas Modes
 
@@ -273,11 +300,11 @@ Global handler: `app.add_exception_handler(AppError, app_error_handler)`
 
 ### ADB Allowlist
 
-Allowed prefixes: `input`, `pm`, `am`, `screencap`, `dumpsys`, `getprop`, `setprop`, `monkey`, `uiautomator`, `cat`, `ls`, `mkdir`, `touch`
+Allowed prefixes: `input text`, `input keyevent`, `input tap`, `input swipe`, `input press`, `input roll`, `input drag`, `input mouse`, `pm list`, `pm path`, `pm dump`, `pm install`, `pm uninstall`, `pm clear`, `pm hide`, `pm unhide`, `pm disable`, `pm enable`, `am start`, `am force-stop`, `am kill`, `am broadcast`, `am monitor`, `am stack`, `screencap`, `screenrecord`, `dumpsys`, `dump`, `settings get`, `settings put`, `getprop`, `setprop`, `wm`, `cat`, `ls`, `mkdir`, `touch`, `chmod`, `chown`, `netstat`, `ip addr`, `ps`, `top`, `free`, `df`, `du`, `getevent`, `uiautomator`, `monkey`, `id`, `uname`, `whoami`, `getconf`, `date`, `pwd`, `echo`
 
-Blocked: `reboot`, `shutdown`, `dd`, `mkfs`, `mount`, `remount`, `sqlite3`, `tar`, `zip`, `unzip`
+Blocked: `reboot`, `shutdown`, `mount`, `umount`, `dd`, `mkfs`, `fdisk`, `sfdisk`, `Format`, `del `, `rm -rf`, `mv /`, `cp /`, `wget`, `curl`, `nc `, `ncat`
 
-Forbidden chars: `&&`, `||`, `|`, `;`, `` ` ``, `$(`, `>`, `>>`, `&`
+Forbidden chars: `&&`, `||`, `|`, `;`, `` ` ``, `$(`, `>`, `>>`, `<`
 
 ## Known Limitations
 
@@ -285,3 +312,4 @@ Forbidden chars: `&&`, `||`, `|`, `;`, `` ` ``, `$(`, `>`, `>>`, `&`
 2. **ADB required** — Android SDK with ADB in PATH
 3. **No auth** — Backend runs locally only
 4. **iOS real devices** — Require WDA via idb-companion
+5. **iOS network interception** — VPN-based Full Intercept not supported on iOS (requires MDM profile)
