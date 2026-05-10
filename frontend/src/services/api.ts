@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getApiUrl } from '../config/apiConfig';
 import type { Bounds, DeviceInfo, DeviceStatus, UiNode } from '../types/shared';
+import type { NetworkFlow } from '../types/network';
 
 // Re-export shared types
 export type { Bounds, DeviceInfo, DeviceStatus, UiNode };
@@ -51,6 +52,41 @@ export const DeviceStatusSchema = z.object({
 
 export const HierarchyResponseSchema = z.object({
   tree: UiNodeSchema,
+});
+
+export const HierarchyAndScreenshotSchema = z.object({
+  hierarchy: UiNodeSchema,
+  screenshot: z.string(),
+});
+
+export const NetworkFlowSchema: z.ZodType<NetworkFlow> = z.object({
+  id: z.string(),
+  timestamp: z.number(),
+  request: z.object({
+    method: z.string(),
+    url: z.string(),
+    host: z.string(),
+    path: z.string(),
+    headers: z.record(z.string(), z.string()),
+    body: z.string().optional(),
+  }),
+  response: z
+    .object({
+      status_code: z.number(),
+      reason: z.string(),
+      headers: z.record(z.string(), z.string()),
+      body: z.string().optional(),
+    })
+    .optional(),
+  duration_ms: z.number(),
+  websocket: z.boolean(),
+  error: z.string().optional(),
+});
+
+export const NetworkInfoSchema = z.object({
+  ip_addresses: z.array(z.object({ iface: z.string(), address: z.string(), family: z.string() })),
+  connections: z.array(z.string()),
+  dns: z.array(z.string()),
 });
 
 // API key getter (reads from localStorage, set via settings store)
@@ -103,7 +139,7 @@ export function useDevices() {
   return useQuery({
     queryKey: ['devices'],
     queryFn: () =>
-      apiFetch<{ devices: z.infer<typeof DeviceInfoSchema>[] }>(`${getApiUrl()}/devices`).then(
+      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`, undefined, DeviceStatusSchema).then(
         (data) => data.devices
       ),
     retry: 2,
@@ -117,11 +153,13 @@ export function useHierarchy(udid?: string) {
   return useQuery({
     queryKey: ['hierarchy', udid],
     queryFn: () =>
-      apiFetch<{ tree: z.infer<typeof UiNodeSchema> }>(
+      apiFetch<z.infer<typeof HierarchyResponseSchema>>(
         udid
           ? `${getApiUrl()}/hierarchy?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/hierarchy`
-      ),
+          : `${getApiUrl()}/hierarchy`,
+        undefined,
+        HierarchyResponseSchema
+      ).then((data) => data.tree),
     staleTime: 1000,
     gcTime: 30000,
     retry: 2,
@@ -136,10 +174,11 @@ export function useHierarchyAndScreenshot(udid?: string) {
       const url = udid
         ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy-and-screenshot`;
-      const data = await apiFetch<{
-        hierarchy: z.infer<typeof UiNodeSchema>;
-        screenshot: string;
-      }>(url);
+      const data = await apiFetch<z.infer<typeof HierarchyAndScreenshotSchema>>(
+        url,
+        undefined,
+        HierarchyAndScreenshotSchema
+      );
       return {
         hierarchy: data.hierarchy,
         screenshotUrl: `data:image/png;base64,${data.screenshot}`,
@@ -210,19 +249,34 @@ export interface Locator {
   stability: number;
 }
 
+export const LocatorSchema: z.ZodType<Locator> = z.object({
+  strategy: z.string(),
+  value: z.string(),
+  expression: z.string(),
+  stability: z.number(),
+});
+
 export interface LocatorResult {
   nodeId: string;
   locators: Locator[];
   best: string;
 }
 
+export const LocatorResultSchema: z.ZodType<LocatorResult> = z.object({
+  nodeId: z.string(),
+  locators: z.array(LocatorSchema),
+  best: z.string(),
+});
+
 // Fetch locators for a node
 export function useLocators(nodeId: string | null) {
   return useQuery({
     queryKey: ['locators', nodeId],
     queryFn: () =>
-      apiFetch<LocatorResult>(
-        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`
+      apiFetch<z.infer<typeof LocatorResultSchema>>(
+        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`,
+        undefined,
+        LocatorResultSchema
       ),
     enabled: !!nodeId,
     staleTime: 30000,
@@ -371,15 +425,27 @@ export interface ContextInfo {
   description: string;
 }
 
+export const ContextInfoSchema = z.object({
+  id: z.string(),
+  type: z.enum(['native', 'webview']),
+  description: z.string(),
+});
+
+export const DeviceContextsResponseSchema = z.object({
+  contexts: z.array(ContextInfoSchema),
+});
+
 export function useDeviceContexts(udid?: string) {
   return useQuery({
     queryKey: ['device-contexts', udid],
     queryFn: () =>
-      apiFetch<{ contexts: ContextInfo[] }>(
+      apiFetch<z.infer<typeof DeviceContextsResponseSchema>>(
         udid
           ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/device/contexts`
-      ),
+          : `${getApiUrl()}/device/contexts`,
+        undefined,
+        DeviceContextsResponseSchema
+      ).then((data) => data.contexts),
     staleTime: 15000,
     gcTime: 30000,
     retry: 1,
@@ -568,12 +634,14 @@ export function useNetworkTraffic(since: number = 0, enabled: boolean = true) {
     queryKey: ['network-traffic', since, enabled],
     queryFn: async () => {
       if (!enabled) return { flows: [], count: 0 };
-      return apiFetch<{ flows: unknown[]; count: number }>(
-        `${getApiUrl()}/network/traffic?since=${since}`
+      return apiFetch<{ flows: NetworkFlow[]; count: number }>(
+        `${getApiUrl()}/network/traffic?since=${since}`,
+        undefined,
+        z.object({ flows: z.array(NetworkFlowSchema), count: z.number() })
       );
     },
     enabled,
-    refetchInterval: enabled ? 12000 : false, // slow fallback poll (12s), WS is primary
+    refetchInterval: enabled ? 12000 : false,
     staleTime: 500,
   });
 }
@@ -585,7 +653,7 @@ export function useNetworkInfo(udid?: string) {
       const url = udid
         ? `${getApiUrl()}/network/info?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/network/info`;
-      return apiFetch<{ ip_addresses: unknown[]; connections: unknown[]; dns: unknown[] }>(url);
+      return apiFetch<z.infer<typeof NetworkInfoSchema>>(url, undefined, NetworkInfoSchema);
     },
     staleTime: 10000,
   });

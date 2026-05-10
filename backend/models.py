@@ -49,7 +49,7 @@ class GestureAction(BaseModel):
     y: int | None = Field(None, ge=0, le=10000, description="Y coordinate (required for move)")
     duration: int | None = Field(None, ge=0, le=10000, description="Duration in ms (for move or pause)")
     pointer: int | None = Field(None, ge=0, le=4, description="Pointer index 0-4 (default 0)")
-    button: str | None = Field(None, description="Button: left, right (for pointerDown/Up)")
+    button: Literal["left", "right"] | None = Field(None, description="Button: left, right (for pointerDown/Up)")
 
 
 class GestureExecuteRequest(BaseModel):
