@@ -1,0 +1,47 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature] "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    id: summary
+    attributes:
+      value: |
+        ## Feature Summary
+        <!-- Clear, concise description of the feature -->
+
+  - type: markdown
+    id: problem
+    attributes:
+      value: |
+        ## Problem Statement
+        <!-- What problem does this solve? -->
+
+  - type: markdown
+    id: solution
+    attributes:
+      value: |
+        ## Proposed Solution
+        <!-- How would you like it to work? -->
+
+  - type: markdown
+    id: alternatives
+    attributes:
+      value: |
+        ## Alternatives Considered
+        <!-- Other approaches you considered -->
+
+  - type: markdown
+    id: mockups
+    attributes:
+      value: |
+        ## Mockups / References
+        <!-- UI mockups, screenshots, links to similar features -->
+
+  - type: markdown
+    id: additional
+    attributes:
+      value: |
+        ## Additional Context
+        <!-- Anything else relevant -->

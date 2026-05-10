@@ -76,13 +76,14 @@ SettingsPanel (Tauri desktop)
 | HierarchyTree | `components/HierarchyTree.tsx` | Recursive tree, search, keyboard nav, lock on click/Enter |
 | Overlay | `components/Overlay.tsx` | Canvas highlight: locked=yellow, selected/hovered=cyan |
 | HierarchyPanel | `components/HierarchyPanel.tsx` | Wrapper: SearchBar + HierarchyTree + PropertiesPanel |
-| SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility / Recorder sub-tab navigation |
+| SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility / Recorder / Network sub-tab navigation |
 | PropertiesPanel | `components/PropertiesPanel.tsx` | Node props (read-only): Identity, State, Geometry, Locators |
 | DevicePanel | `components/DevicePanel.tsx` | Device selector dropdown, auto-selects first device on reconnect |
 | SettingsPanel | `components/SettingsPanel.tsx` | Runtime port config: BE/MCP URL fields, Verify/Scan, Apply to restart servers |
 | TabBar | `components/TabBar.tsx` | inspector / commands tabs |
 | RecorderPanel | `components/RecorderPanel.tsx` | Record test steps and export |
 | AccessibilityPanel | `components/AccessibilityPanel.tsx` | WCAG accessibility audit |
+| NetworkPanel | `components/NetworkPanel.tsx` | Traffic table, proxy/VPN controls, cert install |
 | StatusBar | `components/StatusBar.tsx` | Connection status, version |
 | ErrorBoundary | `components/ErrorBoundary.tsx` | Error boundary for component tree |
 | EmptyState | `components/EmptyState.tsx` | Icon + title + description + optional action |
@@ -90,10 +91,20 @@ SettingsPanel (Tauri desktop)
 | SkeletonLoader | `components/SkeletonLoader.tsx` | Shimmer loaders for tree + canvas |
 | SearchBar | `components/SearchBar.tsx` | Search input in tree header |
 | PropertyRow | `components/PropertyRow.tsx` | Key-value row in PropertiesPanel |
+| CommandsDrawer | `components/CommandsDrawer.tsx` | Bottom drawer: App Commands + ADB Shell tabs |
+| CommandsPanel | `components/CommandsPanel.tsx` | Command execution UI |
+| ApkInfoPanel | `components/ApkInfoPanel.tsx` | APK details: version, SDK, permissions |
+| AdbPanel | `components/AdbPanel.tsx` | ADB shell command input and output |
+| OnboardingModal | `components/OnboardingModal.tsx` | First-run setup wizard |
+| BottomDrawer | `components/BottomDrawer.tsx` | Collapsible drawer shell |
+| DeviceActionsBar | `components/DeviceActionsBar.tsx` | Refresh, screenshot, device actions |
+| LayoutBoundsOverlay | `components/LayoutBoundsOverlay.tsx` | Layout mode bounds overlay |
+| LocatorPanel | `components/LocatorPanel.tsx` | Appium locator generation |
+| StylePanel | `components/StylePanel.tsx` | Node computed styles |
 
-**Implemented:** `ApkInfoPanel` — 3rd tab in TabBar, shows APK details (version, SDK, permissions)
+**Tab structure:** `TabBar` has 2 tabs (inspector | commands). Inspector tab has 4 sub-tabs (hierarchy | accessibility | recorder | network). ApkInfoPanel exists as a component but is not wired into the tab bar.
 
-**Implemented:** `RecorderPanel`, `AccessibilityPanel`, `AdbPanel` (all wired to App)
+**Implemented and wired to App:** NetworkPanel, RecorderPanel, AccessibilityPanel, CommandsDrawer, AdbPanel, ApkInfoPanel
 
 ---
 
@@ -109,7 +120,7 @@ SettingsPanel (Tauri desktop)
   hoveredCanvasPos: {x, y} | null
   isLoadingScreenshot: boolean
   isLoadingHierarchy: boolean
-  refreshCounter: number            // increment → HierarchyTree re-fetches
+  refreshCounter: number            // increment → HierarchyTree re-fetches (manual trigger)
   screenshotRefreshCounter: number  // manual screenshot refresh trigger
   searchQuery: string
   searchFilter: "xpath" | "resource-id" | "text" | "content-desc" | "class"
@@ -133,6 +144,28 @@ SettingsPanel (Tauri desktop)
   devices: Device[]
   selectedDevice: string | null    // localStorage persisted
   setConnected, setDeviceResolution, setDevices, setSelectedDevice
+}
+```
+
+### networkStore (`stores/networkStore.ts`)
+```typescript
+{
+  trafficFlows: NetworkFlow[]
+  proxyStatus: ProxyStatus
+  vpnStatus: VpnStatus
+  wsConnected: boolean
+  setTrafficFlows, setProxyStatus, setVpnStatus, setWsConnected
+}
+```
+
+### recorderStore (`stores/recorderStore.ts`)
+```typescript
+{
+  sessionId: string
+  steps: RecorderStep[]
+  language: "python" | "java" | "javascript"
+  platform: "android" | "ios"
+  addStep, exportRecording, clearRecording
 }
 ```
 
@@ -174,27 +207,39 @@ SettingsPanel (Tauri desktop)
 | GET | `/screenshot?udid=` | PNG binary; empty udid → first Android device |
 | GET | `/hierarchy?udid=` | UiNode JSON; empty udid → first Android device |
 | GET | `/hierarchy-and-screenshot?udid=` | Combined endpoint (single ADB round-trip) |
-| GET | `/hierarchy/search?query=&filter=&udid=` | Element search |
-| GET | `/hierarchy/find?q=&udid=&regex=` | Tree search with regex |
+| GET | `/hierarchy/search?query=&filter=&udid=` | Element search by xpath/resource-id/text/content-desc/class |
+| GET | `/hierarchy/find?q=&udid=&regex=` | Tree search with substring or regex match |
 | GET | `/hierarchy/locators?nodeId=&udid=` | Generate Appium locators for node |
 | POST | `/hierarchy/audit` | WCAG accessibility audit |
-| POST | `/tap` | `{"x": int, "y": int, "udid"?}` |
+| POST | `/tap` | `{"x": int, "y": int, "coordinateMode"?: "absolute"\|"relative", "udid"?}` |
 | POST | `/input/text` | `{"text": string, "udid"?}` |
 | POST | `/device/press-key` | `{"key": "home"\|"back"\|"recent", "udid"?}` |
-| POST | `/device/swipe` | `{"startX", "startY", "endX", "endY", "duration"?, "udid"?}` |
-| POST | `/device/drag` | `{"startX", "startY", "endX", "endY", "duration"?, "udid"?}` |
+| POST | `/device/swipe` | `{"startX", "startY", "endX", "endY", "duration"?, "coordinateMode"?, "udid"?}` |
+| POST | `/device/drag` | `{"startX", "startY", "endX", "endY", "duration"?, "coordinateMode"?, "udid"?}` |
 | POST | `/device/pinch` | `{"x", "y", "scale": float, "udid"?}` |
+| POST | `/gesture/execute` | Multi-pointer gesture sequences (move/pointerDown/pointerUp/pause) |
+| POST | `/execute` | Arbitrary shell script (allowlist-validated) |
 | GET | `/device/status` | `{connected, devices}` |
 | GET | `/devices` | `{devices: [...]}` |
 | POST | `/device/select` | `{"udid": string|null}` |
 | GET | `/device/contexts?udid=` | List WebView/native contexts |
-| POST | `/device/switch-context` | Switch context |
-| POST | `/device/adb` | Execute allowlisted ADB command |
-| GET | `/app/commands/info?package=&udid=` | Detailed app info |
-| POST | `/commands/execute` | install/uninstall/launch/check/list |
-| POST | `/recorder/record` | Record test step |
+| POST | `/device/switch-context` | `{"contextId": string}` — switch to native/webview |
+| POST | `/device/adb` | Execute allowlisted ADB shell command |
+| GET | `/app/commands/info?package=&udid=` | Detailed APK info (version, SDK, permissions) |
+| POST | `/commands/execute` | install_app/uninstall_app/launch_app/check_app/list_apps |
+| POST | `/recorder/record` | Record test step `{"sessionId", "action", "nodeId", "locator", "value"?}` |
 | GET | `/recorder/export?sessionId=&lang=&platform=` | Export as Python/Java/JS |
 | POST | `/recorder/clear` | Clear recording session |
+| WS | `/network/stream?udid=` | Live traffic WebSocket stream |
+| GET | `/network/proxy/status` | mitmproxy running status |
+| POST | `/network/proxy/start` | Start mitmproxy + device tunnel |
+| POST | `/network/proxy/stop` | Stop mitmproxy + clean up tunnels |
+| GET | `/network/proxy/vpn/status?udid=` | VPN interception running state |
+| POST | `/network/proxy/vpn/start` | Start VPN-based full intercept |
+| POST | `/network/proxy/vpn/stop` | Stop VPN interception |
+| GET | `/network/traffic` | Captured network flows |
+| GET | `/network/info` | Device network diagnostics |
+| POST | `/network/cert/install` | Push MITM cert to device |
 
 ---
 
@@ -262,16 +307,26 @@ interface Device {
 
 ## Tests
 
-**Frontend:** 31 passing (Vitest)
-- `stores/__tests__/themeStore.test.ts` — 9 tests
-- `stores/__tests__/hierarchyStore.test.ts` — 18 tests (incl. lockSelection tests)
-- `components/__tests__/ErrorBoundary.test.tsx` — 2 tests
-- `components/__tests__/HierarchyTree.test.tsx` — 2 tests
+**Frontend:** 147 passing (Vitest) — 10 test files
+- `tests/hooks/useDevice.test.ts` — 21 tests
+- `tests/hooks/useCommands.test.ts` — 5 tests
+- `tests/hooks/useRecording.test.ts` — 11 tests
+- `tests/services/api.test.ts` — 14 tests
+- `tests/stores/hierarchyStore.test.ts` — 35 tests
+- `tests/stores/deviceStore.test.ts` — 13 tests
+- `tests/stores/themeStore.test.ts` — 9 tests
+- `tests/stores/recorderStore.test.ts` — 15 tests
+- `tests/utils/coordinates.test.ts` — 10 tests
+- `tests/utils/locators.test.ts` — 14 tests
 
-**Backend:** 118 passing (pytest)
-- `test_app.py` — REST API endpoint tests
-- `test_device_bridges.py` — Android/iOS bridge unit tests
-- `test_app_commands.py` — AppCommands tests
+**Backend:** 184+ passing (pytest) — 8 test files
+- `test_app.py` — 47 endpoint tests
+- `test_device_bridges.py` — 48 bridge unit tests
+- `test_app_commands.py` — 21 AppCommands tests
+- `test_validate.py` — 42 ADB command validation tests
+- `test_base.py` — 13 bridge base/dispatch tests
+- `test_ws.py` + `test_ws_server.py` — WebSocket tests
+- `tests/` subdirectory — 13 additional tests
 
 
 ---
@@ -304,11 +359,13 @@ cd backend/mcp && npm install && npm run dev
 | Tool | Arguments | Description |
 |------|-----------|-------------|
 | `get_hierarchy` | `deviceId`, `maxDepth?` | Fetch full UI tree hierarchy |
-| `get_node` | `nodeId` | Get specific node by ID |
-| `get_children` | `nodeId`, `cursor?`, `pageSize?` | Paginated children |
-| `get_path` | `nodeId` | Path from root to node |
-| `get_ancestors` | `nodeId` | All ancestor nodes |
+| `get_node` | `nodeId`, `deviceId?` | Get specific node by ID |
+| `get_children` | `nodeId`, `deviceId?`, `cursor?`, `pageSize?` | Paginated children |
+| `get_path` | `nodeId`, `deviceId?` | Path from root to node |
+| `get_ancestors` | `nodeId`, `deviceId` | All ancestor nodes |
 | `search_nodes` | `deviceId`, `query`, `matchType?`, `limit?` | Search by text/xpath/regex |
+
+**SSE endpoint:** `GET /subscribe/:deviceId` — real-time tree update stream
 
 ### MCP Protocol (JSON-RPC 2.0)
 

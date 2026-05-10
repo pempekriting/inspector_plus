@@ -13,22 +13,33 @@
 
 ```
 inspector_plus/
+├── .pre-commit-config.yaml     # Ruff format/check hooks (Python only)
 ├── backend/                    # Python FastAPI
 │   ├── main.py                 # Entry + routes + error handlers
 │   ├── pyproject.toml
+│   ├── test_app.py             # 47 endpoint tests
+│   ├── test_device_bridges.py  # 48 bridge unit tests
+│   ├── test_app_commands.py    # 21 AppCommands tests
+│   ├── test_validate.py        # 42 ADB validation tests
+│   ├── test_base.py            # 13 bridge base tests
+│   ├── test_ws.py              # WebSocket tests
+│   ├── test_ws_server.py
 │   ├── device/
-│   │   ├── __init__.py         # Bridge factory
+│   │   ├── __init__.py         # Bridge factory (create_bridge_for_device)
 │   │   ├── base.py             # DeviceBridgeBase abstract
 │   │   ├── android_bridge.py  # ADB + uiautomator
-│   │   └── ios_bridge.py       # idb + WDA
+│   │   ├── ios_bridge.py       # idb + WDA
+│   │   ├── recorder.py         # Recording session per device
+│   │   ├── accessibility_utils.py
+│   │   └── utils.py
 │   ├── network/
-│   │   ├── routes.py           # Network debug endpoints
+│   │   ├── routes.py           # Network debug endpoints (/network/*)
 │   │   ├── mitm_manager.py    # mitmdump process lifecycle
 │   │   └── flow_parser.py     # mitmproxy flow file parser
 │   ├── commands/
-│   │   ├── app_commands.py
-│   │   └── ios_app_commands.py
-│   ├── inspector_vpn/          # Android VPN app (Gradle)
+│   │   ├── app_commands.py    # Android app commands
+│   │   └── ios_app_commands.py  # iOS app commands
+│   ├── inspector_vpn/          # Android VPN app (Gradle/Kotlin)
 │   │   └── app/src/main/java/com/inspectorplus/vpn/
 │   │       ├── InspectorVpnService.java
 │   │       ├── MainActivity.java
@@ -44,44 +55,51 @@ inspector_plus/
 │
 ├── frontend/                   # React + TypeScript + Vite
 │   ├── src/
-│   │   ├── App.tsx              # Main layout
-│   │   ├── components/
-│   │   │   ├── NetworkPanel.tsx   # Traffic table, proxy/VPN controls
-│   │   │   ├── SettingsPanel.tsx  # Runtime port config + server spawn
-│   │   │   ├── RecorderPanel.tsx  # Test recorder
+│   │   ├── App.tsx              # Main layout (2-tab: inspector/commands)
+│   │   ├── index.css            # Theme + styles + CSS variables
+│   │   ├── components/          # 30+ React components
+│   │   │   ├── ScreenshotCanvas.tsx
+│   │   │   ├── HierarchyTree.tsx
+│   │   │   ├── Overlay.tsx
+│   │   │   ├── NetworkPanel.tsx
+│   │   │   ├── RecorderPanel.tsx
 │   │   │   ├── AccessibilityPanel.tsx
-│   │   │   ├── SubTabBar.tsx
-│   │   │   ├── OnboardingModal.tsx
 │   │   │   ├── CommandsDrawer.tsx
-│   │   │   ├── DevicePanel.tsx
-│   │   │   └── ...             # Other components
-│   │   ├── stores/
-│   │   │   ├── settingsStore.ts  # Persistent settings
+│   │   │   ├── CommandsPanel.tsx
+│   │   │   ├── ApkInfoPanel.tsx
+│   │   │   ├── AdbPanel.tsx
+│   │   │   ├── OnboardingModal.tsx
+│   │   │   └── ... (29 components total)
+│   │   ├── stores/              # 6 Zustand stores
 │   │   │   ├── hierarchyStore.ts
 │   │   │   ├── deviceStore.ts
 │   │   │   ├── themeStore.ts
-│   │   │   └── networkStore.ts   # Traffic flows, proxy/VPN status
-│   │   ├── config/
-│   │   │   └── apiConfig.ts     # Separate BE/MCP URL config
-│   │   ├── services/api.ts      # TanStack Query + Zod
-│   │   └── types/
-│   │       └── network.ts       # NetworkFlow, ProxyStatus, NetworkInfo
-│   └── src-tauri/              # Tauri desktop
+│   │   │   ├── settingsStore.ts
+│   │   │   ├── networkStore.ts
+│   │   │   └── recorderStore.ts
+│   │   ├── hooks/
+│   │   │   └── useDevice.ts
+│   │   ├── services/
+│   │   │   └── api.ts           # TanStack Query + Zod
+│   │   └── config/
+│   │       └── apiConfig.ts
+│   └── src-tauri/              # Tauri desktop (Rust)
 │       ├── src/
-│       │   ├── main.rs          # Entry + server lifecycle
-│       │   ├── backend_manager.rs  # Python/FastAPI process manager
-│       │   ├── mcp_manager.rs   # Node.js MCP process manager
-│       │   └── commands.rs      # Tauri IPC commands
+│       │   ├── main.rs
+│       │   ├── backend_manager.rs
+│       │   ├── mcp_manager.rs
+│       │   └── commands.rs
+│       └── Cargo.toml
 │
 ├── docs/
-│   ├── ARCHITECTURE.md          # System design
-│   ├── DEVELOPMENT.md           # This file
-│   ├── NETWORK.md               # Network debug / VPN interception
-│   └── MCP_QUICKREF.md         # MCP server reference
+│   ├── ARCHITECTURE.md
+│   ├── DEVELOPMENT.md
+│   ├── NETWORK.md
+│   └── MCP_QUICKREF.md
 │
-├── SPEC.md                      # Technical reference
-├── README.md                    # Quick overview
-└── CLAUDE.md                    # Claude Code instructions
+├── SPEC.md
+├── README.md
+└── CLAUDE.md
 ```
 
 ## Backend Setup

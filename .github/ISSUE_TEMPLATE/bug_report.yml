@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report something that is not working correctly
+title: "[Bug] "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    id: description
+    attributes:
+      value: |
+        ## Bug Description
+        <!-- A clear, concise description of the bug -->
+
+  - type: markdown
+    id: steps
+    attributes:
+      value: |
+        ## Steps to Reproduce
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+
+  - type: markdown
+    id: expected
+    attributes:
+      value: |
+        ## Expected Behavior
+        <!-- What should happen -->
+
+  - type: markdown
+    id: actual
+    attributes:
+      value: |
+        ## Actual Behavior
+        <!-- What actually happens -->
+
+  - type: markdown
+    id: environment
+    attributes:
+      value: |
+        ## Environment
+        - OS:
+        - Python:
+        - Node:
+        - Device (Android/iOS model + version):
+
+  - type: markdown
+    id: screenshots
+    attributes:
+      value: |
+        ## Screenshots / Logs
+        <!-- If applicable -->
+
+  - type: markdown
+    id: additional
+    attributes:
+      value: |
+        ## Additional Context
+        <!-- Anything else relevant -->

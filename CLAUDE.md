@@ -66,6 +66,8 @@ Stores in `frontend/src/stores/`:
 - `deviceStore.ts` — device list, selected device, resolution
 - `themeStore.ts` — dark/light theme toggle
 - `settingsStore.ts` — persistent settings (BE/MCP URLs)
+- `networkStore.ts` — traffic flows, proxy/VPN status, WebSocket state
+- `recorderStore.ts` — recording session, steps, language
 
 ### Frontend API Layer
 
@@ -79,61 +81,119 @@ Stores in `frontend/src/stores/`:
 
 ```
 inspector_plus/
+├── .pre-commit-config.yaml     # Ruff format/check hooks
 ├── backend/
 │   ├── main.py                  # FastAPI entry + typed errors + routes
-│   ├── test_app.py              # pytest tests (all endpoints + error handling)
+│   ├── test_app.py              # 47 pytest endpoint tests
+│   ├── test_device_bridges.py   # 48 bridge unit tests
+│   ├── test_app_commands.py     # 21 AppCommands tests
+│   ├── test_validate.py         # 42 ADB validation tests
+│   ├── test_base.py             # 13 bridge base tests
+│   ├── test_ws.py               # WebSocket tests
+│   ├── test_ws_server.py       # WebSocket server tests
 │   ├── pyproject.toml
 │   ├── Dockerfile
-│   ├── mcp/                     # MCP server for AI tool consumption
-│   │   ├── src/
-│   │   │   ├── server.ts         # Express + StreamableHTTP MCP server
-│   │   │   ├── types/mcp-types.ts
-│   │   │   ├── services/tree-service.ts
-│   │   │   ├── cache/tree-cache.ts
-│   │   │   └── tools/           # hierarchy, traversal, search tools
-│   │   ├── package.json
-│   │   └── tsconfig.json
-│   └── commands/
-│       └── app_commands.py      # Appium-like command executor
+│   ├── device/
+│   │   ├── __init__.py          # Bridge factory (create_bridge_for_device)
+│   │   ├── base.py              # DeviceBridgeBase abstract class
+│   │   ├── android_bridge.py   # Android ADB + uiautomator implementation
+│   │   ├── ios_bridge.py        # iOS idb + WDA implementation
+│   │   ├── recorder.py         # Recording session per device
+│   │   ├── accessibility_utils.py
+│   │   └── utils.py
+│   ├── network/
+│   │   ├── routes.py            # Network debug endpoints (/network/*)
+│   │   ├── mitm_manager.py     # mitmdump process singleton
+│   │   └── flow_parser.py       # .mitm flow file parser
+│   ├── commands/
+│   │   ├── app_commands.py     # Android app commands
+│   │   └── ios_app_commands.py  # iOS app commands
+│   ├── inspector_vpn/           # Android VPN app (Gradle/Kotlin)
+│   │   └── app/src/main/java/com/inspectorplus/vpn/
+│   │       ├── InspectorVpnService.java
+│   │       ├── MainActivity.java
+│   │       └── AndroidManifest.xml
+│   └── mcp/                     # MCP server for AI tool consumption
+│       ├── src/
+│       │   ├── server.ts         # Express + StreamableHTTP MCP server
+│       │   ├── types/mcp-types.ts
+│       │   ├── services/tree-service.ts
+│       │   ├── cache/tree-cache.ts
+│       │   └── tools/           # hierarchy, traversal, search tools
+│       ├── package.json
+│       └── tsconfig.json
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx              # Main layout (~297 lines, composes panels)
-│   │   ├── components/
-│   │   │   ├── DevicePanel.tsx   # Device selector dropdown
-│   │   │   ├── HierarchyPanel.tsx # Tree view, search bar, polling
-│   │   │   ├── PropertiesPanel.tsx # Node properties using PropertyRow
-│   │   │   ├── StatusBar.tsx    # Status bar with version badge
-│   │   │   ├── HierarchyTree.tsx # Recursive tree rendering
-│   │   │   ├── PropertyRow.tsx   # Property row for node details
-│   │   │   ├── CommandsPanel.tsx # Command execution UI
-│   │   │   ├── SettingsPanel.tsx  # Runtime port config + server spawn
-│   │   │   └── ...
+│   │   ├── App.tsx              # Main layout, TabBar, SubTabBar
+│   │   ├── components/           # 30+ React components
+│   │   │   ├── AccessibilityPanel.tsx
+│   │   │   ├── AdbPanel.tsx
+│   │   │   ├── ApkInfoPanel.tsx
+│   │   │   ├── BottomDrawer.tsx
+│   │   │   ├── CommandsDrawer.tsx
+│   │   │   ├── CommandsPanel.tsx
+│   │   │   ├── DeviceActionsBar.tsx
+│   │   │   ├── DevicePanel.tsx
+│   │   │   ├── EmptyState.tsx
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   ├── ErrorState.tsx
+│   │   │   ├── HierarchyPanel.tsx
+│   │   │   ├── HierarchyTree.tsx
+│   │   │   ├── LayoutBoundsOverlay.tsx
+│   │   │   ├── LocatorPanel.tsx
+│   │   │   ├── NetworkPanel.tsx
+│   │   │   ├── OnboardingModal.tsx
+│   │   │   ├── Overlay.tsx
+│   │   │   ├── PropertiesPanel.tsx
+│   │   │   ├── PropertyRow.tsx
+│   │   │   ├── RecorderPanel.tsx
+│   │   │   ├── ScreenshotCanvas.tsx
+│   │   │   ├── SearchBar.tsx
+│   │   │   ├── SettingsPanel.tsx
+│   │   │   ├── SkeletonLoader.tsx
+│   │   │   ├── StatusBar.tsx
+│   │   │   ├── StylePanel.tsx
+│   │   │   ├── SubTabBar.tsx
+│   │   │   └── TabBar.tsx
 │   │   ├── stores/
 │   │   │   ├── hierarchyStore.ts
 │   │   │   ├── deviceStore.ts
 │   │   │   ├── themeStore.ts
-│   │   │   └── settingsStore.ts  # Persistent settings (BE/MCP URLs)
+│   │   │   ├── settingsStore.ts
+│   │   │   ├── networkStore.ts
+│   │   │   └── recorderStore.ts
 │   │   ├── config/
-│   │   │   └── apiConfig.ts      # Separate BE + MCP URL config
-│   │   ├── hooks/useDevice.ts   # API hooks + useDevicePolling
-│   │   └── services/api.ts      # API base URL from VITE_API_URL
+│   │   │   └── apiConfig.ts
+│   │   ├── hooks/useDevice.ts
+│   │   ├── services/api.ts
+│   │   └── types/network.ts
 │   └── src-tauri/
 │       ├── src/
-│       │   ├── main.rs           # Tauri entry + server lifecycle
-│       │   ├── backend_manager.rs  # Python/FastAPI child process
-│       │   ├── mcp_manager.rs   # Node.js MCP child process
-│       │   └── commands.rs      # Tauri IPC commands
+│       │   ├── main.rs
+│       │   ├── backend_manager.rs
+│       │   ├── mcp_manager.rs
+│       │   └── commands.rs
 │       └── Cargo.toml
 ├── docs/
-│   ├── ARCHITECTURE.md          # API reference, data models
-│   └── DEVELOPMENT.md
-└── SPEC.md                      # Feature spec (verify against code)
+│   ├── ARCHITECTURE.md
+│   ├── DEVELOPMENT.md
+│   ├── MCP_QUICKREF.md
+│   └── NETWORK.md
+├── SPEC.md
+└── CLAUDE.md
 ```
 
 ## Testing
 
-- **Frontend:** `cd frontend && npm test` (vitest) — 4 test files, 28 tests passing
-- **Backend:** `cd backend && uv run pytest` — `test_app.py`, 35 tests covering all endpoints, error handling, and middleware
+- **Frontend:** `cd frontend && npm test` (vitest) — 10 test files, 147 tests passing
+  - `tests/hooks/` — useDevice, useCommands, useRecording
+  - `tests/services/` — api
+  - `tests/stores/` — hierarchyStore, deviceStore, themeStore, recorderStore
+  - `tests/utils/` — coordinates, locators
+- **Backend:** `cd backend && uv run pytest` — 184+ tests across 8 test files
+  - `test_app.py` (47), `test_device_bridges.py` (48), `test_app_commands.py` (21)
+  - `test_validate.py` (42), `test_base.py` (13), `test_ws*.py` (2)
+  - `tests/` subdirectory (13)
 
 ## Coding Agent Workflow
 
@@ -204,9 +264,10 @@ Both backend (port 8001) and MCP (port 8002) can be restarted on different ports
 
 ### Refresh Mechanism
 - Screenshot uses combined `/hierarchy-and-screenshot` endpoint with TanStack Query (staleTime 2000ms)
-- Hierarchy refresh: `triggerHierarchyRefresh()` increments `refreshCounter`
+- Hierarchy refresh: `triggerHierarchyRefresh()` increments `refreshCounter` (manual trigger)
 - Screenshot refresh: `triggerScreenshotRefresh()` increments `screenshotRefreshCounter` (manual only)
 - Device switch: resets resolution + refreshes both screenshot and hierarchy via refetch
+- No auto-refresh polling for hierarchy — manual trigger only
 
 ### Coordinate Conversion
 - Canvas click → device coordinates: `(canvasX / canvasWidth) * deviceWidth`
