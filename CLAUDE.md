@@ -253,6 +253,147 @@ npm run dev                    # or npm run tauri dev for desktop
 6. **Mock Zustand stores in tests** — use `vi.mocked(useHierarchyStore).mockReturnValue(...)` not `require()` inside test bodies
 7. **Always check `get_bridge()` for `None`** before calling methods on the returned bridge
 
+---
+
+## Implementation Best Practices
+
+### Adding a New Backend Endpoint
+
+1. **Define request/response models** using Pydantic `BaseModel` in the routes file
+2. **Use `Query()` not `Field()`** for query parameters
+3. **Guard bridge lookups**: always check `get_bridge(udid)` for `None`
+4. **Use async for I/O-bound operations** (ADB calls, file I/O)
+5. **Register the route** on the `router` and include it in `main.py` via `app.include_router()`
+6. **Add tests**: follow the pattern in `tests/test_network_routes.py`
+
+```python
+from fastapi import APIRouter, Query
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class NewEndpointRequest(BaseModel):
+    udid: str | None = None
+
+@router.post("/new-endpoint")
+async def new_endpoint(req: NewEndpointRequest):
+    if req.udid:
+        bridge = get_bridge(req.udid)
+        if bridge is None:
+            raise DeviceNotFoundError()
+    # ...
+```
+
+### Adding a New Backend Device Bridge
+
+1. Inherit from `DeviceBridgeBase` in `backend/device/base.py`
+2. Implement all abstract methods: `get_hierarchy()`, `get_screenshot()`, `tap()`, `input_text()`, etc.
+3. Add the bridge type to `backend/device/__init__.py` factory
+4. Add tests in `tests/test_device_bridges.py` with `mock_android_bridge` / `mock_ios_bridge` fixtures
+5. **Thread safety**: if the bridge manages state, ensure thread-safe access via locks
+
+### Adding a New Frontend Store (Zustand)
+
+1. Create `frontend/src/stores/myStore.ts` with typed interface
+2. **Always persist** if the store holds user preferences (use `localStorage`)
+3. **Reset pattern**: provide a way to reset state for test isolation
+4. **Add tests** in `frontend/tests/stores/myStore.test.ts`
+5. **Never hardcode URLs** — use `import.meta.env.VITE_API_URL` or the `apiConfig` layer
+
+```typescript
+import { create } from 'zustand';
+
+interface MyState {
+  value: string;
+  setValue: (v: string) => void;
+}
+
+export const useMyStore = create<MyState>((set) => ({
+  value: 'default',
+  setValue: (value) => set({ value }),
+}));
+```
+
+### Adding a New Frontend API Call
+
+1. Add the function to `frontend/src/services/api.ts`
+2. Use `fetch` with proper error handling
+3. **Type the response** with a Zod schema or TypeScript interface
+4. **Add tests** in `frontend/tests/services/api.test.ts`
+
+```typescript
+import { getApiUrl } from '@/config/apiConfig';
+
+export async function fetchDeviceInfo(udid: string) {
+  const res = await fetch(`${getApiUrl()}/devices/${udid}`);
+  if (!res.ok) throw new Error('Failed to fetch device info');
+  return res.json();
+}
+```
+
+### Concurrency & Thread Safety
+
+- **Backend bridges are singletons** per device — protect shared state with `threading.Lock()`
+- **MitmproxyManager** uses `_lock = threading.Lock()` for singleton safety
+- **Reset singletons** in test fixtures via `autouse=True` fixtures that call `reset_instance()`
+- **Don't block the event loop** — use `asyncio` for concurrent operations; don't use `time.sleep()` in async endpoints
+
+### Observability & Logging
+
+Use structured logging with the project logger pattern:
+```python
+import logging
+logger = logging.getLogger(__name__)
+
+logger.info(f"[myoperation] details={details}")
+logger.error(f"[myoperation] failed: {e}")
+```
+
+**Key log sources to check** when debugging:
+- `[start_proxy]` — mitmdump lifecycle in `network/routes.py`
+- `[MitmproxyManager]` — mitmdump process management
+- `[flow_parser]` — flow file parsing
+- `[get_hierarchy]` — hierarchy fetching per device
+
+### Security: ADB Command Validation
+
+ADB commands must be validated against an allowlist before execution:
+- **`_validate_adb_command()`** in `main.py` checks for dangerous characters and patterns
+- **Blocked patterns**: `rm -rf`, `mv` to system dirs, pipes, redirects, semicolons
+- **Never execute raw user input** as ADB commands — always go through the validator
+- **For iOS**: commands go through `idb` which has its own permission model
+
+### Platform-Specific Quirks
+
+**Android:**
+- XML hierarchy from `uiautomator dump` uses bounds format `[x1,y1,x2,y2]`
+- `ClassName_N` format for generated node IDs
+- VPN mode uses `10.0.0.2/32` route, requires AUTO_START permission
+- `adb reverse` needed for proxy tunnel from device to host
+
+**iOS:**
+- Uses `idb-companion` for device communication (not ADB)
+- WebDriver Agent (WDA) for UI inspection
+- No VPN interception — proxy mode only
+- Different hierarchy structure from Android
+
+### Error Propagation
+
+- **Backend**: Use `AppError` subclasses; they auto-register with FastAPI exception handler
+- **Frontend**: API errors are caught in `api.ts` and surfaced via `useQuery.error` or `useMutation.error`
+- **WebSocket**: Errors disconnect the client — implement reconnection logic in the frontend
+- **Never swallow exceptions silently** — always log or re-raise with context
+
+### Performance Considerations
+
+- **Screenshot streaming**: Use binary PNG streams, not base64 in JSON
+- **Hierarchy parsing**: Cache parsed tree in bridge; only re-fetch on explicit refresh
+- **Network flows**: mitmproxy writes to `.mitm` files — don't parse on every request; use `since` filter
+- **Frontend renders**: Use `React.memo` for tree nodes; virtualize long lists with `react-window`
+- **TanStack Query**: `staleTime: 2000ms` for screenshot; `staleTime: Infinity` for hierarchy (manual refresh only)
+
+---
+
 ## Architecture Notes
 
 ### Runtime Port Switching (Tauri Desktop)
