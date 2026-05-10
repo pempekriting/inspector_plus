@@ -23,7 +23,7 @@ interface GestureAction {
   y?: number;
   duration?: number;
   pointer?: number;
-  button?: string;
+  button?: 'left' | 'right';
 }
 
 export function CommandsPanel() {

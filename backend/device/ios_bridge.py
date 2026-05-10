@@ -99,7 +99,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
                     target = json.loads(line)
                 except json.JSONDecodeError:
                     # Skip malformed lines (e.g., injected XSS in DeviceName field)
-                    print(f"get_devices: skipped malformed JSON line: {line[:50]}...")
+                    logger.warning("get_devices: skipped malformed JSON line: %s...", line[:50])
                     continue
                 # Only include booted devices that can be inspected
                 if target.get("state") != "Booted":
@@ -119,7 +119,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
                 )
             return devices
         except Exception as e:
-            print(f"get_devices failed: {e}")
+            logger.warning("get_devices failed: %s", e)
             return []
 
     def get_hierarchy(self) -> dict:
@@ -138,7 +138,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
         try:
             return _retry_with_backoff(do_ui, retries=3, base_delay=1.0)
         except Exception as e:
-            print(f"idb ui describe-all failed after retries: {e}")
+            logger.warning("idb ui describe-all failed after retries: %s", e)
         # Fallback: try direct WDA source
         return self._get_wda_source()
 
@@ -442,7 +442,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
             _retry_with_backoff(do_tap, retries=3, base_delay=0.5)
             return True
         except Exception as e:
-            print(f"tap failed after retries: {e}")
+            logger.warning("tap failed after retries: %s", e)
             return False
 
     def input_text(self, text: str) -> bool:
@@ -490,7 +490,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
             _retry_with_backoff(do_swipe, retries=3, base_delay=0.5)
             return True
         except Exception as e:
-            print(f"swipe failed after retries: {e}")
+            logger.warning("swipe failed after retries: %s", e)
             return False
 
     def press_button(self, button: str) -> bool:
@@ -508,7 +508,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
             _retry_with_backoff(do_press, retries=3, base_delay=0.5)
             return True
         except Exception as e:
-            print(f"press_button failed after retries: {e}")
+            logger.warning("press_button failed after retries: %s", e)
             return False
 
     def drag(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 500) -> bool:
