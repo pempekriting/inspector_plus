@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 import subprocess
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 
@@ -48,7 +49,7 @@ async def get_hierarchy_and_screenshot(request: Request, udid: str | None = None
 @router.get("/hierarchy/search")
 async def search_hierarchy(
     query: str,
-    filter: str = "xpath",
+    filter: Literal["xpath", "resource-id", "text", "content-desc", "class"] = "xpath",
     udid: str | None = None,
 ):
     """Search hierarchy using specified filter type."""

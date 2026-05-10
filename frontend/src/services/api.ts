@@ -59,6 +59,18 @@ export const HierarchyAndScreenshotSchema = z.object({
   screenshot: z.string(),
 });
 
+export const SearchHierarchyMatchSchema = z.object({
+  nodeId: z.string(),
+  matchField: z.string(),
+  matchedText: z.string(),
+  node: UiNodeSchema,
+});
+
+export const SearchHierarchyResponseSchema = z.object({
+  matches: z.array(SearchHierarchyMatchSchema),
+  count: z.number(),
+});
+
 export const NetworkFlowSchema: z.ZodType<NetworkFlow> = z.object({
   id: z.string(),
   timestamp: z.number(),
@@ -319,7 +331,7 @@ export function useGestureExecute() {
         y?: number;
         duration?: number;
         pointer?: number;
-        button?: string;
+        button?: 'left' | 'right';
       }>;
       coordinateMode: string;
       udid?: string;
@@ -732,10 +744,14 @@ export async function searchHierarchy(
   query: string,
   filter: 'xpath' | 'resource-id' | 'text' | 'content-desc' | 'class',
   udid?: string
-): Promise<{ matches: unknown[]; count: number }> {
+): Promise<z.infer<typeof SearchHierarchyResponseSchema>> {
   const params = new URLSearchParams({ query, filter });
   if (udid) params.set('udid', udid);
-  return apiFetch(`${getApiUrl()}/hierarchy/search?${params.toString()}`);
+  return apiFetch(
+    `${getApiUrl()}/hierarchy/search?${params.toString()}`,
+    undefined,
+    SearchHierarchyResponseSchema
+  );
 }
 
 export async function inputDeviceText(text: string, udid?: string): Promise<void> {
