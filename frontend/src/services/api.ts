@@ -73,7 +73,14 @@ export async function apiFetch<T>(url: string, options?: RequestInit, schema?: z
   }
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    let message = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const err = await response.json();
+      message = err.detail || err.error || message;
+    } catch {
+      // response body isn't JSON, use status text
+    }
+    throw new Error(message);
   }
   const data = await response.json();
   return schema ? schema.parse(data) : (data as T);

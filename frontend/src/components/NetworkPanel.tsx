@@ -168,10 +168,15 @@ export function NetworkPanel() {
     startVpn
       .mutateAsync({ port, udid: selectedDevice ?? undefined })
       .then(() => setStartVpnPending(false))
-      .catch(() => setStartVpnPending(false));
+      .catch((err) => {
+        setStartVpnPending(false);
+        console.error('Start VPN failed:', err);
+      });
   };
   const handleStopVpn = () => {
-    stopVpn.mutateAsync({ udid: selectedDevice ?? undefined }).catch(() => {});
+    stopVpn
+      .mutateAsync({ udid: selectedDevice ?? undefined })
+      .catch((err) => console.error('Stop VPN failed:', err));
   };
   const handleCert = () => installCert.mutateAsync({ udid: selectedDevice ?? undefined });
 
