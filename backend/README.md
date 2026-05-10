@@ -28,23 +28,39 @@ API documentation available at `http://localhost:8001/docs`
 | GET | `/hierarchy` | Fetch UI hierarchy from device |
 | GET | `/hierarchy-and-screenshot` | Combined hierarchy + base64 screenshot |
 | GET | `/hierarchy/search` | Filtered search by xpath/resource-id/text/content-desc/class |
-| GET | `/hierarchy/find` | Tree search with regex (F4) |
+| GET | `/hierarchy/find` | Tree search with substring or regex |
 | GET | `/hierarchy/locators` | Generate Appium locators for a node |
 | POST | `/hierarchy/audit` | WCAG accessibility audit |
 | POST | `/tap` | Tap device at coordinates |
 | POST | `/input/text` | Input text |
+| POST | `/device/press-key` | Press hardware key (home/back/recent) |
+| POST | `/device/swipe` | Swipe gesture |
+| POST | `/device/drag` | Drag gesture |
+| POST | `/device/pinch` | Pinch gesture |
+| POST | `/gesture/execute` | Multi-pointer gesture sequences |
+| POST | `/execute` | Arbitrary shell script (allowlist-validated) |
 | GET | `/screenshot` | Get PNG screenshot |
 | GET | `/device/status` | Get connection and device info |
 | GET | `/devices` | List all connected devices |
 | POST | `/device/select` | Switch active device |
-| POST | `/device/adb` | Execute allowlisted ADB command |
+| POST | `/device/adb` | Execute allowlisted ADB shell command |
 | GET | `/device/contexts` | List WebView/native contexts |
 | POST | `/device/switch-context` | Switch context |
 | POST | `/recorder/record` | Record test step |
 | GET | `/recorder/export` | Export recording as Python/Java/JS |
 | POST | `/recorder/clear` | Clear recording |
 | GET | `/app/commands/info` | Get detailed APK info |
-| POST | `/commands/execute` | Execute commands (install/uninstall/launch/check/list apps) |
+| POST | `/commands/execute` | Execute commands (install/uninstall/launch/check/list_apps) |
+| WS | `/network/stream` | Live traffic WebSocket stream |
+| GET | `/network/proxy/status` | mitmproxy status |
+| POST | `/network/proxy/start` | Start mitmproxy + device tunnel |
+| POST | `/network/proxy/stop` | Stop mitmproxy |
+| GET | `/network/proxy/vpn/status` | VPN interception state |
+| POST | `/network/proxy/vpn/start` | Start VPN full intercept |
+| POST | `/network/proxy/vpn/stop` | Stop VPN |
+| GET | `/network/traffic` | Captured flows |
+| GET | `/network/info` | Network diagnostics |
+| POST | `/network/cert/install` | Push MITM cert to device |
 
 ## ADB Commands Used
 
@@ -85,7 +101,7 @@ Uses `uv` for Python dependency management.
 
 ## MCP Server (AI Tool Access)
 
-A TypeScript MCP server exposes hierarchy data for AI clients. See `docs/MCP_SERVER.md` for full documentation or `SPEC.md` for consolidated reference.
+A TypeScript MCP server exposes hierarchy data for AI clients. See `docs/MCP_QUICKREF.md` or `SPEC.md` for MCP server documentation.
 
 ```bash
 cd backend/mcp

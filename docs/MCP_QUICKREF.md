@@ -35,11 +35,12 @@ Server runs on port 8002 (or `MCP_PORT` env var).
 | Tool | Arguments | Description |
 |------|-----------|-------------|
 | `get_hierarchy` | `deviceId: string`, `maxDepth?: number` | Full UI tree |
-| `get_node` | `nodeId: string` | Single node details |
-| `get_children` | `nodeId: string`, `cursor?: string`, `pageSize?: number` | Paginated children |
-| `get_path` | `nodeId: string` | Root to node path |
+| `get_node` | `nodeId: string`, `deviceId?: string` | Single node details |
+| `get_children` | `nodeId: string`, `deviceId?: string`, `cursor?: string`, `pageSize?: number` | Paginated children |
+| `get_path` | `nodeId: string`, `deviceId?: string` | Root to node path |
 | `get_ancestors` | `nodeId: string`, `deviceId: string` | All ancestors |
 | `search_nodes` | `deviceId: string`, `query: string`, `matchType?: "text"\|"xpath"\|"regex"`, `limit?: number` | Search nodes |
+| `subscribeTree` | `deviceId: string` | SSE real-time tree update stream (via `GET /subscribe/:deviceId`) |
 
 ## cURL Examples
 

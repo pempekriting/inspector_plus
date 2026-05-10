@@ -1,0 +1,33 @@
+name: Documentation Update
+description: Improve or fix documentation
+title: "[Docs] "
+labels: ["documentation"]
+assignees: []
+body:
+  - type: markdown
+    id: description
+    attributes:
+      value: |
+        ## Documentation Update
+        <!-- Brief description of what needs to be updated -->
+
+  - type: markdown
+    id: current
+    attributes:
+      value: |
+        ## Current State
+        <!-- What is currently documented that is incorrect or incomplete -->
+
+  - type: markdown
+    id: proposed
+    attributes:
+      value: |
+        ## Proposed Change
+        <!-- What should the documentation say instead -->
+
+  - type: markdown
+    id: files
+    attributes:
+      value: |
+        ## Files Affected
+        <!-- Which documentation files need updating -->
