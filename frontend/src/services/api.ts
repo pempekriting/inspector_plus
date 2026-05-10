@@ -53,20 +53,37 @@ export const HierarchyResponseSchema = z.object({
   tree: UiNodeSchema,
 });
 
-// API fetch wrapper with error handling
-export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
+// API key getter (reads from localStorage, set via settings store)
+function getApiKey(): string | null {
+  try {
+    return localStorage.getItem('inspector-plus-api-key');
+  } catch {
+    return null;
+  }
+}
+
+// API fetch wrapper with error handling and optional Zod validation
+export async function apiFetch<T>(url: string, options?: RequestInit, schema?: z.ZodType<T>): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+  const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
-  return response.json() as Promise<T>;
+  const data = await response.json();
+  return schema ? schema.parse(data) : (data as T);
 }
 
 // Device status
 export function useDeviceStatus() {
   return useQuery({
     queryKey: ['device-status'],
-    queryFn: () => apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`),
+    queryFn: () => apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`, undefined, DeviceStatusSchema),
     refetchInterval: 10000,
     retry: 2,
     staleTime: 3000,
@@ -85,27 +102,6 @@ export function useDevices() {
     retry: 2,
     staleTime: 10000,
     gcTime: 60000,
-  });
-}
-
-// Select device
-export function useSelectDevice() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (udid: string | null) =>
-      apiFetch<{ udid: string; platform: string }>(`${getApiUrl()}/device/select`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ udid }),
-      }),
-    onError: (error) => {
-      console.error('Failed to select device:', error);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['device-status'] });
-      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
-      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
-    },
   });
 }
 
@@ -133,12 +129,10 @@ export function useHierarchyAndScreenshot(udid?: string) {
       const url = udid
         ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy-and-screenshot`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch hierarchy and screenshot');
-      const data = (await res.json()) as {
+      const data = await apiFetch<{
         hierarchy: z.infer<typeof UiNodeSchema>;
         screenshot: string;
-      };
+      }>(url);
       return {
         hierarchy: data.hierarchy,
         screenshotUrl: `data:image/png;base64,${data.screenshot}`,
@@ -644,14 +638,38 @@ export function useStartVpn() {
 export function useStopVpn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ udid }: { udid?: string }) =>
-      apiFetch<{ success: boolean; error?: string }>(`${getApiUrl()}/network/proxy/vpn/stop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ udid }),
-      }),
+    mutationFn: ({ udid }: { udid?: string }) => {
+      const params = udid ? `?udid=${encodeURIComponent(udid)}` : '';
+      return apiFetch<{ success: boolean; error?: string }>(
+        `${getApiUrl()}/network/proxy/vpn/stop${params}`,
+        { method: 'POST' }
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vpn-status'] });
     },
   });
+}
+
+// --- Standalone API functions (for components that don't use TanStack Query) ---
+
+export async function searchHierarchy(
+  query: string,
+  filter: 'xpath' | 'resource-id' | 'text' | 'content-desc' | 'class',
+  udid?: string
+): Promise<{ matches: unknown[]; count: number }> {
+  const params = new URLSearchParams({ query, filter });
+  if (udid) params.set('udid', udid);
+  return apiFetch(`${getApiUrl()}/hierarchy/search?${params.toString()}`);
+}
+
+export async function inputDeviceText(text: string, udid?: string): Promise<void> {
+  await apiFetch<{ success: boolean }>(
+    udid ? `${getApiUrl()}/input/text?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/input/text`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }
+  );
 }

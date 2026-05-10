@@ -1,10 +1,19 @@
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { HierarchyTree } from '../HierarchyTree';
 
 import { useHierarchyStore } from '@/stores/hierarchyStore';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
 
 const mockTree = {
   id: 'root',
@@ -83,7 +92,7 @@ describe('HierarchyTree', () => {
 
   it('renders without crashing when no uiTree', () => {
     (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(createMockStore());
-    const { container } = render(<HierarchyTree />);
+    const { container } = render(<HierarchyTree />, { wrapper: Wrapper });
     expect(container).toBeDefined();
   });
 
@@ -91,7 +100,7 @@ describe('HierarchyTree', () => {
     (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(
       createMockStore({ uiTree: mockTree, expandedNodes: new Set(['root']) })
     );
-    render(<HierarchyTree />);
+    render(<HierarchyTree />, { wrapper: Wrapper });
     // Count = 2 (root + child)
     expect(screen.getByText('2')).toBeInTheDocument();
   });

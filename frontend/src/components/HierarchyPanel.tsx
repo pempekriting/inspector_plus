@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 import { useHierarchyAndScreenshot } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
@@ -10,26 +10,20 @@ import { PropertiesPanel } from './PropertiesPanel';
 
 export function HierarchyPanel() {
   const { selectedDevice } = useDeviceStore();
-  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl, expandAll } =
+  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl, expandToDepth } =
     useHierarchyStore();
 
-  const { data, isLoading, refetch } = useHierarchyAndScreenshot(selectedDevice || undefined);
-  const refetchRef = useRef(refetch);
-  refetchRef.current = refetch;
-
-  useEffect(() => {
-    useHierarchyStore.setState({ refetchFn: refetchRef });
-  }, []);
+  const { data, isLoading } = useHierarchyAndScreenshot(selectedDevice || undefined);
 
   useEffect(() => {
     if (data) {
       setUiTree(data.hierarchy);
       setCombinedScreenshotUrl(data.screenshotUrl);
       useHierarchyStore.setState({ isRefreshing: false });
-      // Auto-expand all nodes when hierarchy loads
-      expandAll(data.hierarchy);
+      // Expand first 2 levels by default (not all nodes)
+      expandToDepth(data.hierarchy, 2);
     }
-  }, [data, setUiTree, setCombinedScreenshotUrl, expandAll]);
+  }, [data, setUiTree, setCombinedScreenshotUrl, expandToDepth]);
 
   useEffect(() => {
     if (isLoading === false && data === undefined) {

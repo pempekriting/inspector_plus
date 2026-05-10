@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useEffect, memo, useMemo, useRef } from 'react';
 
 import { useRecording } from '../hooks/useRecording';
@@ -355,14 +356,13 @@ export function HierarchyTree({
   const handleHover = useCallback((node: UiNode) => setHoveredNode(node), [setHoveredNode]);
   const handleHoverClear = useCallback(() => setHoveredNode(null), [setHoveredNode]);
 
-  // Refresh button handler - calls refetch from store
-  const refetchFn = useHierarchyStore((s) => s.refetchFn);
+  // Refresh button handler - invalidates TanStack Query cache
+  const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
-    if (refetchFn.current) {
-      useHierarchyStore.setState({ isRefreshing: true });
-      refetchFn.current();
-    }
-  }, [refetchFn]);
+    useHierarchyStore.setState({ isRefreshing: true });
+    queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
+    queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
+  }, [queryClient]);
 
   // D1: Expand/Collapse All
   const handleExpandAll = () => {

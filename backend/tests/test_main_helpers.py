@@ -224,32 +224,30 @@ class TestIsIosUdid:
     """Tests for iOS UDID detection."""
 
     def test_valid_ios_udid(self):
-        from main import _is_ios_udid
+        from dependencies import _is_ios_udid
 
-        # Real iOS UDID format
         assert _is_ios_udid("00001234-0001234567890123") is True
         assert _is_ios_udid("AABBCCDD-1234567890ABCDEF12") is True
 
     def test_android_serial_not_ios(self):
-        from main import _is_ios_udid
+        from dependencies import _is_ios_udid
 
-        # Android serials are typically shorter
         assert _is_ios_udid("emulator-5554") is False
         assert _is_ios_udid("SERIAL12345") is False
         assert _is_ios_udid("RF8N1234567") is False
 
     def test_too_short_for_ios(self):
-        from main import _is_ios_udid
+        from dependencies import _is_ios_udid
 
         assert _is_ios_udid("0000-1234") is False
 
     def test_contains_non_hex_chars(self):
-        from main import _is_ios_udid
+        from dependencies import _is_ios_udid
 
         assert _is_ios_udid("00001234-000123456789012G") is False  # G is not hex
 
     def test_lowercase_accepted(self):
-        from main import _is_ios_udid
+        from dependencies import _is_ios_udid
 
         assert _is_ios_udid("aabbccdd-1234567890abcdef12") is True
 
@@ -258,62 +256,54 @@ class TestGetBridge:
     """Tests for bridge factory function."""
 
     def test_get_bridge_with_none_returns_android_bridge(self):
-        from main import _android_bridge, get_bridge
+        from dependencies import get_bridge
 
-        # When no udid provided, it tries to find first android device
-        # If _get_first_android_device returns None, it creates a global android bridge
-        with patch("main._get_first_android_device", return_value=None):
+        with patch("dependencies._get_first_android_device", return_value=None):
             result = get_bridge(None)
-            # Should be a valid bridge instance
             assert result is not None
 
     def test_get_bridge_with_ios_udid_returns_ios_bridge(self):
-        from main import get_bridge
+        from dependencies import _ios_bridges, get_bridge
 
-        with patch("main._is_ios_udid", return_value=True), patch("main._ios_bridges", {}):
+        with patch("dependencies._is_ios_udid", return_value=True):
+            _ios_bridges.clear()
             result = get_bridge("00001234-0001234567890123")
             assert result is not None
-            # Verify it's from iOS bridges dict
-            from main import _ios_bridges
-
             assert "00001234-0001234567890123" in _ios_bridges
 
     def test_get_bridge_with_android_serial_returns_android_bridge(self):
-        from main import get_bridge
+        from dependencies import _android_bridges, get_bridge
 
-        with patch("main._is_ios_udid", return_value=False):
-            with patch("main._android_bridges", {}):
-                result = get_bridge("emulator-5554")
-                assert result is not None
-                from main import _android_bridges
-
-                assert "emulator-5554" in _android_bridges
+        with patch("dependencies._is_ios_udid", return_value=False):
+            _android_bridges.clear()
+            result = get_bridge("emulator-5554")
+            assert result is not None
+            assert "emulator-5554" in _android_bridges
 
     def test_get_bridge_reuses_cached_ios_bridge(self):
-        from main import get_bridge
+        from dependencies import get_bridge
 
-        with patch("main._is_ios_udid", return_value=True), patch("main._ios_bridges", {}):
+        with patch("dependencies._is_ios_udid", return_value=True):
             result1 = get_bridge("00001234-0001234567890123")
             result2 = get_bridge("00001234-0001234567890123")
             assert result1 is result2
 
     def test_get_bridge_reuses_cached_android_bridge(self):
-        from main import get_bridge
+        from dependencies import get_bridge
 
-        with patch("main._is_ios_udid", return_value=False):
-            with patch("main._android_bridges", {}):
-                result1 = get_bridge("emulator-5554")
-                result2 = get_bridge("emulator-5554")
-                assert result1 is result2
+        with patch("dependencies._is_ios_udid", return_value=False):
+            result1 = get_bridge("emulator-5554")
+            result2 = get_bridge("emulator-5554")
+            assert result1 is result2
 
 
 class TestGetFirstAndroidDevice:
     """Tests for _get_first_android_device function."""
 
     def test_returns_first_device_serial(self):
-        from main import _get_first_android_device
+        from dependencies import _get_first_android_device
 
-        with patch("subprocess.run") as mock_run:
+        with patch("dependencies.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout="List of devices attached\nemulator-5554\tdevice\nRF8N1234567\toffline\n",
@@ -322,24 +312,24 @@ class TestGetFirstAndroidDevice:
             assert result == "emulator-5554"
 
     def test_returns_none_when_no_devices(self):
-        from main import _get_first_android_device
+        from dependencies import _get_first_android_device
 
-        with patch("subprocess.run") as mock_run:
+        with patch("dependencies.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="List of devices attached\n")
             result = _get_first_android_device()
             assert result is None
 
     def test_returns_none_on_exception(self):
-        from main import _get_first_android_device
+        from dependencies import _get_first_android_device
 
-        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 5)):
+        with patch("dependencies.subprocess.run", side_effect=subprocess.TimeoutExpired("cmd", 5)):
             result = _get_first_android_device()
             assert result is None
 
     def test_handles_device_with_model_info(self):
-        from main import _get_first_android_device
+        from dependencies import _get_first_android_device
 
-        with patch("subprocess.run") as mock_run:
+        with patch("dependencies.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(
                 returncode=0,
                 stdout="List of devices attached\nemulator-5554          device product:sdk_google_atd model:SDK device:generic_x86_64\n",

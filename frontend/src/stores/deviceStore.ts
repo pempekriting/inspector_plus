@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { DeviceInfo } from '../hooks/useDevice';
+import type { DeviceInfo } from '../types/shared';
 
 interface DeviceState {
   connected: boolean;

@@ -38,8 +38,7 @@ interface HierarchyState {
   lockSelection: (node: UiNode | null) => void;
   // Screenshot from combined /hierarchy-and-screenshot endpoint
   combinedScreenshotUrl: string | null;
-  // Refetch function and refreshing state for refresh button
-  refetchFn: { current: (() => void) | null };
+  // Refreshing state for refresh button
   isRefreshing: boolean;
   setUiTree: (tree: UiNode | null) => void;
   setHoveredNode: (node: UiNode | null, canvasPos?: { x: number; y: number }) => void;
@@ -59,6 +58,7 @@ interface HierarchyState {
   // D1: expand/collapse
   toggleExpanded: (nodeId: string) => void;
   expandAll: (node: UiNode) => void;
+  expandToDepth: (node: UiNode, depth: number) => void;
   collapseAll: () => void;
   setContext: (contextId: string) => void;
   getDemoTree: () => UiNode;
@@ -74,7 +74,6 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   refreshCounter: 0,
   screenshotRefreshCounter: 0,
   combinedScreenshotUrl: null,
-  refetchFn: { current: null },
   isRefreshing: false,
   searchQuery: '',
   searchFilter: 'xpath',
@@ -130,6 +129,17 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
       if (n.children) n.children.forEach(traverse);
     };
     traverse(node);
+    set({ expandedNodes: expanded });
+  },
+  expandToDepth: (node: UiNode, depth: number) => {
+    const expanded = new Set<string>();
+    const traverse = (n: UiNode, currentDepth: number) => {
+      if (n.id && currentDepth < depth) {
+        expanded.add(n.id);
+      }
+      if (n.children) n.children.forEach((child) => traverse(child, currentDepth + 1));
+    };
+    traverse(node, 0);
     set({ expandedNodes: expanded });
   },
   collapseAll: () => set({ expandedNodes: new Set() }),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+import { getApiUrl } from '../config/apiConfig';
 import {
   useProxyStatus,
   useStartProxy,
@@ -152,7 +153,7 @@ export function NetworkPanel() {
   }, [isRunning, selectedDevice]);
 
   function getWsUrl() {
-    return (import.meta.env.VITE_API_URL || 'http://localhost:8001').replace('http', 'ws');
+    return getApiUrl().replace(/^http/, 'ws');
   }
 
   // ── handlers ──────────────────────────────────────────────────────
@@ -757,7 +758,7 @@ export function NetworkPanel() {
           >
             Network
           </div>
-          {networkInfo.ip_addresses?.map((ip: any, i: number) => (
+          {(networkInfo.ip_addresses as { address: string; iface: string }[] | undefined)?.map((ip, i) => (
             <div
               key={i}
               className="text-[10px] font-code mb-1"

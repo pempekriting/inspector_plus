@@ -1,6 +1,6 @@
 import { useState, useCallback, memo, useEffect, useRef } from 'react';
 
-import { searchHierarchy } from '../hooks/useDevice';
+import { searchHierarchy } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useHierarchyStore, SearchFilter } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -117,7 +117,6 @@ export const SearchBar = memo(function SearchBar() {
         }>;
         count: number;
       };
-      console.debug('[SearchBar] raw BE response:', JSON.stringify(data));
       const results = (data.matches || []).map((m) => ({
         nodeId: m.id,
         matchField: m.text

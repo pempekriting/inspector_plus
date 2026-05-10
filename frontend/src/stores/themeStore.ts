@@ -21,6 +21,8 @@ function getInitialTheme(): ThemeMode {
   }
 }
 
+export const useIsDark = () => useThemeStore((s) => s.theme === 'dark');
+
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: getInitialTheme(),
   setTheme: (theme) => {
