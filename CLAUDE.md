@@ -84,13 +84,13 @@ inspector_plus/
 ├── .pre-commit-config.yaml     # Ruff format/check hooks
 ├── backend/
 │   ├── main.py                  # FastAPI entry + typed errors + routes
-│   ├── test_app.py              # 47 pytest endpoint tests
-│   ├── test_device_bridges.py   # 48 bridge unit tests
-│   ├── test_app_commands.py     # 21 AppCommands tests
-│   ├── test_validate.py         # 42 ADB validation tests
-│   ├── test_base.py             # 13 bridge base tests
+│   ├── test_app.py              # FastAPI endpoint tests
+│   ├── test_device_bridges.py   # Android/iOS bridge tests
+│   ├── test_app_commands.py     # AppCommands tests
+│   ├── test_validate.py         # ADB validation tests
+│   ├── test_base.py             # Bridge base tests
 │   ├── test_ws.py               # WebSocket tests
-│   ├── test_ws_server.py       # WebSocket server tests
+│   ├── test_ws_server.py        # WebSocket server tests
 │   ├── pyproject.toml
 │   ├── Dockerfile
 │   ├── device/
@@ -108,6 +108,15 @@ inspector_plus/
 │   ├── commands/
 │   │   ├── app_commands.py     # Android app commands
 │   │   └── ios_app_commands.py  # iOS app commands
+│   ├── tests/
+│   │   ├── test_flow_parser.py     # Flow file parsing tests
+│   │   ├── test_mitm_manager.py    # MitmproxyManager singleton tests
+│   │   ├── test_network_routes.py # Network API endpoint tests
+│   │   ├── test_android_helpers.py
+│   │   ├── test_ios_app_commands.py
+│   │   ├── test_recorder_session.py
+│   │   ├── test_ios_recorder_session.py
+│   │   └── test_main_helpers.py
 │   ├── inspector_vpn/           # Android VPN app (Gradle/Kotlin)
 │   │   └── app/src/main/java/com/inspectorplus/vpn/
 │   │       ├── InspectorVpnService.java
@@ -167,33 +176,34 @@ inspector_plus/
 │   │   ├── hooks/useDevice.ts
 │   │   ├── services/api.ts
 │   │   └── types/network.ts
-│   └── src-tauri/
-│       ├── src/
-│       │   ├── main.rs
-│       │   ├── backend_manager.rs
-│       │   ├── mcp_manager.rs
-│       │   └── commands.rs
-│       └── Cargo.toml
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── DEVELOPMENT.md
-│   ├── MCP_QUICKREF.md
-│   └── NETWORK.md
+│   └── tests/
+│       ├── hooks/              # useDevice, useCommands, useRecording
+│       ├── services/           # api tests
+│       ├── stores/             # hierarchyStore, deviceStore, themeStore, recorderStore, networkStore, settingsStore
+│       └── utils/               # coordinates, locators, layoutGeometry
+└── docs/
+    ├── ARCHITECTURE.md
+    ├── DEVELOPMENT.md
+    ├── MCP_QUICKREF.md
+    └── NETWORK.md
 ├── SPEC.md
+├── CONTRIBUTING.md
+├── LICENSE
 └── CLAUDE.md
 ```
 
 ## Testing
 
-- **Frontend:** `cd frontend && npm test` (vitest) — 10 test files, 147 tests passing
+- **Frontend:** `cd frontend && npm test` (vitest) — 36 test files, 238 tests
   - `tests/hooks/` — useDevice, useCommands, useRecording
   - `tests/services/` — api
-  - `tests/stores/` — hierarchyStore, deviceStore, themeStore, recorderStore
-  - `tests/utils/` — coordinates, locators
-- **Backend:** `cd backend && uv run pytest` — 184+ tests across 8 test files
-  - `test_app.py` (47), `test_device_bridges.py` (48), `test_app_commands.py` (21)
-  - `test_validate.py` (42), `test_base.py` (13), `test_ws*.py` (2)
-  - `tests/` subdirectory (13)
+  - `tests/stores/` — hierarchyStore, deviceStore, themeStore, recorderStore, networkStore, settingsStore
+  - `tests/utils/` — coordinates, locators, layoutGeometry
+  - `src/components/__tests__/` — component tests
+- **Backend:** `cd backend && uv run pytest` — 366 tests across 14 test files
+  - `test_app.py`, `test_device_bridges.py`, `test_app_commands.py`, `test_validate.py`
+  - `test_base.py`, `test_ws*.py`
+  - `tests/` subdirectory — android_helpers, ios_app_commands, recorder_session, ios_recorder_session, main_helpers, **test_flow_parser, test_mitm_manager, test_network_routes**
 
 ## Coding Agent Workflow
 
