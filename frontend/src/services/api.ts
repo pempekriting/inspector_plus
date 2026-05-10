@@ -265,7 +265,7 @@ export interface LocatorResult {
 export const LocatorResultSchema: z.ZodType<LocatorResult> = z.object({
   nodeId: z.string(),
   locators: z.array(LocatorSchema),
-  best: z.string(),
+  best: z.string().optional(),
 });
 
 // Fetch locators for a node

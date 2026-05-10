@@ -285,6 +285,78 @@ describe('hierarchyStore', () => {
     });
   });
 
+  describe('expandToDepth', () => {
+    const treeWithChildren: UiNode = {
+      id: 'root',
+      className: 'FrameLayout',
+      bounds: { x: 0, y: 0, width: 100, height: 100 },
+      children: [
+        {
+          id: 'child1',
+          className: 'LinearLayout',
+          bounds: { x: 0, y: 0, width: 50, height: 50 },
+          children: [
+            {
+              id: 'grandchild1',
+              className: 'Button',
+              bounds: { x: 0, y: 0, width: 25, height: 25 },
+            },
+            {
+              id: 'grandchild2',
+              className: 'TextView',
+              bounds: { x: 0, y: 25, width: 25, height: 25 },
+            },
+          ],
+        },
+        { id: 'child2', className: 'Button', bounds: { x: 50, y: 0, width: 50, height: 50 } },
+      ],
+    };
+
+    beforeEach(() => {
+      useHierarchyStore.setState({ expandedNodes: new Set() });
+    });
+
+    it('depth 0 expands no nodes', () => {
+      useHierarchyStore.getState().expandToDepth(treeWithChildren, 0);
+      const expanded = useHierarchyStore.getState().expandedNodes;
+      expect(expanded.size).toBe(0);
+    });
+
+    it('depth 1 expands root only', () => {
+      useHierarchyStore.getState().expandToDepth(treeWithChildren, 1);
+      const expanded = useHierarchyStore.getState().expandedNodes;
+      expect(expanded.has('root')).toBe(true);
+      expect(expanded.has('child1')).toBe(false);
+      expect(expanded.has('child2')).toBe(false);
+      expect(expanded.has('grandchild1')).toBe(false);
+    });
+
+    it('depth 2 expands root and immediate children but not grandchildren', () => {
+      useHierarchyStore.getState().expandToDepth(treeWithChildren, 2);
+      const expanded = useHierarchyStore.getState().expandedNodes;
+      expect(expanded.has('root')).toBe(true);
+      expect(expanded.has('child1')).toBe(true);
+      expect(expanded.has('child2')).toBe(true);
+      expect(expanded.has('grandchild1')).toBe(false);
+      expect(expanded.has('grandchild2')).toBe(false);
+    });
+
+    it('depth 99 expands all (acts like expandAll)', () => {
+      useHierarchyStore.getState().expandToDepth(treeWithChildren, 99);
+      const expanded = useHierarchyStore.getState().expandedNodes;
+      expect(expanded.has('root')).toBe(true);
+      expect(expanded.has('child1')).toBe(true);
+      expect(expanded.has('grandchild1')).toBe(true);
+    });
+
+    it('handles tree with no children', () => {
+      const leaf: UiNode = { id: 'leaf', className: 'Button', bounds: { x: 0, y: 0, width: 10, height: 10 } };
+      useHierarchyStore.getState().expandToDepth(leaf, 1);
+      const expanded = useHierarchyStore.getState().expandedNodes;
+      expect(expanded.has('leaf')).toBe(true);
+    });
+  });
+
   describe('search results', () => {
     it('setSearchResults updates results and count', () => {
       const results = [
