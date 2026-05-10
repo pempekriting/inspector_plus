@@ -681,3 +681,127 @@ class TestRequestID:
         req_id = response.headers["X-Request-ID"]
         # Should not raise ValueError
         uuid.UUID(req_id)
+
+
+# --- API Key Auth Middleware ---
+
+
+class TestApiKeyAuth:
+    """Tests for optional X-API-Key authentication middleware."""
+
+    def test_request_without_api_key_when_required_returns_401(self, client):
+        """Request without X-API-Key header when API_KEY is set returns 401."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices")
+            assert response.status_code == 401
+            data = response.json()
+            assert data["error"] == "unauthorized"
+        finally:
+            settings.API_KEY = None
+
+    def test_request_with_wrong_api_key_returns_401(self, client):
+        """Request with incorrect X-API-Key value returns 401."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices", headers={"X-API-Key": "wrong-key"})
+            assert response.status_code == 401
+            data = response.json()
+            assert data["error"] == "unauthorized"
+        finally:
+            settings.API_KEY = None
+
+    def test_request_with_correct_api_key_passes_through(self, client):
+        """Request with correct X-API-Key value is authenticated."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices", headers={"X-API-Key": "test-secret-key"})
+            # Should not be 401 (may be 200 or 500 if no device, but not 401)
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_health_endpoint_bypasses_auth(self, client):
+        """Health endpoint is exempt from API key auth."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/health")
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_ready_endpoint_bypasses_auth(self, client):
+        """Ready endpoint is exempt from API key auth."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/ready")
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_auth_disabled_when_api_key_unset(self, client):
+        """Auth middleware passes through when API_KEY env var is unset."""
+        from config import settings
+
+        settings.API_KEY = None
+        response = client.get("/devices")
+        # Should not be 401 - auth is disabled
+        assert response.status_code != 401
+
+
+# --- Command Injection Prevention ---
+
+
+class TestCommandInjectionPrevention:
+    """Tests verifying dangerous command patterns are rejected."""
+
+    def test_execute_command_with_shell_injection_blocked(self, client):
+        """Shell injection via semicolon is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls; rm -rf /"}},
+        )
+        # Should return validation error
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_pipe_injection_blocked(self, client):
+        """Pipe injection is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls | cat"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_backtick_injection_blocked(self, client):
+        """Backtick command substitution is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "echo `whoami`"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_dollar_substitution_blocked(self, client):
+        """Dollar sign command substitution is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "echo $(whoami)"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_redirect_blocked(self, client):
+        """Output redirect is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls > /tmp/out"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
