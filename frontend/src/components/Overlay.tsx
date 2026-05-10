@@ -1,6 +1,7 @@
-import { useHierarchyStore } from "../stores/hierarchyStore";
-import { useEffect, useState, memo } from "react";
-import { useThemeStore } from "../stores/themeStore";
+import { useEffect, useState, memo } from 'react';
+
+import { useHierarchyStore } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
 
 interface ImageLayout {
   left: number;
@@ -45,7 +46,12 @@ interface HighlightProps {
   locked?: boolean;
 }
 
-const HighlightBox = memo(function HighlightBox({ bounds, layout, isDark, locked }: HighlightProps) {
+const HighlightBox = memo(function HighlightBox({
+  bounds,
+  layout,
+  isDark,
+  locked,
+}: HighlightProps) {
   const left = layout.imgLeft + bounds.x * layout.scale;
   const top = layout.imgTop + bounds.y * layout.scale;
   const width = bounds.width * layout.scale;
@@ -55,15 +61,17 @@ const HighlightBox = memo(function HighlightBox({ bounds, layout, isDark, locked
   const finalHeight = Math.max(height, 6);
 
   // Locked: bright yellow border + "SELECTED" badge. Hover/selected: subtle cyan.
-  const accentColor = locked ? '#fbbf24' : (isDark ? 'var(--accent-cyan)' : '#1a1a2e');
+  const accentColor = locked ? '#fbbf24' : isDark ? 'var(--accent-cyan)' : '#1a1a2e';
   const bgColor = locked
     ? 'rgba(251, 191, 36, 0.20)'
-    : (isDark ? 'rgba(0, 245, 212, 0.12)' : 'rgba(26, 26, 46, 0.10)');
+    : isDark
+      ? 'rgba(0, 245, 212, 0.12)'
+      : 'rgba(26, 26, 46, 0.10)';
   const boxShadow = locked
     ? '0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 14px rgba(251, 191, 36, 0.20)'
-    : (isDark
+    : isDark
       ? '0 0 16px rgba(0, 245, 212, 0.5), inset 0 0 12px rgba(0, 245, 212, 0.15)'
-      : '0 0 12px rgba(26, 26, 46, 0.3), inset 0 0 10px rgba(26, 26, 46, 0.08)');
+      : '0 0 12px rgba(26, 26, 46, 0.3), inset 0 0 10px rgba(26, 26, 46, 0.08)';
 
   return (
     <>
@@ -86,7 +94,8 @@ const HighlightBox = memo(function HighlightBox({ bounds, layout, isDark, locked
           boxShadow,
           zIndex: 9999,
           pointerEvents: 'none',
-          transition: 'left 0.03s linear, top 0.03s linear, width 0.03s linear, height 0.03s linear',
+          transition:
+            'left 0.03s linear, top 0.03s linear, width 0.03s linear, height 0.03s linear',
         }}
       />
     </>
@@ -130,15 +139,24 @@ const InfoTooltip = memo(function InfoTooltip({
         pointerEvents: 'none',
       }}
     >
-      <div className="text-[11px] font-bold mb-1" style={{ color: textPrimary, fontFamily: 'JetBrains Mono, monospace' }}>
+      <div
+        className="text-[11px] font-bold mb-1"
+        style={{ color: textPrimary, fontFamily: 'JetBrains Mono, monospace' }}
+      >
         {node.className?.split('.').pop()}
       </div>
       {node.resourceId && (
-        <div className="text-[10px]" style={{ color: accentColor, fontFamily: 'JetBrains Mono, monospace' }}>
+        <div
+          className="text-[10px]"
+          style={{ color: accentColor, fontFamily: 'JetBrains Mono, monospace' }}
+        >
           #{node.resourceId}
         </div>
       )}
-      <div className="text-[9px] mt-1" style={{ color: textTertiary, fontFamily: 'JetBrains Mono, monospace' }}>
+      <div
+        className="text-[9px] mt-1"
+        style={{ color: textTertiary, fontFamily: 'JetBrains Mono, monospace' }}
+      >
         [{bounds.x}, {bounds.y}] {bounds.width}x{bounds.height}
       </div>
     </div>
@@ -169,7 +187,7 @@ export function Overlay() {
       if (img?.src && img.src !== lastSrc) {
         lastSrc = img.src;
       }
-      updateLayout();  // Always run to pick up zoom/pan changes
+      updateLayout(); // Always run to pick up zoom/pan changes
     }, 200);
 
     return () => {
@@ -197,7 +215,12 @@ export function Overlay() {
 
   return (
     <>
-      <HighlightBox bounds={activeNode.bounds} layout={layout} isDark={isDark} locked={!!lockedNode} />
+      <HighlightBox
+        bounds={activeNode.bounds}
+        layout={layout}
+        isDark={isDark}
+        locked={!!lockedNode}
+      />
       <InfoTooltip bounds={activeNode.bounds} layout={layout} node={activeNode} isDark={isDark} />
     </>
   );

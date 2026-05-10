@@ -1,5 +1,6 @@
-import { create } from "zustand";
-import type { Bounds, SearchFilter, UiNode } from "../types/shared";
+import { create } from 'zustand';
+
+import type { Bounds, SearchFilter, UiNode } from '../types/shared';
 
 export type { SearchFilter };
 export type { Bounds, UiNode };
@@ -22,7 +23,7 @@ interface HierarchyState {
   screenshotRefreshCounter: number;
   searchQuery: string;
   searchFilter: SearchFilter;
-  canvasMode: "inspect" | "coordinate" | "layout";
+  canvasMode: 'inspect' | 'coordinate' | 'layout';
   // F4: Element search state
   searchResults: SearchResult[];
   searchResultsCount: number;
@@ -50,7 +51,7 @@ interface HierarchyState {
   triggerScreenshotRefresh: () => void;
   setSearchQuery: (query: string) => void;
   setSearchFilter: (filter: SearchFilter) => void;
-  setCanvasMode: (mode: "inspect" | "coordinate" | "layout") => void;
+  setCanvasMode: (mode: 'inspect' | 'coordinate' | 'layout') => void;
   // F4: search actions
   setSearchResults: (results: SearchResult[], count: number) => void;
   setCurrentSearchIndex: (index: number) => void;
@@ -75,9 +76,9 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   combinedScreenshotUrl: null,
   refetchFn: { current: null },
   isRefreshing: false,
-  searchQuery: "",
-  searchFilter: "xpath",
-  canvasMode: "inspect",
+  searchQuery: '',
+  searchFilter: 'xpath',
+  canvasMode: 'inspect',
   // F4: element search
   searchResults: [],
   searchResultsCount: 0,
@@ -93,24 +94,35 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   setLoadingHierarchy: (v) => set({ isLoadingHierarchy: v }),
   setCombinedScreenshotUrl: (url) => set({ combinedScreenshotUrl: url }),
   triggerHierarchyRefresh: () => set((state) => ({ refreshCounter: state.refreshCounter + 1 })),
-  triggerScreenshotRefresh: () => set((state) => ({ screenshotRefreshCounter: state.screenshotRefreshCounter + 1 })),
+  triggerScreenshotRefresh: () =>
+    set((state) => ({ screenshotRefreshCounter: state.screenshotRefreshCounter + 1 })),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSearchFilter: (filter) => set({ searchFilter: filter }),
-  setCanvasMode: (mode) => set({
-    canvasMode: mode,
-    lockedNode: mode === "inspect" ? get().lockedNode : null,
-  }),
+  setCanvasMode: (mode) =>
+    set({
+      canvasMode: mode,
+      lockedNode: mode === 'inspect' ? get().lockedNode : null,
+    }),
   // F4: search actions
-  setSearchResults: (results, count) => set({ searchResults: results, searchResultsCount: count, isSearchActive: results.length > 0 }),
+  setSearchResults: (results, count) =>
+    set({ searchResults: results, searchResultsCount: count, isSearchActive: results.length > 0 }),
   setCurrentSearchIndex: (index) => set({ currentSearchIndex: index }),
-  clearSearch: () => set({ searchQuery: "", searchResults: [], searchResultsCount: 0, currentSearchIndex: -1, isSearchActive: false }),
+  clearSearch: () =>
+    set({
+      searchQuery: '',
+      searchResults: [],
+      searchResultsCount: 0,
+      currentSearchIndex: -1,
+      isSearchActive: false,
+    }),
   // D1: expand/collapse
-  toggleExpanded: (nodeId) => set((state) => {
-    const next = new Set(state.expandedNodes);
-    if (next.has(nodeId)) next.delete(nodeId);
-    else next.add(nodeId);
-    return { expandedNodes: next };
-  }),
+  toggleExpanded: (nodeId) =>
+    set((state) => {
+      const next = new Set(state.expandedNodes);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return { expandedNodes: next };
+    }),
   expandAll: (node) => {
     const expanded = new Set<string>();
     const traverse = (n: UiNode) => {
@@ -121,79 +133,79 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
     set({ expandedNodes: expanded });
   },
   collapseAll: () => set({ expandedNodes: new Set() }),
-  currentContext: "NATIVE_APP",
+  currentContext: 'NATIVE_APP',
   setContext: (contextId) => set({ currentContext: contextId }),
   lockedNode: null,
   lockSelection: (node) => set({ lockedNode: node }),
   getDemoTree: () => {
     const demoTree: UiNode = {
-      id: "decor_content",
-      className: "android.widget.FrameLayout",
-      package: "com.example.settings",
-      resourceId: "decor_content",
+      id: 'decor_content',
+      className: 'android.widget.FrameLayout',
+      package: 'com.example.settings',
+      resourceId: 'decor_content',
       bounds: { x: 0, y: 0, width: 1080, height: 1920 },
       children: [
         {
-          id: "toolbar",
-          className: "android.widget.Toolbar",
-          package: "com.example.settings",
-          resourceId: "toolbar",
+          id: 'toolbar',
+          className: 'android.widget.Toolbar',
+          package: 'com.example.settings',
+          resourceId: 'toolbar',
           bounds: { x: 0, y: 0, width: 1080, height: 200 },
           children: [
             {
-              id: "title",
-              className: "android.widget.TextView",
-              package: "com.example.settings",
-              resourceId: "title",
-              text: "Settings",
+              id: 'title',
+              className: 'android.widget.TextView',
+              package: 'com.example.settings',
+              resourceId: 'title',
+              text: 'Settings',
               bounds: { x: 40, y: 80, width: 200, height: 60 },
             },
             {
-              id: "menu_btn",
-              className: "android.widget.ImageButton",
-              package: "com.example.settings",
-              resourceId: "menu",
-              contentDesc: "Open menu",
+              id: 'menu_btn',
+              className: 'android.widget.ImageButton',
+              package: 'com.example.settings',
+              resourceId: 'menu',
+              contentDesc: 'Open menu',
               bounds: { x: 1000, y: 60, width: 80, height: 80 },
             },
           ],
         },
         {
-          id: "content",
-          className: "android.widget.FrameLayout",
-          package: "com.example.settings",
-          resourceId: "content",
+          id: 'content',
+          className: 'android.widget.FrameLayout',
+          package: 'com.example.settings',
+          resourceId: 'content',
           bounds: { x: 0, y: 200, width: 1080, height: 1720 },
           children: [
             {
-              id: "list",
-              className: "android.widget.ListView",
-              package: "com.example.settings",
-              resourceId: "list",
+              id: 'list',
+              className: 'android.widget.ListView',
+              package: 'com.example.settings',
+              resourceId: 'list',
               bounds: { x: 0, y: 0, width: 1080, height: 1720 },
               children: [
                 {
-                  id: "item_1",
-                  className: "android.widget.LinearLayout",
-                  package: "com.example.settings",
-                  resourceId: "item1",
-                  text: "Account Settings",
+                  id: 'item_1',
+                  className: 'android.widget.LinearLayout',
+                  package: 'com.example.settings',
+                  resourceId: 'item1',
+                  text: 'Account Settings',
                   bounds: { x: 40, y: 40, width: 1000, height: 120 },
                 },
                 {
-                  id: "item_2",
-                  className: "android.widget.LinearLayout",
-                  package: "com.example.settings",
-                  resourceId: "item2",
-                  text: "Notifications",
+                  id: 'item_2',
+                  className: 'android.widget.LinearLayout',
+                  package: 'com.example.settings',
+                  resourceId: 'item2',
+                  text: 'Notifications',
                   bounds: { x: 40, y: 180, width: 1000, height: 120 },
                 },
                 {
-                  id: "item_3",
-                  className: "android.widget.LinearLayout",
-                  package: "com.example.settings",
-                  resourceId: "item3",
-                  text: "Privacy & Security",
+                  id: 'item_3',
+                  className: 'android.widget.LinearLayout',
+                  package: 'com.example.settings',
+                  resourceId: 'item3',
+                  text: 'Privacy & Security',
                   bounds: { x: 40, y: 320, width: 1000, height: 120 },
                 },
               ],

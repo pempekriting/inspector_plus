@@ -1,24 +1,26 @@
-import { useState, useCallback, useEffect, memo, useMemo, useRef } from "react";
-import { useHierarchyStore, UiNode, SearchFilter } from "../stores/hierarchyStore";
-import { useThemeStore } from "../stores/themeStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { SearchBar } from "./SearchBar";
-import { SkeletonLoader } from "./SkeletonLoader";
-import { ErrorState } from "./ErrorState";
-import { EmptyState } from "./EmptyState";
-import type { UiCapability } from "../types/shared";
-import { useRecording } from "../hooks/useRecording";
-import { nodeToLocator } from "./ScreenshotCanvas";
+import { useState, useCallback, useEffect, memo, useMemo, useRef } from 'react';
+
+import { useRecording } from '../hooks/useRecording';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore, UiNode, SearchFilter } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
+import type { UiCapability } from '../types/shared';
+
+import { EmptyState } from './EmptyState';
+import { ErrorState } from './ErrorState';
+import { nodeToLocator } from './ScreenshotCanvas';
+import { SearchBar } from './SearchBar';
+import { SkeletonLoader } from './SkeletonLoader';
 
 const CAPABILITY_COLORS: Record<string, string> = {
-  scroll: "#fbbf24",
-  input:  "#a78bfa",
-  long:   "#fb923c",
-  link:   "#34d399",
+  scroll: '#fbbf24',
+  input: '#a78bfa',
+  long: '#fb923c',
+  link: '#34d399',
 };
 
 function capColor(type: string): string {
-  return CAPABILITY_COLORS[type] ?? "#6b7280";
+  return CAPABILITY_COLORS[type] ?? '#6b7280';
 }
 
 const ELEMENT_ICONS: Record<string, { bg: string; color: string }> = {
@@ -52,18 +54,20 @@ function nodeMatchesFilter(node: UiNode, query: string, filter: SearchFilter): b
   if (!query.trim()) return true;
   const term = query.toLowerCase();
   switch (filter) {
-    case "text":
+    case 'text':
       return node.text?.toLowerCase().includes(term) ?? false;
-    case "resource-id":
+    case 'resource-id':
       return node.resourceId?.toLowerCase().includes(term) ?? false;
-    case "content-desc":
+    case 'content-desc':
       return node.contentDesc?.toLowerCase().includes(term) ?? false;
-    case "class":
+    case 'class':
       return node.className?.toLowerCase().includes(term) ?? false;
-    case "xpath":
+    case 'xpath':
     default:
       // XPath: generic substring across all fields
-      return [node.text, node.contentDesc, node.resourceId, node.className].some(f => f?.toLowerCase().includes(term));
+      return [node.text, node.contentDesc, node.resourceId, node.className].some((f) =>
+        f?.toLowerCase().includes(term)
+      );
   }
 }
 
@@ -102,7 +106,7 @@ function flattenVisibleNodes(
   let children: UiNode[] | undefined;
   if (nodeIsMatched) {
     // Find this node's BE subtree - use BE's children
-    const matchedResult = searchResults.find(r => r.nodeId === node.id);
+    const matchedResult = searchResults.find((r) => r.nodeId === node.id);
     if (matchedResult?.node?.children) {
       children = matchedResult.node.children;
     }
@@ -115,13 +119,28 @@ function flattenVisibleNodes(
   // For matched nodes, recurse regardless of expanded state to show full BE subtree
   if (children && (expandedNodes.has(node.id) || nodeIsMatched)) {
     for (const child of children) {
-      result.push(...flattenVisibleNodes(child, expandedNodes, searchQuery, searchFilter, matchSet, searchResults));
+      result.push(
+        ...flattenVisibleNodes(
+          child,
+          expandedNodes,
+          searchQuery,
+          searchFilter,
+          matchSet,
+          searchResults
+        )
+      );
     }
   }
   return result;
 }
 
-export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: string | null; onRefresh?: () => void }) {
+export function HierarchyTree({
+  refreshKey = null,
+  onRefresh,
+}: {
+  refreshKey?: string | null;
+  onRefresh?: () => void;
+}) {
   const {
     uiTree,
     hoveredNode,
@@ -172,7 +191,7 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
   // Ancestors are found by traversing the tree to locate each matched node's ID.
   const matchSet = useMemo(() => {
     if (!isSearchActive || searchResults.length === 0 || !uiTree) return null;
-    const matchedIds = new Set(searchResults.map(r => r.nodeId));
+    const matchedIds = new Set(searchResults.map((r) => r.nodeId));
     const ancestors = new Set<string>();
 
     function findAncestors(node: UiNode, targetId: string, path: string[]): boolean {
@@ -199,7 +218,14 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
   // D4: Flattened visible nodes for keyboard navigation
   const visibleNodes = useMemo(() => {
     if (!uiTree) return [];
-    return flattenVisibleNodes(uiTree, expandedNodes, searchQuery, searchFilter, matchSet, searchResults);
+    return flattenVisibleNodes(
+      uiTree,
+      expandedNodes,
+      searchQuery,
+      searchFilter,
+      matchSet,
+      searchResults
+    );
   }, [uiTree, expandedNodes, searchQuery, searchFilter, matchSet, searchResults]);
 
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -216,12 +242,12 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
   // so matches hidden under collapsed parents become visible
   useEffect(() => {
     if (!uiTree || !isSearchActive || searchResults.length === 0) return;
-    const matchedIds = new Set(searchResults.map(r => r.nodeId));
+    const matchedIds = new Set(searchResults.map((r) => r.nodeId));
     const ancestorsToExpand = new Set<string>();
 
     function findAncestors(node: UiNode, targetId: string, path: Set<string>): boolean {
       if (node.id === targetId) {
-        path.forEach(id => ancestorsToExpand.add(id));
+        path.forEach((id) => ancestorsToExpand.add(id));
         return true;
       }
       if (node.children) {
@@ -239,12 +265,12 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
     }
 
     // Expand all ancestors that aren't already expanded
-    const notYetExpanded = [...ancestorsToExpand].filter(id => !expandedNodes.has(id));
+    const notYetExpanded = [...ancestorsToExpand].filter((id) => !expandedNodes.has(id));
     if (notYetExpanded.length > 0) {
       const nextExpanded = new Set(expandedNodes);
-      notYetExpanded.forEach(id => nextExpanded.add(id));
+      notYetExpanded.forEach((id) => nextExpanded.add(id));
       // We need to update expandedNodes in the store - use the expandAll pattern
-      notYetExpanded.forEach(id => {
+      notYetExpanded.forEach((id) => {
         if (!expandedNodes.has(id)) toggleExpanded(id);
       });
     }
@@ -256,7 +282,7 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
     const firstResult = searchResults[0];
     // Wait a tick for DOM to update after expand
     const timer = setTimeout(() => {
-      const idx = visibleNodes.findIndex(n => n.id === firstResult.nodeId);
+      const idx = visibleNodes.findIndex((n) => n.id === firstResult.nodeId);
       if (idx >= 0) {
         setFocusedIndex(idx);
         setSelectedNode(visibleNodes[idx]);
@@ -286,7 +312,8 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
       if (!useHierarchyStore.getState().uiTree) return;
 
       const store = useHierarchyStore.getState();
-      const { expandedNodes, toggleExpanded, setSelectedNode, setHoveredNode, lockSelection } = store;
+      const { expandedNodes, toggleExpanded, setSelectedNode, setHoveredNode, lockSelection } =
+        store;
 
       // D4: Arrow navigation
       if (e.key === 'ArrowDown') {
@@ -329,7 +356,7 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
   const handleHoverClear = useCallback(() => setHoveredNode(null), [setHoveredNode]);
 
   // Refresh button handler - calls refetch from store
-  const refetchFn = useHierarchyStore(s => s.refetchFn);
+  const refetchFn = useHierarchyStore((s) => s.refetchFn);
   const handleRefresh = useCallback(() => {
     if (refetchFn.current) {
       useHierarchyStore.setState({ isRefreshing: true });
@@ -410,7 +437,9 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
         onClick={() => {
           // If user clicks on tree area while searching, keep focus on search input
           // This allows arrow keys to move cursor in the input instead of navigating tree
-          const searchInput = document.querySelector('input[placeholder*="Search elements"]') as HTMLInputElement;
+          const searchInput = document.querySelector(
+            'input[placeholder*="Search elements"]'
+          ) as HTMLInputElement;
           if (searchInput && searchInput.value.length > 0) {
             searchInput.focus();
           }
@@ -451,7 +480,7 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
                   // Record click step if recording is active
                   if (isRecording) {
                     recordStep({
-                      action: "click",
+                      action: 'click',
                       nodeId: n.id,
                       locator: nodeToLocator(n),
                     });
@@ -472,12 +501,12 @@ export function HierarchyTree({ refreshKey = null, onRefresh }: { refreshKey?: s
                 setSelectedNode(n);
                 lockSelection(n);
                 // Update focused index
-                const idx = visibleNodes.findIndex(vn => vn.id === n.id);
+                const idx = visibleNodes.findIndex((vn) => vn.id === n.id);
                 if (idx >= 0) setFocusedIndex(idx);
                 // Record click step if recording is active
                 if (isRecording) {
                   recordStep({
-                    action: "click",
+                    action: 'click',
                     nodeId: n.id,
                     locator: nodeToLocator(n),
                   });
@@ -554,7 +583,14 @@ function SearchResultNode({
                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
-              <svg className="w-2.5 h-2.5" style={{ color: isDark ? '#71717a' : '#666666' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <svg
+                className="w-2.5 h-2.5"
+                style={{ color: isDark ? '#71717a' : '#666666' }}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              >
                 <path d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -580,26 +616,41 @@ function SearchResultNode({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink min-w-0">
-          <span className="text-[10px] font-bold truncate" style={{ color: isDark ? '#f0f0f5' : '#1a1a2e' }}>
+          <span
+            className="text-[10px] font-bold truncate"
+            style={{ color: isDark ? '#f0f0f5' : '#1a1a2e' }}
+          >
             {shortClassName}
           </span>
           {node.resourceId ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}>
+            <span
+              className="text-[10px] font-mono truncate"
+              style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}
+            >
               #{node.resourceId}
             </span>
           ) : node.contentDesc ? (
-            <span className="text-[10px] italic font-mono truncate" style={{ color: isDark ? '#f72585' : '#e94560' }}>
+            <span
+              className="text-[10px] italic font-mono truncate"
+              style={{ color: isDark ? '#f72585' : '#e94560' }}
+            >
               {node.contentDesc}
             </span>
           ) : node.text ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? '#fee440' : '#d97706' }}>
+            <span
+              className="text-[10px] font-mono truncate"
+              style={{ color: isDark ? '#fee440' : '#d97706' }}
+            >
               "{node.text}"
             </span>
           ) : null}
         </div>
 
         {node.bounds && (
-          <span className="text-[9px] ml-2 flex-shrink-0 font-mono" style={{ color: isDark ? '#52525b' : '#999999' }}>
+          <span
+            className="text-[9px] ml-2 flex-shrink-0 font-mono"
+            style={{ color: isDark ? '#52525b' : '#999999' }}
+          >
             {node.bounds.width}x{node.bounds.height}
           </span>
         )}
@@ -655,7 +706,10 @@ const TreeHeader = memo(function TreeHeader({
       }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#71717a' : '#666666' }}>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider"
+          style={{ color: isDark ? '#71717a' : '#666666' }}
+        >
           View Hierarchy
         </span>
         <span
@@ -674,7 +728,9 @@ const TreeHeader = memo(function TreeHeader({
             style={{
               background: isDark ? 'rgba(253, 224, 71, 0.15)' : 'rgba(180, 83, 9, 0.15)',
               color: isDark ? 'var(--accent-amber, #fde047)' : 'var(--accent-orange, #c2410c)',
-              border: isDark ? '2px solid var(--accent-amber, #fde047)' : '2px solid var(--accent-orange, #c2410c)',
+              border: isDark
+                ? '2px solid var(--accent-amber, #fde047)'
+                : '2px solid var(--accent-orange, #c2410c)',
             }}
           >
             {matchCount} match{matchCount !== 1 ? 'es' : ''}
@@ -708,7 +764,13 @@ const TreeHeader = memo(function TreeHeader({
           Collapse
         </button>
         <ActionButton onClick={onRefresh} loading={loading} isDark={isDark}>
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg
+            className="w-3 h-3"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+          >
             <path d="M1 4v6h6M23 20v-6h-6" />
             <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
           </svg>
@@ -743,11 +805,19 @@ function ActionButton({
       }}
     >
       {loading ? (
-        <svg className="w-3 h-3 animate-br-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+        <svg
+          className="w-3 h-3 animate-br-refresh"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+        >
           <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      ) : children}
+      ) : (
+        children
+      )}
     </button>
   );
 }
@@ -768,7 +838,7 @@ interface TreeNodeProps {
   searchFilter: SearchFilter;
   searchResults: { nodeId: string; matchField: string; matchedText: string; node: UiNode }[];
   currentSearchIndex: number;
-  matchSet?: Set<string>;  // node IDs to show (matched + ancestors)
+  matchSet?: Set<string>; // node IDs to show (matched + ancestors)
 }
 
 const TreeNode = memo(function TreeNode({
@@ -798,7 +868,7 @@ const TreeNode = memo(function TreeNode({
   // Get children - use BE's subtree for matched nodes to show correct hierarchy
   let children: UiNode[] | undefined;
   if (isMatched) {
-    const matchedResult = searchResults.find(r => r.nodeId === node.id);
+    const matchedResult = searchResults.find((r) => r.nodeId === node.id);
     if (matchedResult?.node?.children) {
       children = matchedResult.node.children;
     }
@@ -816,11 +886,11 @@ const TreeNode = memo(function TreeNode({
   const matches = nodeMatchesFilter(node, searchQuery, searchFilter);
   const hasSearch = searchQuery.trim().length > 0;
   // Dim if local filter says no match AND not a direct backend match
-  const isSearchMatch = searchResults.some(r => r.nodeId === node.id);
+  const isSearchMatch = searchResults.some((r) => r.nodeId === node.id);
   const isDimmed = hasSearch && !matches && !isSearchMatch;
 
   // F4: Check if this node is the current index in search results
-  const searchResultIndex = searchResults.findIndex(r => r.nodeId === node.id);
+  const searchResultIndex = searchResults.findIndex((r) => r.nodeId === node.id);
   const isCurrentSearchMatch = searchResultIndex === currentSearchIndex;
 
   const handleClick = () => onSelect(node);
@@ -831,28 +901,46 @@ const TreeNode = memo(function TreeNode({
   const indent = depth * 16 + 8;
 
   const borderColor = isLocked
-    ? '#fbbf24'  // locked: bright yellow
+    ? '#fbbf24' // locked: bright yellow
     : isSelected
-    ? (isDark ? 'var(--accent-cyan)' : '#1a1a2e')
-    : isHovered
-    ? (isDark ? '#fee440' : '#e94560')
-    : isSearchMatch
-    ? (isDark ? 'var(--accent-cyan)' : '#2563eb')
-    : 'transparent';
+      ? isDark
+        ? 'var(--accent-cyan)'
+        : '#1a1a2e'
+      : isHovered
+        ? isDark
+          ? '#fee440'
+          : '#e94560'
+        : isSearchMatch
+          ? isDark
+            ? 'var(--accent-cyan)'
+            : '#2563eb'
+          : 'transparent';
 
   const bgColor = isLocked
-    ? (isDark ? 'rgba(251, 191, 36, 0.18)' : 'rgba(251, 191, 36, 0.15)')
+    ? isDark
+      ? 'rgba(251, 191, 36, 0.18)'
+      : 'rgba(251, 191, 36, 0.15)'
     : isSelected
-    ? (isDark ? 'rgba(0, 245, 212, 0.1)' : 'rgba(26, 26, 46, 0.08)')
-    : isHovered
-    ? (isDark ? 'rgba(254, 228, 64, 0.08)' : 'rgba(233, 69, 96, 0.06)')
-    : isCurrentSearchMatch
-    ? (isDark ? 'rgba(253, 224, 71, 0.2)' : 'rgba(180, 83, 9, 0.2)')
-    : isSearchMatch
-    ? (isDark ? 'rgba(253, 224, 71, 0.12)' : 'rgba(180, 83, 9, 0.12)')
-    : hasSearch && matches
-    ? (isDark ? 'rgba(253, 224, 71, 0.08)' : 'rgba(180, 83, 9, 0.08)')
-    : 'transparent';
+      ? isDark
+        ? 'rgba(0, 245, 212, 0.1)'
+        : 'rgba(26, 26, 46, 0.08)'
+      : isHovered
+        ? isDark
+          ? 'rgba(254, 228, 64, 0.08)'
+          : 'rgba(233, 69, 96, 0.06)'
+        : isCurrentSearchMatch
+          ? isDark
+            ? 'rgba(253, 224, 71, 0.2)'
+            : 'rgba(180, 83, 9, 0.2)'
+          : isSearchMatch
+            ? isDark
+              ? 'rgba(253, 224, 71, 0.12)'
+              : 'rgba(180, 83, 9, 0.12)'
+            : hasSearch && matches
+              ? isDark
+                ? 'rgba(253, 224, 71, 0.08)'
+                : 'rgba(180, 83, 9, 0.08)'
+              : 'transparent';
 
   return (
     <div style={{ opacity: isDimmed ? 0.4 : 1, transition: 'opacity 0.15s ease-out' }}>
@@ -881,7 +969,14 @@ const TreeNode = memo(function TreeNode({
                 transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
-              <svg className="w-2.5 h-2.5" style={{ color: isDark ? '#71717a' : '#666666' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <svg
+                className="w-2.5 h-2.5"
+                style={{ color: isDark ? '#71717a' : '#666666' }}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              >
                 <path d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -915,21 +1010,33 @@ const TreeNode = memo(function TreeNode({
           </span>
 
           {node.resourceId ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}>
+            <span
+              className="text-[10px] font-mono truncate"
+              style={{ color: isDark ? 'var(--accent-cyan)' : '#2563eb' }}
+            >
               #{node.resourceId}
             </span>
           ) : node.contentDesc ? (
-            <span className="text-[10px] italic font-mono truncate" style={{ color: isDark ? '#f72585' : '#e94560' }}>
+            <span
+              className="text-[10px] italic font-mono truncate"
+              style={{ color: isDark ? '#f72585' : '#e94560' }}
+            >
               {node.contentDesc}
             </span>
           ) : node.text ? (
-            <span className="text-[10px] font-mono truncate" style={{ color: isDark ? '#fee440' : '#d97706' }}>
+            <span
+              className="text-[10px] font-mono truncate"
+              style={{ color: isDark ? '#fee440' : '#d97706' }}
+            >
               "{node.text}"
             </span>
           ) : null}
         </div>
         {node.bounds && (
-          <span className="text-[9px] ml-2 flex-shrink-0 font-mono" style={{ color: isDark ? '#52525b' : '#999999' }}>
+          <span
+            className="text-[9px] ml-2 flex-shrink-0 font-mono"
+            style={{ color: isDark ? '#52525b' : '#999999' }}
+          >
             {node.bounds.width}x{node.bounds.height}
           </span>
         )}

@@ -1,60 +1,83 @@
-import { useState, memo } from "react";
-import { useHierarchyStore } from "../stores/hierarchyStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useThemeStore } from "../stores/themeStore";
-import { inputDeviceText } from "../hooks/useDevice";
-import { LayoutChips } from "./StylePanel";
+import { useState, memo } from 'react';
 
-import { getApiUrl } from "../config/apiConfig";
+import { getApiUrl } from '../config/apiConfig';
+import { inputDeviceText } from '../hooks/useDevice';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
+
+import { LayoutChips } from './StylePanel';
 
 async function pressKey(key: string, udid?: string): Promise<void> {
-  const url = udid ? `${getApiUrl()}/device/press-key?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/press-key`;
+  const url = udid
+    ? `${getApiUrl()}/device/press-key?udid=${encodeURIComponent(udid)}`
+    : `${getApiUrl()}/device/press-key`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key }),
   });
   if (!res.ok) throw new Error(`Failed to press ${key}`);
 }
 
-async function swipeDevice(startX: number, startY: number, endX: number, endY: number, duration?: number, udid?: string): Promise<void> {
-  const url = udid ? `${getApiUrl()}/device/swipe?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/swipe`;
+async function swipeDevice(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  duration?: number,
+  udid?: string
+): Promise<void> {
+  const url = udid
+    ? `${getApiUrl()}/device/swipe?udid=${encodeURIComponent(udid)}`
+    : `${getApiUrl()}/device/swipe`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ startX, startY, endX, endY, duration: duration ?? 300 }),
   });
-  if (!res.ok) throw new Error("Failed to swipe");
+  if (!res.ok) throw new Error('Failed to swipe');
 }
 
-async function dragDevice(startX: number, startY: number, endX: number, endY: number, duration?: number, udid?: string): Promise<void> {
-  const url = udid ? `${getApiUrl()}/device/drag?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/drag`;
+async function dragDevice(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  duration?: number,
+  udid?: string
+): Promise<void> {
+  const url = udid
+    ? `${getApiUrl()}/device/drag?udid=${encodeURIComponent(udid)}`
+    : `${getApiUrl()}/device/drag`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ startX, startY, endX, endY, duration: duration ?? 500 }),
   });
-  if (!res.ok) throw new Error("Failed to drag");
+  if (!res.ok) throw new Error('Failed to drag');
 }
 
 async function pinchDevice(x: number, y: number, scale: number, udid?: string): Promise<void> {
-  const url = udid ? `${getApiUrl()}/device/pinch?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/pinch`;
+  const url = udid
+    ? `${getApiUrl()}/device/pinch?udid=${encodeURIComponent(udid)}`
+    : `${getApiUrl()}/device/pinch`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ x, y, scale }),
   });
-  if (!res.ok) throw new Error("Failed to pinch");
+  if (!res.ok) throw new Error('Failed to pinch');
 }
 
 async function tapDevice(x: number, y: number, udid?: string): Promise<void> {
   const url = udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`;
   const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ x, y }),
   });
-  if (!res.ok) throw new Error("Failed to tap");
+  if (!res.ok) throw new Error('Failed to tap');
 }
 
 interface ActionPillProps {
@@ -62,10 +85,16 @@ interface ActionPillProps {
   onClick: () => void;
   disabled?: boolean;
   isDark: boolean;
-  variant?: "default" | "primary" | "danger";
+  variant?: 'default' | 'primary' | 'danger';
 }
 
-const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, variant = "default" }: ActionPillProps) {
+const ActionPill = memo(function ActionPill({
+  label,
+  onClick,
+  disabled,
+  isDark,
+  variant = 'default',
+}: ActionPillProps) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
@@ -78,23 +107,42 @@ const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, 
     }
   };
 
-  const bgColor = variant === "primary"
-    ? (isDark ? "var(--accent-cyan)" : "#0066cc")
-    : variant === "danger"
-    ? (isDark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.1)")
-    : (isDark ? "#1f1f23" : "#f0f0f0");
+  const bgColor =
+    variant === 'primary'
+      ? isDark
+        ? 'var(--accent-cyan)'
+        : '#0066cc'
+      : variant === 'danger'
+        ? isDark
+          ? 'rgba(248, 113, 113, 0.15)'
+          : 'rgba(220, 38, 38, 0.1)'
+        : isDark
+          ? '#1f1f23'
+          : '#f0f0f0';
 
-  const fgColor = variant === "primary"
-    ? (isDark ? "#0a0a0c" : "#ffffff")
-    : variant === "danger"
-    ? (isDark ? "#f87171" : "#dc2626")
-    : (isDark ? "#a1a1aa" : "#666666");
+  const fgColor =
+    variant === 'primary'
+      ? isDark
+        ? '#0a0a0c'
+        : '#ffffff'
+      : variant === 'danger'
+        ? isDark
+          ? '#f87171'
+          : '#dc2626'
+        : isDark
+          ? '#a1a1aa'
+          : '#666666';
 
-  const borderColor = variant === "primary"
-    ? "transparent"
-    : variant === "danger"
-    ? (isDark ? "#f87171" : "#dc2626")
-    : (isDark ? "#3f3f46" : "#cccccc");
+  const borderColor =
+    variant === 'primary'
+      ? 'transparent'
+      : variant === 'danger'
+        ? isDark
+          ? '#f87171'
+          : '#dc2626'
+        : isDark
+          ? '#3f3f46'
+          : '#cccccc';
 
   return (
     <button
@@ -105,10 +153,11 @@ const ActionPill = memo(function ActionPill({ label, onClick, disabled, isDark, 
         background: bgColor,
         color: fgColor,
         border: `1.5px solid ${borderColor}`,
-        boxShadow: variant === "primary" ? (isDark ? "2px 2px 0 #000" : "2px 2px 0 #1a1a1a") : "none",
+        boxShadow:
+          variant === 'primary' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
       }}
     >
-      {loading ? "..." : label}
+      {loading ? '...' : label}
     </button>
   );
 });
@@ -117,16 +166,16 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
   const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
   const { selectedDevice, devices } = useDeviceStore();
-  const [inputText, setInputText] = useState("");
+  const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
 
   // Get platform from selected device
-  const selectedDeviceInfo = devices.find(d => d.udid === selectedDevice);
-  const platform = selectedDeviceInfo?.platform ?? "android";
-  const isIOS = platform === "ios";
+  const selectedDeviceInfo = devices.find((d) => d.udid === selectedDevice);
+  const platform = selectedDeviceInfo?.platform ?? 'android';
+  const isIOS = platform === 'ios';
 
-  const refetchFn = useHierarchyStore(s => s.refetchFn);
+  const refetchFn = useHierarchyStore((s) => s.refetchFn);
 
   const triggerRefresh = () => {
     if (refetchFn.current) {
@@ -137,10 +186,11 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
 
   const displayNode = lockedNode || selectedNode || hoveredNode;
   const hasNode = !!displayNode;
-  const hasEditText = displayNode?.className?.includes("EditText") ||
-    displayNode?.className?.includes("TextField") ||
-    displayNode?.className?.includes("TextView") ||
-    displayNode?.className?.includes("SearchField");
+  const hasEditText =
+    displayNode?.className?.includes('EditText') ||
+    displayNode?.className?.includes('TextField') ||
+    displayNode?.className?.includes('TextView') ||
+    displayNode?.className?.includes('SearchField');
 
   const nodeBounds = displayNode?.bounds;
   const centerX = nodeBounds ? nodeBounds.x + Math.floor(nodeBounds.width / 2) : 0;
@@ -154,10 +204,10 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
         await tapDevice(centerX, centerY, selectedDevice ?? undefined);
       }
       await inputDeviceText(inputText, selectedDevice ?? undefined);
-      setInputText("");
+      setInputText('');
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Failed to send text");
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to send text');
     }
   };
 
@@ -171,7 +221,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Failed to tap");
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to tap');
     }
   };
   const handleLongPress = async () => {
@@ -185,35 +235,49 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Long press failed");
+      setErrorMsg(e instanceof Error ? e.message : 'Long press failed');
     }
   };
   const handleSwipe = async () => {
     if (!nodeBounds) return;
     setErrorMsg(null);
     try {
-      await swipeDevice(centerX, centerY, centerX, Math.max(0, centerY - 300), undefined, selectedDevice ?? undefined);
+      await swipeDevice(
+        centerX,
+        centerY,
+        centerX,
+        Math.max(0, centerY - 300),
+        undefined,
+        selectedDevice ?? undefined
+      );
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Failed to swipe");
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to swipe');
     }
   };
   const handleDrag = async () => {
     if (!nodeBounds) return;
     setErrorMsg(null);
     try {
-      await dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined);
+      await dragDevice(
+        centerX,
+        centerY,
+        centerX,
+        centerY + 200,
+        undefined,
+        selectedDevice ?? undefined
+      );
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Drag not supported on iOS");
+      setErrorMsg(e instanceof Error ? e.message : 'Drag not supported on iOS');
     }
   };
   const handleZoom = async () => {
@@ -226,7 +290,7 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Zoom not supported on iOS");
+      setErrorMsg(e instanceof Error ? e.message : 'Zoom not supported on iOS');
     }
   };
   const handlePinch = async () => {
@@ -239,46 +303,46 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Pinch not supported on iOS");
+      setErrorMsg(e instanceof Error ? e.message : 'Pinch not supported on iOS');
     }
   };
   const handleHome = async () => {
     setErrorMsg(null);
     try {
-      await pressKey("home", selectedDevice ?? undefined);
+      await pressKey('home', selectedDevice ?? undefined);
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Failed to press home");
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to press home');
     }
   };
   const handleBack = async () => {
     setErrorMsg(null);
     try {
-      await pressKey("back", selectedDevice ?? undefined);
+      await pressKey('back', selectedDevice ?? undefined);
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Back not supported on iOS");
+      setErrorMsg(e instanceof Error ? e.message : 'Back not supported on iOS');
     }
   };
   const handleRecent = async () => {
     setErrorMsg(null);
     try {
-      await pressKey("recent", selectedDevice ?? undefined);
+      await pressKey('recent', selectedDevice ?? undefined);
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Recent not supported on iOS");
+      setErrorMsg(e instanceof Error ? e.message : 'Recent not supported on iOS');
     }
   };
 
@@ -288,27 +352,30 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     <div
       className="px-3 py-2 space-y-2 flex-shrink-0"
       style={{
-        background: "var(--bg-tertiary)",
-        borderBottom: "2px solid var(--border-subtle)",
+        background: 'var(--bg-tertiary)',
+        borderBottom: '2px solid var(--border-subtle)',
       }}
     >
       {/* Row 1: Input Text */}
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: "var(--text-tertiary)" }}>
+        <span
+          className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
           Input
         </span>
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSendText()}
-          placeholder={hasEditText ? "Enter text..." : "Select EditText"}
+          onKeyDown={(e) => e.key === 'Enter' && handleSendText()}
+          placeholder={hasEditText ? 'Enter text...' : 'Select EditText'}
           disabled={!hasEditText}
           className="flex-1 px-2 py-1 rounded text-[10px] font-mono disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            background: "var(--bg-elevated)",
-            color: "var(--text-primary)",
-            border: "2px solid var(--border-default)",
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-primary)',
+            border: '2px solid var(--border-default)',
           }}
         />
         <ActionPill
@@ -326,8 +393,8 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
         <div
           className="px-2 py-1 rounded text-[9px] font-medium"
           style={{
-            background: isDark ? "rgba(248,113,113,0.15)" : "rgba(220,38,38,0.1)",
-            color: isDark ? "var(--accent-rose)" : "#dc2626",
+            background: isDark ? 'rgba(248,113,113,0.15)' : 'rgba(220,38,38,0.1)',
+            color: isDark ? 'var(--accent-rose)' : '#dc2626',
           }}
         >
           {errorMsg}
@@ -336,12 +403,38 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
 
       {/* Row 2: Action Pills */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <ActionPill label="Tap" onClick={handleTap} disabled={!hasNode} isDark={isDark} variant="primary" />
-        <ActionPill label="Long Press" onClick={handleLongPress} disabled={!hasNode || isIOS} isDark={isDark} />
+        <ActionPill
+          label="Tap"
+          onClick={handleTap}
+          disabled={!hasNode}
+          isDark={isDark}
+          variant="primary"
+        />
+        <ActionPill
+          label="Long Press"
+          onClick={handleLongPress}
+          disabled={!hasNode || isIOS}
+          isDark={isDark}
+        />
         <ActionPill label="Swipe" onClick={handleSwipe} disabled={!hasNode} isDark={isDark} />
-        <ActionPill label="Drag" onClick={handleDrag} disabled={!hasNode || isIOS} isDark={isDark} />
-        <ActionPill label="Zoom" onClick={handleZoom} disabled={!hasNode || isIOS} isDark={isDark} />
-        <ActionPill label="Pinch" onClick={handlePinch} disabled={!hasNode || isIOS} isDark={isDark} />
+        <ActionPill
+          label="Drag"
+          onClick={handleDrag}
+          disabled={!hasNode || isIOS}
+          isDark={isDark}
+        />
+        <ActionPill
+          label="Zoom"
+          onClick={handleZoom}
+          disabled={!hasNode || isIOS}
+          isDark={isDark}
+        />
+        <ActionPill
+          label="Pinch"
+          onClick={handlePinch}
+          disabled={!hasNode || isIOS}
+          isDark={isDark}
+        />
         <ActionPill label="Home" onClick={handleHome} disabled={false} isDark={isDark} />
         <ActionPill label="Back" onClick={handleBack} disabled={isIOS} isDark={isDark} />
         <ActionPill label="Recent" onClick={handleRecent} disabled={isIOS} isDark={isDark} />

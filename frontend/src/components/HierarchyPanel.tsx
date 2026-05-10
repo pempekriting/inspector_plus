@@ -1,14 +1,17 @@
-import { useEffect, useRef } from "react";
-import { HierarchyTree } from "./HierarchyTree";
-import { PropertiesPanel } from "./PropertiesPanel";
-import { DeviceActionsBar } from "./DeviceActionsBar";
-import { useHierarchyStore } from "../stores/hierarchyStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useHierarchyAndScreenshot } from "../services/api";
+import { useEffect, useRef } from 'react';
+
+import { useHierarchyAndScreenshot } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore } from '../stores/hierarchyStore';
+
+import { DeviceActionsBar } from './DeviceActionsBar';
+import { HierarchyTree } from './HierarchyTree';
+import { PropertiesPanel } from './PropertiesPanel';
 
 export function HierarchyPanel() {
   const { selectedDevice } = useDeviceStore();
-  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl, expandAll } = useHierarchyStore();
+  const { triggerHierarchyRefresh, setUiTree, setCombinedScreenshotUrl, expandAll } =
+    useHierarchyStore();
 
   const { data, isLoading, refetch } = useHierarchyAndScreenshot(selectedDevice || undefined);
   const refetchRef = useRef(refetch);

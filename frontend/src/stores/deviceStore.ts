@@ -1,5 +1,6 @@
-import { create } from "zustand";
-import { DeviceInfo } from "../hooks/useDevice";
+import { create } from 'zustand';
+
+import { DeviceInfo } from '../hooks/useDevice';
 
 interface DeviceState {
   connected: boolean;
@@ -13,7 +14,7 @@ interface DeviceState {
   setSelectedDevice: (udid: string | null) => void;
 }
 
-const STORAGE_KEY = "inspector-plus-selected-device";
+const STORAGE_KEY = 'inspector-plus-selected-device';
 
 function loadStoredDevice(): string | null {
   try {
@@ -30,8 +31,7 @@ export const useDeviceStore = create<DeviceState>((set) => ({
   devices: [],
   selectedDevice: loadStoredDevice(),
   setConnected: (connected) => set({ connected }),
-  setDeviceResolution: (width, height) =>
-    set({ deviceWidth: width, deviceHeight: height }),
+  setDeviceResolution: (width, height) => set({ deviceWidth: width, deviceHeight: height }),
   setDevices: (devices) => set({ devices }),
   setSelectedDevice: (udid) => {
     try {

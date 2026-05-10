@@ -11,17 +11,21 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   width: 100%;
   overflow: hidden;
 }
 
 body {
-  font-family: "Satoshi", "JetBrains Mono", "SF Mono", sans-serif;
+  font-family: 'Satoshi', 'JetBrains Mono', 'SF Mono', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /* Neo-Brutalism Theme Classes */
@@ -143,8 +147,13 @@ body {
 
 /* Custom animations */
 @keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes fade-in-up {
@@ -170,8 +179,12 @@ body {
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes tap-ripple {
@@ -211,8 +224,12 @@ body {
 }
 
 @keyframes br-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Neo-brutalist refresh - snappy rotation */
@@ -221,8 +238,12 @@ body {
 }
 
 @keyframes br-refresh {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Device switch loading animations */
@@ -230,50 +251,88 @@ body {
   animation: pulse-slow 2.5s ease-in-out infinite;
 }
 @keyframes pulse-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.97); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.97);
+  }
 }
 
 .animate-spin-slow {
   animation: spin-slow 8s linear infinite;
 }
 @keyframes spin-slow {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-scan-line {
   animation: scan-line 2s ease-in-out infinite;
 }
 @keyframes scan-line {
-  0% { top: 0%; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
 }
 
 .animate-pulse-text {
   animation: pulse-text 2s ease-in-out infinite;
 }
 @keyframes pulse-text {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .animate-ping-slow {
   animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 @keyframes ping-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
 }
 
 .animate-pulse-subtle {
   animation: pulse-subtle 3s ease-in-out infinite;
 }
 @keyframes pulse-subtle {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Tree node connector lines */
@@ -331,7 +390,9 @@ body {
 
 /* Neo-Brutalism specific */
 .neo-brutal-border {
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 /* Overlay highlight - Neo Brutalism style */
@@ -344,11 +405,16 @@ body {
 
 /* AI Element Finder highlight - pulsing cyan border */
 @keyframes ai-pulse-border {
-  0%, 100% {
-    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.6), 0 0 20px rgba(34, 211, 238, 0.3);
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(34, 211, 238, 0.6),
+      0 0 20px rgba(34, 211, 238, 0.3);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(34, 211, 238, 0.4), 0 0 30px rgba(34, 211, 238, 0.2);
+    box-shadow:
+      0 0 0 5px rgba(34, 211, 238, 0.4),
+      0 0 30px rgba(34, 211, 238, 0.2);
   }
 }
 
@@ -433,7 +499,7 @@ body {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  border: 1.5px solid rgba(0,0,0,0.3);
+  border: 1.5px solid rgba(0, 0, 0, 0.3);
 }
 
 /* Loading skeleton */
@@ -452,7 +518,9 @@ body {
 /* Focus ring - Neo Brutalism style */
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-cyan);
+  box-shadow:
+    0 0 0 2px var(--bg-primary),
+    0 0 0 4px var(--accent-cyan);
 }
 
 /* Tap indicator pulse */
@@ -461,8 +529,12 @@ body {
 }
 
 /* Theme transition */
-body, .theme-transition {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+body,
+.theme-transition {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 /* ============================================
@@ -472,15 +544,15 @@ body, .theme-transition {
 @layer components {
   /* Typography */
   .font-display {
-    font-family: "Instrument Serif", Georgia, serif;
+    font-family: 'Instrument Serif', Georgia, serif;
   }
 
   .font-ui {
-    font-family: "Satoshi", "SF Mono", sans-serif;
+    font-family: 'Satoshi', 'SF Mono', sans-serif;
   }
 
   .font-code {
-    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
   }
 
   /* Neo-Brutalist Panels */
@@ -667,7 +739,9 @@ body, .theme-transition {
 
   .neo-input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-primary);
+    box-shadow:
+      0 0 0 2px var(--bg-primary),
+      0 0 0 4px var(--accent-primary);
   }
 
   .neo-input::placeholder {
@@ -703,10 +777,22 @@ body, .theme-transition {
    ============================================ */
 
 @keyframes coord-popup {
-  0% { opacity: 0; transform: translateY(8px) scale(0.95); }
-  10% { opacity: 1; transform: translateY(0) scale(1); }
-  80% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
 }
 
 .animate-coord-popup {

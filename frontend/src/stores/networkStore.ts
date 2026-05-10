@@ -1,5 +1,6 @@
-import { create } from "zustand";
-import type { NetworkFlow, ProxyStatus } from "../types/network";
+import { create } from 'zustand';
+
+import type { NetworkFlow, ProxyStatus } from '../types/network';
 
 interface NetworkState {
   trafficFlows: NetworkFlow[];
@@ -37,17 +38,22 @@ export const useNetworkStore = create<NetworkState>((set) => ({
       trafficFlows: [...state.trafficFlows.slice(-999), flow],
     })),
   setTrafficFlows: (flows) => set({ trafficFlows: flows }),
-  clearTraffic: () => set({ trafficFlows: [], selectedFlowId: null, lastTimestamp: 0, wsDisconnectedAt: null }),
+  clearTraffic: () =>
+    set({ trafficFlows: [], selectedFlowId: null, lastTimestamp: 0, wsDisconnectedAt: null }),
   setProxyStatus: (status) =>
     set((state) => ({
       proxyStatus: { ...state.proxyStatus, ...status },
     })),
   setIsCapturing: (capturing) => set({ isCapturing: capturing }),
-  setWsConnected: (connected) => set((state) => ({ wsConnected: connected, wsDisconnectedAt: connected ? null : (state.wsDisconnectedAt ?? Date.now()) })),
+  setWsConnected: (connected) =>
+    set((state) => ({
+      wsConnected: connected,
+      wsDisconnectedAt: connected ? null : (state.wsDisconnectedAt ?? Date.now()),
+    })),
   setWsDisconnectedAt: (ts) => set({ wsDisconnectedAt: ts }),
   setSelectedFlowId: (id) => set({ selectedFlowId: id }),
   setLastTimestamp: (ts) =>
     set((state) => ({
-      lastTimestamp: typeof ts === "function" ? ts(state.lastTimestamp) : ts,
+      lastTimestamp: typeof ts === 'function' ? ts(state.lastTimestamp) : ts,
     })),
 }));

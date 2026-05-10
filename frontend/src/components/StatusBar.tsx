@@ -1,14 +1,14 @@
-import { useBackendStatus } from "../hooks/useBackend";
-import { useThemeStore } from "../stores/themeStore";
+import { useBackendStatus } from '../hooks/useBackend';
+import { useThemeStore } from '../stores/themeStore';
 
 function BackendStatusBadge({ isDark }: { isDark: boolean }) {
   const { status } = useBackendStatus();
 
   const statusConfig = {
-    starting: { label: "Starting...", color: isDark ? "#f59e0b" : "#d97706" },
-    running: { label: "Running", color: isDark ? "#22c55e" : "#059669" },
-    stopped: { label: "Stopped", color: isDark ? "#ef4444" : "#dc2626" },
-    error: { label: "Error", color: isDark ? "#ef4444" : "#dc2626" },
+    starting: { label: 'Starting...', color: isDark ? '#f59e0b' : '#d97706' },
+    running: { label: 'Running', color: isDark ? '#22c55e' : '#059669' },
+    stopped: { label: 'Stopped', color: isDark ? '#ef4444' : '#dc2626' },
+    error: { label: 'Error', color: isDark ? '#ef4444' : '#dc2626' },
   };
 
   const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.stopped;

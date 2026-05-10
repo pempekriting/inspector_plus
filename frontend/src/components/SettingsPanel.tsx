@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { useSettingsStore } from "../stores/settingsStore";
-import { useThemeStore } from "../stores/themeStore";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+
+import { useSettingsStore } from '../stores/settingsStore';
+import { useThemeStore } from '../stores/themeStore';
 
 interface SettingsPanelProps {
   isOpen: boolean;
@@ -10,38 +11,43 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const { theme } = useThemeStore();
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
   const { backendUrl, mcpUrl, setBackendUrl, setMcpUrl, resetSettings } = useSettingsStore();
   const queryClient = useQueryClient();
 
   const [editedBackend, setEditedBackend] = useState(backendUrl);
   const [editedMcp, setEditedMcp] = useState(mcpUrl);
-  const [verifyStatus, setVerifyStatus] = useState<{ be: "idle" | "testing" | "ok" | "fail"; mcp: "idle" | "testing" | "ok" | "fail" }>({ be: "idle", mcp: "idle" });
+  const [verifyStatus, setVerifyStatus] = useState<{
+    be: 'idle' | 'testing' | 'ok' | 'fail';
+    mcp: 'idle' | 'testing' | 'ok' | 'fail';
+  }>({ be: 'idle', mcp: 'idle' });
   const [detectedPort, setDetectedPort] = useState<number | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
   const [isRestarting, setIsRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
-  const [scanResult, setScanResult] = useState<{ be: number | null; mcp: number | null } | null>(null);
+  const [scanResult, setScanResult] = useState<{ be: number | null; mcp: number | null } | null>(
+    null
+  );
 
-  const accentColor = isDark ? "#00e5cc" : "#0066cc";
-  const accentBg = isDark ? "rgba(0,229,204,0.12)" : "rgba(0,102,204,0.08)";
-  const dangerColor = isDark ? "#fb7185" : "#dc2626";
-  const successColor = isDark ? "#10b981" : "#047857";
-  const mcpAccent = isDark ? "#a78bfa" : "#7c3aed";
+  const accentColor = isDark ? '#00e5cc' : '#0066cc';
+  const accentBg = isDark ? 'rgba(0,229,204,0.12)' : 'rgba(0,102,204,0.08)';
+  const dangerColor = isDark ? '#fb7185' : '#dc2626';
+  const successColor = isDark ? '#10b981' : '#047857';
+  const mcpAccent = isDark ? '#a78bfa' : '#7c3aed';
 
-  const bg = isDark ? "#111114" : "#ffffff";
-  const bgHeader = isDark ? "#18181b" : "#e5e5e5";
-  const bgSubtle = isDark ? "#0f0f12" : "#f5f5f5";
-  const border = isDark ? "#3f3f46" : "#1a1a1a";
-  const text = isDark ? "#e4e4e7" : "#1a1a1a";
-  const textMuted = isDark ? "#71717a" : "#999999";
-  const textDim = isDark ? "#52525b" : "#999999";
+  const bg = isDark ? '#111114' : '#ffffff';
+  const bgHeader = isDark ? '#18181b' : '#e5e5e5';
+  const bgSubtle = isDark ? '#0f0f12' : '#f5f5f5';
+  const border = isDark ? '#3f3f46' : '#1a1a1a';
+  const text = isDark ? '#e4e4e7' : '#1a1a1a';
+  const textMuted = isDark ? '#71717a' : '#999999';
+  const textDim = isDark ? '#52525b' : '#999999';
 
   useEffect(() => {
     if (isOpen) {
       setEditedBackend(backendUrl);
       setEditedMcp(mcpUrl);
-      setVerifyStatus({ be: "idle", mcp: "idle" });
+      setVerifyStatus({ be: 'idle', mcp: 'idle' });
       setDetectedPort(null);
       setScanProgress(0);
       setIsRestarting(false);
@@ -55,7 +61,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     return match ? parseInt(match[1], 10) : 8001;
   };
 
-  const isTauriAvailable = () => typeof window !== "undefined" && !!window.__TAURI__;
+  const isTauriAvailable = () => typeof window !== 'undefined' && !!window.__TAURI__;
 
   const handleSave = async () => {
     const backendPort = extractPort(editedBackend);
@@ -78,25 +84,25 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       let mcpRunning = false;
 
       try {
-        const backendStatus = await tauri.core.invoke<{ status: string }>("get_backend_status");
-        backendRunning = backendStatus.status === "running";
+        const backendStatus = await tauri.core.invoke<{ status: string }>('get_backend_status');
+        backendRunning = backendStatus.status === 'running';
       } catch {}
 
       try {
-        const mcpStatus = await tauri.core.invoke<{ status: string }>("get_mcp_status");
-        mcpRunning = mcpStatus.status === "running";
+        const mcpStatus = await tauri.core.invoke<{ status: string }>('get_mcp_status');
+        mcpRunning = mcpStatus.status === 'running';
       } catch {}
 
       if (backendRunning) {
-        await tauri.core.invoke("restart_backend", { port: backendPort });
+        await tauri.core.invoke('restart_backend', { port: backendPort });
       } else {
-        await tauri.core.invoke("start_backend", { port: backendPort });
+        await tauri.core.invoke('start_backend', { port: backendPort });
       }
 
       if (mcpRunning) {
-        await tauri.core.invoke("restart_mcp", { port: mcpPort });
+        await tauri.core.invoke('restart_mcp', { port: mcpPort });
       } else {
-        await tauri.core.invoke("start_mcp", { port: mcpPort });
+        await tauri.core.invoke('start_mcp', { port: mcpPort });
       }
 
       setBackendUrl(editedBackend);
@@ -112,60 +118,60 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   const handleReset = () => {
     resetSettings();
-    setEditedBackend("http://localhost:8001");
-    setEditedMcp("http://localhost:8002");
-    setVerifyStatus({ be: "idle", mcp: "idle" });
+    setEditedBackend('http://localhost:8001');
+    setEditedMcp('http://localhost:8002');
+    setVerifyStatus({ be: 'idle', mcp: 'idle' });
     setDetectedPort(null);
     setScanResult(null);
     queryClient.invalidateQueries();
   };
 
   const handleVerifyBoth = async () => {
-    setVerifyStatus({ be: "testing", mcp: "testing" });
+    setVerifyStatus({ be: 'testing', mcp: 'testing' });
     setDetectedPort(null);
 
     try {
       const res = await fetch(`${editedBackend}/health`, {
-        method: "GET",
+        method: 'GET',
         signal: AbortSignal.timeout(3000),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.version && !data.service) {
-          setVerifyStatus(prev => ({ ...prev, be: "ok", detectedPort: data.port ?? null }));
+          setVerifyStatus((prev) => ({ ...prev, be: 'ok', detectedPort: data.port ?? null }));
           setDetectedPort(data.port ?? null);
         } else {
-          setVerifyStatus(prev => ({ ...prev, be: "fail" }));
+          setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
         }
       } else {
-        setVerifyStatus(prev => ({ ...prev, be: "fail" }));
+        setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
       }
     } catch {
-      setVerifyStatus(prev => ({ ...prev, be: "fail" }));
+      setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
     }
 
     try {
       const res = await fetch(`${editedMcp}/health`, {
-        method: "GET",
+        method: 'GET',
         signal: AbortSignal.timeout(3000),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.service) {
-          setVerifyStatus(prev => ({ ...prev, mcp: "ok" }));
+          setVerifyStatus((prev) => ({ ...prev, mcp: 'ok' }));
         } else {
-          setVerifyStatus(prev => ({ ...prev, mcp: "fail" }));
+          setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
         }
       } else {
-        setVerifyStatus(prev => ({ ...prev, mcp: "fail" }));
+        setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
       }
     } catch {
-      setVerifyStatus(prev => ({ ...prev, mcp: "fail" }));
+      setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
     }
   };
 
   const handleScanBoth = async () => {
-    setVerifyStatus({ be: "testing", mcp: "testing" });
+    setVerifyStatus({ be: 'testing', mcp: 'testing' });
     setDetectedPort(null);
     setScanProgress(0);
 
@@ -176,7 +182,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setScanProgress(((port - 8001) / 99) * 100);
       try {
         const res = await fetch(`http://localhost:${port}/health`, {
-          method: "GET",
+          method: 'GET',
           signal: AbortSignal.timeout(500),
         });
         if (res.ok) {
@@ -185,7 +191,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             bePort = data.port ?? port;
             setDetectedPort(data.port ?? port);
             setEditedBackend(`http://localhost:${port}`);
-            setVerifyStatus(prev => ({ ...prev, be: "ok" }));
+            setVerifyStatus((prev) => ({ ...prev, be: 'ok' }));
             break;
           }
         }
@@ -197,7 +203,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setScanProgress(((port - 8001) / 99) * 100);
       try {
         const res = await fetch(`http://localhost:${port}/health`, {
-          method: "GET",
+          method: 'GET',
           signal: AbortSignal.timeout(500),
         });
         if (res.ok) {
@@ -205,15 +211,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           if (data.service) {
             mcpPort = port;
             setEditedMcp(`http://localhost:${port}`);
-            setVerifyStatus(prev => ({ ...prev, mcp: "ok" }));
+            setVerifyStatus((prev) => ({ ...prev, mcp: 'ok' }));
             break;
           }
         }
       } catch {}
     }
 
-    if (!bePort) setVerifyStatus(prev => ({ ...prev, be: "fail" }));
-    if (!mcpPort) setVerifyStatus(prev => ({ ...prev, mcp: "fail" }));
+    if (!bePort) setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
+    if (!mcpPort) setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
     setScanResult({ be: bePort, mcp: mcpPort });
     setScanProgress(100);
   };
@@ -222,15 +228,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   const beStatus = verifyStatus.be;
   const mcpStatus = verifyStatus.mcp;
-  const isVerifying = beStatus === "testing" || mcpStatus === "testing";
-  const isScanning = beStatus === "testing" || mcpStatus === "testing";
-  const verifyAllOk = beStatus === "ok" && mcpStatus === "ok";
-  const verifyAnyFail = beStatus === "fail" || mcpStatus === "fail";
+  const isVerifying = beStatus === 'testing' || mcpStatus === 'testing';
+  const isScanning = beStatus === 'testing' || mcpStatus === 'testing';
+  const verifyAllOk = beStatus === 'ok' && mcpStatus === 'ok';
+  const verifyAnyFail = beStatus === 'fail' || mcpStatus === 'fail';
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -238,7 +244,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         style={{
           background: bg,
           border: `3px solid ${border}`,
-          boxShadow: isDark ? "8px 8px 0 #000, 0 0 40px rgba(0,229,204,0.05)" : "8px 8px 0 #1a1a1a",
+          boxShadow: isDark ? '8px 8px 0 #000, 0 0 40px rgba(0,229,204,0.05)' : '8px 8px 0 #1a1a1a',
           fontFamily: '"Satoshi", sans-serif',
         }}
       >
@@ -255,7 +261,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             style={{
               background: accentBg,
               border: `2px solid ${accentColor}`,
-              boxShadow: `3px 3px 0 ${isDark ? "#000" : "#1a1a1a"}`,
+              boxShadow: `3px 3px 0 ${isDark ? '#000' : '#1a1a1a'}`,
             }}
           >
             <svg
@@ -269,7 +275,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             >
               <path d="M4 6h16M4 12h16M4 18h7" />
               <circle cx="17" cy="18" r="3" fill={accentColor} stroke="none" />
-              <circle cx="17" cy="18" r="1.5" fill={isDark ? "#111114" : "#ffffff"} stroke="none" />
+              <circle cx="17" cy="18" r="1.5" fill={isDark ? '#111114' : '#ffffff'} stroke="none" />
             </svg>
           </div>
           <div className="ml-3">
@@ -284,20 +290,26 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             onClick={onClose}
             className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-95"
             style={{
-              background: "transparent",
+              background: 'transparent',
               border: `2px solid ${border}`,
               color: textMuted,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = isDark ? "#27272a" : "#f0f0f0";
+              e.currentTarget.style.background = isDark ? '#27272a' : '#f0f0f0';
               e.currentTarget.style.color = text;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.background = 'transparent';
               e.currentTarget.style.color = textMuted;
             }}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -313,11 +325,20 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 className="w-4 h-4 rounded flex items-center justify-center"
                 style={{ background: accentColor }}
               >
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="#0a0a0c" strokeWidth="3">
+                <svg
+                  className="w-2.5 h-2.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#0a0a0c"
+                  strokeWidth="3"
+                >
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: textMuted }}>
+              <span
+                className="text-[9px] font-black uppercase tracking-widest"
+                style={{ color: textMuted }}
+              >
                 Backend API
               </span>
             </div>
@@ -328,11 +349,11 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               placeholder="http://localhost:8001"
               className="w-full px-4 py-3 rounded-lg text-[11px] font-mono font-medium"
               style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
+                background: isDark ? '#1f1f23' : '#ffffff',
                 color: text,
-                border: `2px solid ${beStatus === "ok" ? successColor : border}`,
-                outline: "none",
-                boxShadow: isDark ? "3px 3px 0 #000" : "3px 3px 0 #e5e5e5",
+                border: `2px solid ${beStatus === 'ok' ? successColor : border}`,
+                outline: 'none',
+                boxShadow: isDark ? '3px 3px 0 #000' : '3px 3px 0 #e5e5e5',
               }}
             />
           </div>
@@ -344,11 +365,20 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 className="w-4 h-4 rounded flex items-center justify-center"
                 style={{ background: mcpAccent }}
               >
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3">
+                <svg
+                  className="w-2.5 h-2.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                >
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: textMuted }}>
+              <span
+                className="text-[9px] font-black uppercase tracking-widest"
+                style={{ color: textMuted }}
+              >
                 MCP Server
               </span>
             </div>
@@ -359,11 +389,11 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               placeholder="http://localhost:8002"
               className="w-full px-4 py-3 rounded-lg text-[11px] font-mono font-medium"
               style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
+                background: isDark ? '#1f1f23' : '#ffffff',
                 color: text,
-                border: `2px solid ${mcpStatus === "ok" ? mcpAccent : border}`,
-                outline: "none",
-                boxShadow: isDark ? "3px 3px 0 #000" : "3px 3px 0 #e5e5e5",
+                border: `2px solid ${mcpStatus === 'ok' ? mcpAccent : border}`,
+                outline: 'none',
+                boxShadow: isDark ? '3px 3px 0 #000' : '3px 3px 0 #e5e5e5',
               }}
             />
             <p className="text-[9px] leading-relaxed" style={{ color: textDim }}>
@@ -373,11 +403,14 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
           {/* Divider */}
           <div className="flex items-center gap-3 py-3">
-            <div className="flex-1 h-px" style={{ background: isDark ? "#27272a" : "#e5e5e5" }} />
-            <span className="text-[8px] font-bold uppercase tracking-[0.15em]" style={{ color: textDim }}>
+            <div className="flex-1 h-px" style={{ background: isDark ? '#27272a' : '#e5e5e5' }} />
+            <span
+              className="text-[8px] font-bold uppercase tracking-[0.15em]"
+              style={{ color: textDim }}
+            >
               Actions
             </span>
-            <div className="flex-1 h-px" style={{ background: isDark ? "#27272a" : "#e5e5e5" }} />
+            <div className="flex-1 h-px" style={{ background: isDark ? '#27272a' : '#e5e5e5' }} />
           </div>
 
           {/* Action buttons */}
@@ -388,22 +421,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60"
               style={{
                 background: verifyAllOk ? successColor : accentColor,
-                color: "#0a0a0c",
-                border: `2px solid ${verifyAllOk ? successColor : "transparent"}`,
-                boxShadow: `3px 3px 0 ${isDark ? "#000" : "#1a1a1a"}`,
+                color: '#0a0a0c',
+                border: `2px solid ${verifyAllOk ? successColor : 'transparent'}`,
+                boxShadow: `3px 3px 0 ${isDark ? '#000' : '#1a1a1a'}`,
               }}
             >
               {isVerifying ? (
                 <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
                     <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   ...
                 </span>
               ) : verifyAllOk ? (
-                "Verified"
+                'Verified'
               ) : (
-                "Verify"
+                'Verify'
               )}
             </button>
             <button
@@ -411,23 +450,32 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               disabled={isScanning}
               className="flex items-center justify-center gap-2 px-3 py-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60"
               style={{
-                background: isDark ? "#1f1f23" : "#ffffff",
+                background: isDark ? '#1f1f23' : '#ffffff',
                 color: verifyAllOk ? successColor : accentColor,
                 border: `2px solid ${verifyAllOk ? successColor : accentColor}`,
-                boxShadow: `3px 3px 0 ${isDark ? "#000" : "#1a1a1a"}`,
+                boxShadow: `3px 3px 0 ${isDark ? '#000' : '#1a1a1a'}`,
               }}
             >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
-              {isScanning ? "Scanning..." : "Scan"}
+              {isScanning ? 'Scanning...' : 'Scan'}
             </button>
           </div>
 
           {/* Scan progress bar */}
           {isScanning && (
-            <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: isDark ? "#27272a" : "#e5e5e5" }}>
+            <div
+              className="relative h-1.5 rounded-full overflow-hidden"
+              style={{ background: isDark ? '#27272a' : '#e5e5e5' }}
+            >
               <div
                 className="absolute left-0 top-0 h-full rounded-full transition-all duration-150"
                 style={{ width: `${scanProgress}%`, background: accentColor }}
@@ -440,12 +488,18 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-medium"
               style={{
-                background: isDark ? "rgba(16,185,129,0.12)" : "#f0fdf4",
+                background: isDark ? 'rgba(16,185,129,0.12)' : '#f0fdf4',
                 color: successColor,
                 border: `2px solid ${successColor}`,
               }}
             >
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
@@ -453,10 +507,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 {scanResult.be && scanResult.mcp
                   ? `Backend (${scanResult.be}) + MCP (${scanResult.mcp}) found`
                   : scanResult.be
-                  ? `Backend found on port ${scanResult.be}`
-                  : scanResult.mcp
-                  ? `MCP found on port ${scanResult.mcp}`
-                  : "No servers found"}
+                    ? `Backend found on port ${scanResult.be}`
+                    : scanResult.mcp
+                      ? `MCP found on port ${scanResult.mcp}`
+                      : 'No servers found'}
               </span>
             </div>
           )}
@@ -466,22 +520,28 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <div
               className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-[10px] font-medium"
               style={{
-                background: isDark ? "rgba(248,113,113,0.12)" : "#fef2f2",
+                background: isDark ? 'rgba(248,113,113,0.12)' : '#fef2f2',
                 color: dangerColor,
                 border: `2px solid ${dangerColor}`,
               }}
             >
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <circle cx="12" cy="12" r="10" />
                 <line x1="15" y1="9" x2="9" y2="15" />
                 <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
               <span>
-                {beStatus === "fail" && mcpStatus === "fail"
-                  ? "Both servers offline — check if backend and MCP are running"
-                  : beStatus === "fail"
-                  ? "Backend offline — check if backend is running"
-                  : "MCP offline — check if MCP server is running"}
+                {beStatus === 'fail' && mcpStatus === 'fail'
+                  ? 'Both servers offline — check if backend and MCP are running'
+                  : beStatus === 'fail'
+                    ? 'Backend offline — check if backend is running'
+                    : 'MCP offline — check if MCP server is running'}
               </span>
             </div>
           )}
@@ -491,12 +551,18 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-medium"
               style={{
-                background: isDark ? "rgba(16,185,129,0.12)" : "#f0fdf4",
+                background: isDark ? 'rgba(16,185,129,0.12)' : '#f0fdf4',
                 color: successColor,
                 border: `2px solid ${successColor}`,
               }}
             >
-              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
@@ -508,12 +574,18 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <div
               className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-[10px] font-medium"
               style={{
-                background: isDark ? "rgba(248,113,113,0.12)" : "#fef2f2",
+                background: isDark ? 'rgba(248,113,113,0.12)' : '#fef2f2',
                 color: dangerColor,
                 border: `2px solid ${dangerColor}`,
               }}
             >
-              <svg className="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <circle cx="12" cy="12" r="10" />
                 <line x1="15" y1="9" x2="9" y2="15" />
                 <line x1="9" y1="9" x2="15" y2="15" />
@@ -535,9 +607,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             onClick={handleReset}
             className="px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95"
             style={{
-              background: "transparent",
+              background: 'transparent',
               color: textDim,
-              border: `2px solid ${isDark ? "#27272a" : "#e5e5e5"}`,
+              border: `2px solid ${isDark ? '#27272a' : '#e5e5e5'}`,
             }}
           >
             Reset Defaults
@@ -548,10 +620,10 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               disabled={isRestarting}
               className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-60"
               style={{
-                background: isDark ? "#27272a" : "#e5e5e5",
+                background: isDark ? '#27272a' : '#e5e5e5',
                 color: textMuted,
                 border: `2px solid ${border}`,
-                boxShadow: `2px 2px 0 ${isDark ? "#000" : "#e5e5e5"}`,
+                boxShadow: `2px 2px 0 ${isDark ? '#000' : '#e5e5e5'}`,
               }}
             >
               Cancel
@@ -561,21 +633,27 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               disabled={isRestarting}
               className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-60"
               style={{
-                background: isRestarting ? (isDark ? "#52525b" : "#999999") : accentColor,
-                color: "#0a0a0c",
-                border: `2px solid ${isRestarting ? "transparent" : accentColor}`,
-                boxShadow: `3px 3px 0 ${isDark ? "#000" : "#1a1a1a"}`,
+                background: isRestarting ? (isDark ? '#52525b' : '#999999') : accentColor,
+                color: '#0a0a0c',
+                border: `2px solid ${isRestarting ? 'transparent' : accentColor}`,
+                boxShadow: `3px 3px 0 ${isDark ? '#000' : '#1a1a1a'}`,
               }}
             >
               {isRestarting ? (
                 <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                  >
                     <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Restarting...
                 </span>
               ) : (
-                "Apply"
+                'Apply'
               )}
             </button>
           </div>

@@ -2,15 +2,16 @@
 Tests for device/base.py — DeviceBridgeBase, create_bridge, create_bridge_for_device.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from device.base import DeviceBridgeBase, create_bridge, create_bridge_for_device
 from device.android_bridge import AndroidDeviceBridge
+from device.base import DeviceBridgeBase, create_bridge, create_bridge_for_device
 from device.ios_bridge import IOSDeviceBridge
 
 
@@ -29,13 +30,27 @@ class TestDeviceBridgeBase:
 
     def test_android_bridge_has_required_methods(self):
         bridge = AndroidDeviceBridge("emulator-5554")
-        required = ["connect", "get_devices", "get_hierarchy", "search_hierarchy", "tap", "get_screenshot"]
+        required = [
+            "connect",
+            "get_devices",
+            "get_hierarchy",
+            "search_hierarchy",
+            "tap",
+            "get_screenshot",
+        ]
         for method in required:
             assert hasattr(bridge, method), f"Missing method: {method}"
 
     def test_ios_bridge_has_required_methods(self):
         bridge = IOSDeviceBridge("00001234-0001234567890123")
-        required = ["connect", "get_devices", "get_hierarchy", "search_hierarchy", "tap", "get_screenshot"]
+        required = [
+            "connect",
+            "get_devices",
+            "get_hierarchy",
+            "search_hierarchy",
+            "tap",
+            "get_screenshot",
+        ]
         for method in required:
             assert hasattr(bridge, method), f"Missing method: {method}"
 

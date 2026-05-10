@@ -3,17 +3,18 @@ Tests for utility functions in android_bridge.py:
 _detect_capabilities, _parse_color_attr, _parse_dimension, _extract_styles, _safe_str.
 """
 
+import os
+import sys
+
 import pytest
 
-import sys
-import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from device.android_bridge import (
     _detect_capabilities,
+    _extract_styles,
     _parse_color_attr,
     _parse_dimension,
-    _extract_styles,
     _safe_str,
 )
 
@@ -25,6 +26,7 @@ class TestSafeStr:
 
     def test_returns_empty_for_non_string(self):
         from unittest.mock import MagicMock
+
         assert _safe_str(MagicMock()) == ""
         assert _safe_str(123) == ""
         assert _safe_str(None) == ""
@@ -160,7 +162,12 @@ class TestExtractStyles:
         assert styles.get("fontFamily") == "Roboto Medium"
 
     def test_extracts_padding_from_individual_attrs(self):
-        attrib = {"paddingLeft": "8dp", "paddingTop": "4dp", "paddingRight": "8dp", "paddingBottom": "4dp"}
+        attrib = {
+            "paddingLeft": "8dp",
+            "paddingTop": "4dp",
+            "paddingRight": "8dp",
+            "paddingBottom": "4dp",
+        }
         styles = _extract_styles(attrib)
         assert styles.get("padding") == {"left": 8, "top": 4, "right": 8, "bottom": 4}
 

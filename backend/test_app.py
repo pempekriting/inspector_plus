@@ -3,28 +3,30 @@ Backend tests for InspectorPlus FastAPI app.
 Tests cover: health endpoints, device endpoints, hierarchy, tap, screenshot, error handling.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport
+import os
 
 # Import app and error classes
 import sys
-import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from main import (
-    app,
     AppError,
+    CommandExecutionError,
     DeviceNotFoundError,
     HierarchyNotFoundError,
-    CommandExecutionError,
     ScreenshotError,
+    app,
     get_bridge,
 )
 
-
 # --- Fixtures ---
+
 
 @pytest.fixture
 def client():
@@ -36,6 +38,7 @@ def client():
 def reset_bridges():
     """Reset bridge singletons and rate limiter between tests to avoid state leakage."""
     import main
+
     main._android_bridge = None
     main._android_bridges = {}
     main._ios_bridges = {}
@@ -86,9 +89,7 @@ def mock_android_bridge():
     bridge.tap.return_value = True
     bridge.input_text.return_value = True
     bridge.get_screenshot.return_value = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
-    bridge.search_hierarchy.return_value = {
-        "results": [{"id": "Button_0", "className": "android.widget.Button"}]
-    }
+    bridge.search_hierarchy.return_value = {"results": [{"id": "Button_0", "className": "android.widget.Button"}]}
     return bridge
 
 
@@ -119,6 +120,7 @@ def mock_ios_bridge():
 
 
 # --- Health Endpoints ---
+
 
 class TestHealthEndpoints:
     def test_health_returns_ok(self, client):
@@ -159,6 +161,7 @@ class TestHealthEndpoints:
 
 
 # --- Device Endpoints ---
+
 
 class TestDeviceEndpoints:
     @patch("main._get_android_bridge")
@@ -205,6 +208,7 @@ class TestDeviceEndpoints:
 
 # --- Hierarchy Endpoints ---
 
+
 class TestHierarchyEndpoints:
     @patch("main.get_bridge")
     def test_hierarchy_returns_tree(self, mock_get_bridge, client, mock_android_bridge):
@@ -247,7 +251,9 @@ class TestHierarchyEndpoints:
     @patch("main._get_first_android_device")
     @patch("main.AndroidDeviceBridge")
     @patch("main._get_android_bridge")
-    def test_hierarchy_empty_udid_resolves_to_first_device(self, mock_get_android, mock_android_class, mock_first_device, client):
+    def test_hierarchy_empty_udid_resolves_to_first_device(
+        self, mock_get_android, mock_android_class, mock_first_device, client
+    ):
         """GET /hierarchy?udid= (empty) resolves to first Android device via _get_first_android_device."""
         mock_bridge = MagicMock()
         mock_bridge.get_hierarchy.return_value = {"id": "root", "bounds": {}, "children": []}
@@ -260,6 +266,7 @@ class TestHierarchyEndpoints:
 
 
 # --- Hierarchy Search ---
+
 
 class TestHierarchySearch:
     @patch("main.get_bridge")
@@ -299,6 +306,7 @@ class TestHierarchySearch:
 
 # --- Locator Generator ---
 
+
 class TestLocatorGenerator:
     @patch("main.get_bridge")
     def test_get_locators_success(self, mock_get_bridge, client, mock_android_bridge):
@@ -318,7 +326,12 @@ class TestLocatorGenerator:
             "nodeId": "Button_0",
             "className": "android.widget.Button",
             "locators": [
-                {"strategy": "id", "value": "btn_submit", "expression": 'By.id("btn_submit")', "stability": 5}
+                {
+                    "strategy": "id",
+                    "value": "btn_submit",
+                    "expression": 'By.id("btn_submit")',
+                    "stability": 5,
+                }
             ],
             "best": "id",
         }
@@ -347,6 +360,7 @@ class TestLocatorGenerator:
 
 
 # --- ADB Command Panel ---
+
 
 class TestAdbCommand:
     @patch("main.get_bridge")
@@ -392,6 +406,7 @@ class TestAdbCommand:
 
 # --- Tap Endpoint ---
 
+
 class TestTapEndpoint:
     @patch("main.get_bridge")
     def test_tap_returns_success(self, mock_get_bridge, client, mock_android_bridge):
@@ -431,6 +446,7 @@ class TestTapEndpoint:
 
 # --- Screenshot Endpoint ---
 
+
 class TestScreenshotEndpoint:
     @patch("main.get_bridge")
     def test_screenshot_returns_png(self, mock_get_bridge, client, mock_android_bridge):
@@ -460,7 +476,9 @@ class TestScreenshotEndpoint:
     @patch("main._get_first_android_device")
     @patch("main.AndroidDeviceBridge")
     @patch("main._get_android_bridge")
-    def test_screenshot_empty_udid_resolves_to_first_device(self, mock_get_android, mock_android_class, mock_first_device, client):
+    def test_screenshot_empty_udid_resolves_to_first_device(
+        self, mock_get_android, mock_android_class, mock_first_device, client
+    ):
         """GET /screenshot?udid= (empty) resolves to first Android device via _get_first_android_device."""
         mock_bridge = MagicMock()
         mock_bridge.get_screenshot.return_value = b"\x89PNG\r\n\x1a\n" + b"x" * 100
@@ -473,6 +491,7 @@ class TestScreenshotEndpoint:
 
 
 # --- Input Text Endpoint ---
+
 
 class TestInputTextEndpoint:
     @patch("main.get_bridge")
@@ -498,6 +517,7 @@ class TestInputTextEndpoint:
 
 
 # --- App Error Handler ---
+
 
 class TestAppErrorHandler:
     @patch("main.get_bridge")
@@ -534,6 +554,7 @@ class TestAppErrorHandler:
 
 # --- Test Recorder ---
 
+
 class TestRecorderEndpoints:
     @patch("main.get_bridge")
     def test_record_step(self, mock_get_bridge, client, mock_android_bridge):
@@ -541,9 +562,10 @@ class TestRecorderEndpoints:
         mock_get_bridge.return_value = mock_android_bridge
         # get_recorder_session is called on the bridge
         import main
+
         # Ensure bridge has the method
         mock_android_bridge.get_recorder_session.return_value = MagicMock()
-        mock_step = MagicMock()
+        MagicMock()
         mock_android_bridge.get_recorder_session.return_value.add_step = MagicMock()
         response = client.post(
             "/recorder/record",
@@ -567,9 +589,7 @@ class TestRecorderEndpoints:
         mock_session.steps = []
         mock_session.export.return_value = "# Generated test\nclass TestRecording:\n    pass"
         mock_android_bridge.get_recorder_session.return_value = mock_session
-        response = client.get(
-            "/recorder/export?sessionId=sess123&lang=python&platform=android"
-        )
+        response = client.get("/recorder/export?sessionId=sess123&lang=python&platform=android")
         assert response.status_code == 200
         data = response.json()
         assert "script" in data
@@ -591,6 +611,7 @@ class TestRecorderEndpoints:
 
 
 # --- Command Execution ---
+
 
 class TestCommandExecution:
     @patch("main.get_bridge")
@@ -635,6 +656,7 @@ class TestCommandExecution:
 
 # --- CORS Middleware ---
 
+
 class TestCORS:
     def test_cors_allows_localhost(self, client):
         """CORS headers are set for localhost:5173."""
@@ -647,6 +669,7 @@ class TestCORS:
 
 # --- Request ID Middleware ---
 
+
 class TestRequestID:
     def test_request_id_header_present(self, client):
         """Every response includes X-Request-ID header."""
@@ -656,6 +679,7 @@ class TestRequestID:
     def test_request_id_is_uuid(self, client):
         """X-Request-ID is a valid UUID."""
         import uuid
+
         response = client.get("/health")
         req_id = response.headers["X-Request-ID"]
         # Should not raise ValueError

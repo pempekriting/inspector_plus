@@ -1,35 +1,34 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
-from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, Response
-from contextlib import asynccontextmanager
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, Any
-from io import BytesIO
 import asyncio
 import base64
-import logging
-import tempfile
-import os
-import uuid
-import time
-import subprocess
 import json
+import logging
+import os
 import re
 import shutil
+import subprocess
+import time
+import uuid
+from contextlib import asynccontextmanager
+from typing import Any
 
-from device import create_bridge_for_device, AndroidDeviceBridge, DeviceBridgeBase
-from device.ios_bridge import IOSDeviceBridge
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, Field, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
 from commands.app_commands import AppCommands
 from commands.ios_app_commands import IOSAppCommands
+from device import AndroidDeviceBridge, DeviceBridgeBase
+from device.ios_bridge import IOSDeviceBridge
 from network.routes import router as network_router
-
 
 # --- App version from env or default ---
 __version__ = os.environ.get("APP_VERSION", "0.0.1")
+
 
 # --- Resolve adb path ---
 def _get_adb_path() -> str:
@@ -39,6 +38,7 @@ def _get_adb_path() -> str:
         if os.path.isfile(adb_path):
             return adb_path
     return shutil.which("adb") or "adb"
+
 
 _ADB_PATH = _get_adb_path()
 
@@ -53,6 +53,7 @@ async def lifespan(app: FastAPI):
     # Shutdown mitmproxy
     try:
         from network.mitm_manager import MitmproxyManager
+
         MitmproxyManager.get_instance().stop()
     except Exception:
         pass
@@ -72,34 +73,103 @@ app = FastAPI(title="Inspector Plus API", version=__version__, lifespan=lifespan
 # --- Security: ADB Command Allowlist ---
 _ALLOWED_ADB_PREFIXES = [
     # Input events
-    "input text", "input keyevent", "input tap", "input swipe", "input press",
-    "input roll", "input drag", "input mouse",
+    "input text",
+    "input keyevent",
+    "input tap",
+    "input swipe",
+    "input press",
+    "input roll",
+    "input drag",
+    "input mouse",
     # Package manager
-    "pm list", "pm path", "pm dump", "pm install", "pm uninstall", "pm clear",
-    "pm hide", "pm unhide", "pm disable", "pm enable",
+    "pm list",
+    "pm path",
+    "pm dump",
+    "pm install",
+    "pm uninstall",
+    "pm clear",
+    "pm hide",
+    "pm unhide",
+    "pm disable",
+    "pm enable",
     # App launch
-    "am start", "am force-stop", "am kill", "am broadcast", "am monitor", "am stack",
+    "am start",
+    "am force-stop",
+    "am kill",
+    "am broadcast",
+    "am monitor",
+    "am stack",
     # Screenshot / screenrecord
-    "screencap", "screenrecord",
+    "screencap",
+    "screenrecord",
     # dumpsys
-    "dumpsys", "dump",
+    "dumpsys",
+    "dump",
     # Settings / system
-    "settings get", "settings put", "getprop", "setprop", "wm",
+    "settings get",
+    "settings put",
+    "getprop",
+    "setprop",
+    "wm",
     # Misc read-only / safe
-    "cat", "ls", "mkdir", "touch", "chmod", "chown",
-    "netstat", "ip addr", "ps", "top", "free", "df", "du",
-    "getevent", "uiautomator",
+    "cat",
+    "ls",
+    "mkdir",
+    "touch",
+    "chmod",
+    "chown",
+    "netstat",
+    "ip addr",
+    "ps",
+    "top",
+    "free",
+    "df",
+    "du",
+    "getevent",
+    "uiautomator",
     # Shell utilities
-    "monkey", "id", "uname", "whoami", "getconf", "date", "pwd", "echo",
+    "monkey",
+    "id",
+    "uname",
+    "whoami",
+    "getconf",
+    "date",
+    "pwd",
+    "echo",
 ]
 
 _SAFE_SHORT_COMMANDS = {
-    "ls", "ps", "cat", "pwd", "date", "echo", "id", "uname", "whoami", "getconf", "uptime",
+    "ls",
+    "ps",
+    "cat",
+    "pwd",
+    "date",
+    "echo",
+    "id",
+    "uname",
+    "whoami",
+    "getconf",
+    "uptime",
 }
 
 _DANGEROUS_EXECS = {
-    "reboot", "shutdown", "mount", "umount", "dd", "mkfs", "fdisk", "sfdisk",
-    "Format", "del ", "rm -rf", "mv /", "cp /", "wget", "curl", "nc ", "ncat",
+    "reboot",
+    "shutdown",
+    "mount",
+    "umount",
+    "dd",
+    "mkfs",
+    "fdisk",
+    "sfdisk",
+    "Format",
+    "del ",
+    "rm -rf",
+    "mv /",
+    "cp /",
+    "wget",
+    "curl",
+    "nc ",
+    "ncat",
 }
 
 _DANGEROUS_CHARS = ["&&", "||", "|", ";", "`", "$(", ">", ">>", "<"]
@@ -118,7 +188,7 @@ def _validate_adb_command(command: str) -> tuple[bool, str]:
     for exe in _DANGEROUS_EXECS:
         if re.match(rf"^\s*{re.escape(exe)}(\s|$)", cmd_lower):
             return False, f"Command '{exe}' is not allowed"
-        if re.search(rf"su\s+.{0,50}\s+{re.escape(exe)}(\s|$)", cmd_lower):
+        if re.search(rf"su\s+.{0, 50}\s+{re.escape(exe)}(\s|$)", cmd_lower):
             return False, f"Command '{exe}' is not allowed"
     # Allow known safe prefixes
     for prefix in sorted(_ALLOWED_ADB_PREFIXES, key=len, reverse=True):
@@ -140,7 +210,7 @@ def _convert_coord(value: int, max_value: int, coordinate_mode: str) -> int:
 def _get_device_resolution(bridge) -> tuple[int, int]:
     """Get device resolution from bridge."""
     try:
-        if hasattr(bridge, 'get_device_resolution'):
+        if hasattr(bridge, "get_device_resolution"):
             res = bridge.get_device_resolution()
             return res.get("width", 1080), res.get("height", 1920)
     except Exception:
@@ -164,17 +234,14 @@ class DeviceNotFoundError(AppError):
         super().__init__(detail, "DEVICE_NOT_FOUND", 404)
 
 
-
 class HierarchyNotFoundError(AppError):
     def __init__(self, detail: str = "No hierarchy found. Is a device connected?"):
         super().__init__(detail, "HIERARCHY_NOT_FOUND", 404)
 
 
-
 class CommandExecutionError(AppError):
     def __init__(self, detail: str):
         super().__init__(detail, "COMMAND_EXECUTION_FAILED", 500)
-
 
 
 class ScreenshotError(AppError):
@@ -200,9 +267,8 @@ def _get_ios_devices() -> list[dict]:
     def run_idb(args: list[str], timeout: int = 30):
         """Run idb from PATH or uv run fallback."""
         if shutil.which("idb"):
-            return subprocess.run(["idb"] + args, capture_output=True, text=True, timeout=timeout)
-        else:
-            return subprocess.run(["uv", "run", "idb"] + args, capture_output=True, text=True, timeout=timeout)
+            return subprocess.run(["idb", *args], capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(["uv", "run", "idb", *args], capture_output=True, text=True, timeout=timeout)
 
     # Try idb first
     try:
@@ -217,17 +283,19 @@ def _get_ios_devices() -> list[dict]:
                 except json.JSONDecodeError:
                     continue
                 if target.get("state") == "Booted":
-                    devices.append({
-                        "udid": target.get("udid", ""),
-                        "name": target.get("name", "Unknown"),
-                        "platform": "ios",
-                        "state": target.get("state", "Shutdown"),
-                        "os_version": target.get("os_version", ""),
-                        "architecture": target.get("architecture", ""),
-                        "device_type": target.get("type", ""),
-                        "model": target.get("name", "Unknown"),
-                        "manufacturer": "Apple",
-                    })
+                    devices.append(
+                        {
+                            "udid": target.get("udid", ""),
+                            "name": target.get("name", "Unknown"),
+                            "platform": "ios",
+                            "state": target.get("state", "Shutdown"),
+                            "os_version": target.get("os_version", ""),
+                            "architecture": target.get("architecture", ""),
+                            "device_type": target.get("type", ""),
+                            "model": target.get("name", "Unknown"),
+                            "manufacturer": "Apple",
+                        }
+                    )
             return devices
     except Exception:
         pass
@@ -236,7 +304,9 @@ def _get_ios_devices() -> list[dict]:
     try:
         result = subprocess.run(
             ["xcrun", "simctl", "list", "devices", "--json"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             data = json.loads(result.stdout)
@@ -244,23 +314,25 @@ def _get_ios_devices() -> list[dict]:
                 os_version = runtime.replace("com.apple.CoreSimulator.SimRuntime.iOS-", "").replace("-", ".")
                 for sim in sims:
                     if sim.get("isAvailable", False) and sim.get("state") == "Booted":
-                        devices.append({
-                            "udid": sim.get("udid", ""),
-                            "name": sim.get("name", "Unknown"),
-                            "platform": "ios",
-                            "state": "Booted",
-                            "os_version": os_version,
-                            "architecture": "arm64",
-                            "device_type": sim.get("deviceTypeIdentifier", ""),
-                            "model": sim.get("name", "Unknown"),
-                            "manufacturer": "Apple",
-                        })
+                        devices.append(
+                            {
+                                "udid": sim.get("udid", ""),
+                                "name": sim.get("name", "Unknown"),
+                                "platform": "ios",
+                                "state": "Booted",
+                                "os_version": os_version,
+                                "architecture": "arm64",
+                                "device_type": sim.get("deviceTypeIdentifier", ""),
+                                "model": sim.get("name", "Unknown"),
+                                "manufacturer": "Apple",
+                            }
+                        )
     except Exception:
         pass
     return devices
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -277,7 +349,7 @@ async def add_request_id(request: Request, call_next):
             "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
-        }
+        },
     )
 
     response = await call_next(request)
@@ -291,7 +363,7 @@ async def add_request_id(request: Request, call_next):
             "path": request.url.path,
             "status_code": response.status_code,
             "duration_ms": round(duration_ms, 2),
-        }
+        },
     )
 
     response.headers["X-Request-ID"] = request_id
@@ -324,7 +396,6 @@ async def health_check():
     return {"status": "ok", "version": __version__}
 
 
-
 @app.get("/ready")
 async def ready_check():
     """Readiness probe - device is connected and hierarchy accessible."""
@@ -339,8 +410,11 @@ async def ready_check():
         logger.warning("Ready check failed: %s", str(e))
         return JSONResponse(status_code=503, content={"ready": False, "error": str(e)})
 
+
 # --- CORS Origins from env ---
-_cors_origins_str = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,app://localhost,tauri://localhost")
+_cors_origins_str = os.environ.get(
+    "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,app://localhost,tauri://localhost"
+)
 _cors_origins = [o.strip() for o in _cors_origins_str.split(",") if o.strip()]
 
 app.add_middleware(
@@ -352,7 +426,7 @@ app.add_middleware(
 )
 
 # Bridge management - singleton per platform
-_android_bridge: Optional[AndroidDeviceBridge] = None
+_android_bridge: AndroidDeviceBridge | None = None
 _android_bridges: dict[str, AndroidDeviceBridge] = {}
 _ios_bridges: dict[str, IOSDeviceBridge] = {}
 
@@ -362,7 +436,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-
 def _get_android_bridge() -> AndroidDeviceBridge:
     global _android_bridge
     if _android_bridge is None:
@@ -370,7 +443,7 @@ def _get_android_bridge() -> AndroidDeviceBridge:
     return _android_bridge
 
 
-def get_bridge(udid: Optional[str] = None) -> DeviceBridgeBase:
+def get_bridge(udid: str | None = None) -> DeviceBridgeBase:
     """Get appropriate bridge for device. Returns None if device can't be resolved."""
     # Resolve empty or None udid to a real device serial
     if not udid:
@@ -396,7 +469,7 @@ def _is_ios_udid(udid: str) -> bool:
     return len(udid) >= 24 and all(c in "0123456789ABCDEFabcdef-" for c in udid)
 
 
-def _get_first_android_device() -> Optional[str]:
+def _get_first_android_device() -> str | None:
     """Return serial of first connected Android device."""
     try:
         result = subprocess.run([_ADB_PATH, "devices"], capture_output=True, text=True, timeout=5)
@@ -459,32 +532,32 @@ class PressKeyRequest(BaseModel):
 
 class GestureAction(BaseModel):
     type: str = Field(..., description="Action type: move, pointerDown, pointerUp, pause")
-    x: Optional[int] = Field(None, ge=0, le=10000, description="X coordinate (required for move)")
-    y: Optional[int] = Field(None, ge=0, le=10000, description="Y coordinate (required for move)")
-    duration: Optional[int] = Field(None, ge=0, le=10000, description="Duration in ms (for move or pause)")
-    pointer: Optional[int] = Field(None, ge=0, le=4, description="Pointer index 0-4 (default 0)")
-    button: Optional[str] = Field(None, description="Button: left, right (for pointerDown/Up)")
+    x: int | None = Field(None, ge=0, le=10000, description="X coordinate (required for move)")
+    y: int | None = Field(None, ge=0, le=10000, description="Y coordinate (required for move)")
+    duration: int | None = Field(None, ge=0, le=10000, description="Duration in ms (for move or pause)")
+    pointer: int | None = Field(None, ge=0, le=4, description="Pointer index 0-4 (default 0)")
+    button: str | None = Field(None, description="Button: left, right (for pointerDown/Up)")
 
 
 class GestureExecuteRequest(BaseModel):
     actions: list[GestureAction] = Field(..., min_length=1, description="List of gesture actions")
     coordinateMode: str = Field(default="absolute", description="absolute or relative")
-    udid: Optional[str] = None
+    udid: str | None = None
 
 
 class CommandRequest(BaseModel):
     type: str = Field(..., min_length=1, max_length=50, description="Command type")
-    params: Optional[dict[str, Any]] = None
+    params: dict[str, Any] | None = None
 
 
 class CommandResponse(BaseModel):
     success: bool
     output: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class SelectDeviceRequest(BaseModel):
-    udid: Optional[str] = None
+    udid: str | None = None
 
 
 class AdbCommandRequest(BaseModel):
@@ -519,7 +592,7 @@ class RecordStepRequest(BaseModel):
     action: str
     nodeId: str
     locator: dict
-    value: Optional[str] = None
+    value: str | None = None
 
 
 class ExportRequest(BaseModel):
@@ -530,7 +603,7 @@ class ExportRequest(BaseModel):
 
 @app.get("/hierarchy")
 @limiter.limit("5/second")
-async def get_hierarchy(request: Request, udid: Optional[str] = None):
+async def get_hierarchy(request: Request, udid: str | None = None):
     try:
         bridge = get_bridge(udid)
         if bridge is None:
@@ -542,12 +615,12 @@ async def get_hierarchy(request: Request, udid: Optional[str] = None):
     except (HTTPException, AppError):
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get hierarchy: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get hierarchy: {e!s}")
 
 
 @app.get("/hierarchy-and-screenshot")
 @limiter.limit("5/second")
-async def get_hierarchy_and_screenshot(request: Request, udid: Optional[str] = None):
+async def get_hierarchy_and_screenshot(request: Request, udid: str | None = None):
     """Combined endpoint: fetch hierarchy + screenshot in single ADB call.
     Returns base64-encoded screenshot to keep JSON serializable.
     """
@@ -563,14 +636,14 @@ async def get_hierarchy_and_screenshot(request: Request, udid: Optional[str] = N
     except AppError:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get hierarchy+screenshot: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get hierarchy+screenshot: {e!s}")
 
 
 @app.get("/hierarchy/search")
 async def search_hierarchy(
     query: str,
     filter: str = "xpath",
-    udid: Optional[str] = None,
+    udid: str | None = None,
 ):
     """Search hierarchy using specified filter type.
 
@@ -597,13 +670,13 @@ async def search_hierarchy(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to search hierarchy: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to search hierarchy: {e!s}")
 
 
 @app.get("/hierarchy/find")
 async def find_hierarchy(
     q: str,
-    udid: Optional[str] = None,
+    udid: str | None = None,
     regex: bool = False,
 ):
     """F4: Search hierarchy tree for nodes matching query.
@@ -616,6 +689,7 @@ async def find_hierarchy(
         {"results": [{"nodeId": "...", "matchField": "text", "matchedText": "...", "node": {...}}], "count": N}
     """
     import re
+
     try:
         bridge = get_bridge(udid)
         if bridge is None:
@@ -652,13 +726,15 @@ async def find_hierarchy(
         def walk(node: dict):
             matched, match_field, matched_text = matches_node(node, q, regex)
             if matched:
-                results.append({
-                    "nodeId": node.get("id", ""),
-                    "matchField": match_field,
-                    "matchedText": matched_text[:100] if matched_text else "",
-                    "node": node,
-                })
-            for child in (node.get("children") or []):
+                results.append(
+                    {
+                        "nodeId": node.get("id", ""),
+                        "matchField": match_field,
+                        "matchedText": matched_text[:100] if matched_text else "",
+                        "node": node,
+                    }
+                )
+            for child in node.get("children") or []:
                 walk(child)
 
         walk(tree)
@@ -666,10 +742,11 @@ async def find_hierarchy(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to find hierarchy nodes: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to find hierarchy nodes: {e!s}")
+
 
 @app.get("/hierarchy/locators")
-async def get_locators(nodeId: str, udid: Optional[str] = None):
+async def get_locators(nodeId: str, udid: str | None = None):
     """Generate Appium locator strategies for a UI node by its ID.
 
     Args:
@@ -686,22 +763,18 @@ async def get_locators(nodeId: str, udid: Optional[str] = None):
         # Walk tree to find the node
         node = bridge._find_node_by_id(hierarchy, nodeId)
         if node is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Node with id '{nodeId}' not found in hierarchy"
-            )
-        result = bridge.generate_locators(node)
-        return result
+            raise HTTPException(status_code=404, detail=f"Node with id '{nodeId}' not found in hierarchy")
+        return bridge.generate_locators(node)
     except HTTPException:
         raise
     except AppError:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate locators: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate locators: {e!s}")
 
 
 @app.post("/hierarchy/audit")
-async def audit_accessibility(udid: Optional[str] = None):
+async def audit_accessibility(udid: str | None = None):
     """Run WCAG accessibility audit against current hierarchy.
 
     Args:
@@ -714,18 +787,17 @@ async def audit_accessibility(udid: Optional[str] = None):
         tree = bridge.get_hierarchy()
         if not tree or tree.get("error"):
             raise HierarchyNotFoundError(tree.get("error") if tree else None)
-        result = bridge.audit_accessibility(tree)
-        return result
+        return bridge.audit_accessibility(tree)
     except AppError:
         raise
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Accessibility audit failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Accessibility audit failed: {e!s}")
 
 
 @app.post("/tap")
-async def tap_coordinates(req: TapRequest, udid: Optional[str] = None):
+async def tap_coordinates(req: TapRequest, udid: str | None = None):
     try:
         # Resolve udid to actual device serial if not provided
         resolved_udid = udid or _get_first_android_device() or os.environ.get("ANDROID_SERIAL")
@@ -745,7 +817,7 @@ async def tap_coordinates(req: TapRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to tap: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to tap: {e!s}")
 
 
 _KEYCODE_MAP = {
@@ -755,7 +827,7 @@ _KEYCODE_MAP = {
 }
 
 
-def _resolve_android_udid(udid: Optional[str]) -> Optional[str]:
+def _resolve_android_udid(udid: str | None) -> str | None:
     """Resolve udid to Android device serial, checking env and first device."""
     if udid:
         return udid
@@ -763,7 +835,7 @@ def _resolve_android_udid(udid: Optional[str]) -> Optional[str]:
 
 
 @app.post("/device/press-key")
-async def press_key(req: PressKeyRequest, udid: Optional[str] = None):
+async def press_key(req: PressKeyRequest, udid: str | None = None):
     keycode = _KEYCODE_MAP.get(req.key)
     if keycode is None:
         raise HTTPException(status_code=400, detail=f"Unknown key: {req.key}. Use: home, back, recent")
@@ -777,8 +849,7 @@ async def press_key(req: PressKeyRequest, udid: Optional[str] = None):
             if req.key == "home":
                 bridge.press_button("HOME")
                 return {"success": True}
-            else:
-                raise UnsupportedOnPlatformError(req.key, "iOS")
+            raise UnsupportedOnPlatformError(req.key, "iOS")
         result = bridge.execute_adb_command(f"input keyevent {keycode}")
         if result.get("exitCode") != 0:
             raise HTTPException(status_code=500, detail=result.get("error", "Key press failed"))
@@ -788,11 +859,11 @@ async def press_key(req: PressKeyRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to press key: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to press key: {e!s}")
 
 
 @app.post("/device/swipe")
-async def swipe_device(req: SwipeRequest, udid: Optional[str] = None):
+async def swipe_device(req: SwipeRequest, udid: str | None = None):
     try:
         resolved = _resolve_android_udid(udid)
         bridge = get_bridge(resolved)
@@ -808,9 +879,7 @@ async def swipe_device(req: SwipeRequest, udid: Optional[str] = None):
         if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
             bridge.swipe(startX, startY, endX, endY, req.duration)
             return {"success": True}
-        result = bridge.execute_adb_command(
-            f"input swipe {startX} {startY} {endX} {endY} {req.duration}"
-        )
+        result = bridge.execute_adb_command(f"input swipe {startX} {startY} {endX} {endY} {req.duration}")
         if result.get("exitCode") != 0:
             raise HTTPException(status_code=500, detail=result.get("error", "Swipe failed"))
         return {"success": True}
@@ -819,11 +888,11 @@ async def swipe_device(req: SwipeRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to swipe: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to swipe: {e!s}")
 
 
 @app.post("/device/drag")
-async def drag_device(req: DragRequest, udid: Optional[str] = None):
+async def drag_device(req: DragRequest, udid: str | None = None):
     try:
         resolved = _resolve_android_udid(udid)
         bridge = get_bridge(resolved)
@@ -838,9 +907,7 @@ async def drag_device(req: DragRequest, udid: Optional[str] = None):
         # Drag is not supported on iOS
         if isinstance(bridge, IOSDeviceBridge) or (_is_ios_udid(resolved) if resolved else False):
             raise UnsupportedOnPlatformError("drag", "iOS")
-        result = bridge.execute_adb_command(
-            f"input drag {startX} {startY} {endX} {endY} {req.duration}"
-        )
+        result = bridge.execute_adb_command(f"input drag {startX} {startY} {endX} {endY} {req.duration}")
         if result.get("exitCode") != 0:
             raise HTTPException(status_code=500, detail=result.get("error", "Drag failed"))
         return {"success": True}
@@ -849,11 +916,11 @@ async def drag_device(req: DragRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to drag: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to drag: {e!s}")
 
 
 @app.post("/device/pinch")
-async def pinch_device(req: PinchRequest, udid: Optional[str] = None):
+async def pinch_device(req: PinchRequest, udid: str | None = None):
     """Pinch gesture using input roll command (two-finger rotation gesture)."""
     try:
         resolved = _resolve_android_udid(udid)
@@ -877,11 +944,11 @@ async def pinch_device(req: PinchRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to pinch: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to pinch: {e!s}")
 
 
 @app.post("/gesture/execute")
-async def gesture_execute(req: GestureExecuteRequest, udid: Optional[str] = None):
+async def gesture_execute(req: GestureExecuteRequest, udid: str | None = None):
     """Execute multi-pointer gesture sequences.
     Supports: move, pointerDown, pointerUp, pause actions.
     Up to 5 simultaneous pointers (0-4).
@@ -898,13 +965,12 @@ async def gesture_execute(req: GestureExecuteRequest, udid: Optional[str] = None
         # Convert relative to absolute if needed
         device_width = 1080
         device_height = 1920
-        if req.coordinateMode == "relative":
-            if hasattr(bridge, 'get_device_resolution'):
-                res = bridge.get_device_resolution()
-                device_width = res.get("width", 1080)
-                device_height = res.get("height", 1920)
+        if req.coordinateMode == "relative" and hasattr(bridge, "get_device_resolution"):
+            res = bridge.get_device_resolution()
+            device_width = res.get("width", 1080)
+            device_height = res.get("height", 1920)
 
-        def to_absolute(val: Optional[int], max_val: int) -> Optional[int]:
+        def to_absolute(val: int | None, max_val: int) -> int | None:
             if val is None:
                 return None
             if req.coordinateMode == "relative":
@@ -929,54 +995,54 @@ async def gesture_execute(req: GestureExecuteRequest, udid: Optional[str] = None
                     pass
                 elif action.type == "pause":
                     import time
+
                     time.sleep((action.duration or 100) / 1000)
             # Fallback: single pointer swipe for simple cases
             return {"success": True, "message": "iOS multi-pointer gesture executed"}
-        else:
-            # Android: use input command sequence
-            # Build the gesture sequence using Android's multi-touch input
-            for action in req.actions:
-                if action.type == "move":
-                    x = to_absolute(action.x, device_width)
-                    y = to_absolute(action.y, device_height)
-                    pointer = action.pointer or 0
-                    duration = action.duration or 100
-                    if x is not None and y is not None:
-                        cmd = f"input swipe {x} {y} {x} {y} {duration}"
-                        result = bridge.execute_adb_command(cmd)
-                        if result.get("exitCode") != 0:
-                            raise HTTPException(status_code=500, detail=f"Move failed: {result.get('error')}")
-                elif action.type == "pointerDown":
-                    x = to_absolute(action.x, device_width)
-                    y = to_absolute(action.y, device_height)
-                    if x is not None and y is not None:
-                        cmd = f"input tap {x} {y}"
-                        result = bridge.execute_adb_command(cmd)
-                        if result.get("exitCode") != 0:
-                            raise HTTPException(status_code=500, detail=f"PointerDown failed: {result.get('error')}")
-                elif action.type == "pointerUp":
-                    # Release is implicit after tap
-                    pass
-                elif action.type == "pause":
-                    import time
-                    time.sleep((action.duration or 100) / 1000)
+        # Android: use input command sequence
+        # Build the gesture sequence using Android's multi-touch input
+        for action in req.actions:
+            if action.type == "move":
+                x = to_absolute(action.x, device_width)
+                y = to_absolute(action.y, device_height)
+                duration = action.duration or 100
+                if x is not None and y is not None:
+                    cmd = f"input swipe {x} {y} {x} {y} {duration}"
+                    result = bridge.execute_adb_command(cmd)
+                    if result.get("exitCode") != 0:
+                        raise HTTPException(status_code=500, detail=f"Move failed: {result.get('error')}")
+            elif action.type == "pointerDown":
+                x = to_absolute(action.x, device_width)
+                y = to_absolute(action.y, device_height)
+                if x is not None and y is not None:
+                    cmd = f"input tap {x} {y}"
+                    result = bridge.execute_adb_command(cmd)
+                    if result.get("exitCode") != 0:
+                        raise HTTPException(status_code=500, detail=f"PointerDown failed: {result.get('error')}")
+            elif action.type == "pointerUp":
+                # Release is implicit after tap
+                pass
+            elif action.type == "pause":
+                import time
 
-            return {"success": True}
+                time.sleep((action.duration or 100) / 1000)
+
+        return {"success": True}
     except AppError:
         raise
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to execute gesture: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute gesture: {e!s}")
 
 
 class ExecuteScriptRequest(BaseModel):
     script: str = Field(..., min_length=1, max_length=2000, description="Shell script or command to execute")
-    platform: Optional[str] = Field(None, description="Override platform: android or ios")
+    platform: str | None = Field(None, description="Override platform: android or ios")
 
 
 @app.post("/execute")
-async def execute_script(req: ExecuteScriptRequest, udid: Optional[str] = None):
+async def execute_script(req: ExecuteScriptRequest, udid: str | None = None):
     """Execute an arbitrary shell script or command on the device.
     For Android: executes via ADB shell
     For iOS: executes via idb
@@ -984,9 +1050,9 @@ async def execute_script(req: ExecuteScriptRequest, udid: Optional[str] = None):
     try:
         # Determine platform
         is_ios = False
-        if req.platform == 'ios':
+        if req.platform == "ios":
             is_ios = True
-        elif req.platform == 'android':
+        elif req.platform == "android":
             is_ios = False
         else:
             # Auto-detect from device
@@ -999,7 +1065,7 @@ async def execute_script(req: ExecuteScriptRequest, udid: Optional[str] = None):
                 raise DeviceNotFoundError("iOS device required")
             # iOS: use idb
             result = subprocess.run(
-                ["idb", "run", udid, "--"] + req.script.split(),
+                ["idb", "run", udid, "--", *req.script.split()],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -1010,33 +1076,32 @@ async def execute_script(req: ExecuteScriptRequest, udid: Optional[str] = None):
                 "error": result.stderr.strip() if result.stderr else None,
                 "exitCode": result.returncode,
             }
-        else:
-            # Android: use ADB shell
-            resolved = _resolve_android_udid(udid)
-            bridge = get_bridge(resolved)
-            if bridge is None:
-                raise DeviceNotFoundError()
-            # Validate command is in allowlist
-            ok, reason = _validate_adb_command(req.script)
-            if not ok:
-                raise HTTPException(status_code=400, detail=f"Command not allowed: {reason}")
-            result = bridge.execute_adb_command(req.script)
-            return {
-                "success": result.get("exitCode") == 0,
-                "output": result.get("output", ""),
-                "error": result.get("error"),
-                "exitCode": result.get("exitCode"),
-            }
+        # Android: use ADB shell
+        resolved = _resolve_android_udid(udid)
+        bridge = get_bridge(resolved)
+        if bridge is None:
+            raise DeviceNotFoundError()
+        # Validate command is in allowlist
+        ok, reason = _validate_adb_command(req.script)
+        if not ok:
+            raise HTTPException(status_code=400, detail=f"Command not allowed: {reason}")
+        result = bridge.execute_adb_command(req.script)
+        return {
+            "success": result.get("exitCode") == 0,
+            "output": result.get("output", ""),
+            "error": result.get("error"),
+            "exitCode": result.get("exitCode"),
+        }
     except AppError:
         raise
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to execute script: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute script: {e!s}")
 
 
 @app.post("/input/text")
-async def input_text(req: TextInputRequest, udid: Optional[str] = None):
+async def input_text(req: TextInputRequest, udid: str | None = None):
     try:
         resolved = _resolve_android_udid(udid)
         bridge = get_bridge(resolved)
@@ -1051,7 +1116,7 @@ async def input_text(req: TextInputRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to input text: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to input text: {e!s}")
 
 
 @app.get("/device/status")
@@ -1082,7 +1147,7 @@ async def select_device(req: SelectDeviceRequest):
 
 
 @app.post("/device/adb")
-async def execute_adb(req: AdbCommandRequest, udid: Optional[str] = None):
+async def execute_adb(req: AdbCommandRequest, udid: str | None = None):
     """Execute a safe ADB shell command on the device.
 
     Args:
@@ -1099,18 +1164,17 @@ async def execute_adb(req: AdbCommandRequest, udid: Optional[str] = None):
         if bridge is None:
             raise DeviceNotFoundError()
         logger.info(f"ADB command executed: {req.command[:200]}")
-        result = bridge.execute_adb_command(req.command)
-        return result
+        return bridge.execute_adb_command(req.command)
     except AppError:
         raise
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to execute ADB command: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to execute ADB command: {e!s}")
 
 
 @app.get("/device/contexts")
-async def get_contexts(udid: Optional[str] = None):
+async def get_contexts(udid: str | None = None):
     try:
         bridge = get_bridge(udid)
         if bridge is None:
@@ -1121,11 +1185,11 @@ async def get_contexts(udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get contexts: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get contexts: {e!s}")
 
 
 @app.post("/device/switch-context")
-async def switch_context(req: SwitchContextRequest, udid: Optional[str] = None):
+async def switch_context(req: SwitchContextRequest, udid: str | None = None):
     """Switch to a different context (native or webview). Validates contextId against known contexts."""
     try:
         bridge = get_bridge(udid)
@@ -1136,8 +1200,7 @@ async def switch_context(req: SwitchContextRequest, udid: Optional[str] = None):
         if req.contextId not in valid_ids:
             raise HTTPException(
                 status_code=400,
-                detail=f"contextId '{req.contextId}' is not in the current context list. "
-                       f"Available: {valid_ids}",
+                detail=f"contextId '{req.contextId}' is not in the current context list. Available: {valid_ids}",
             )
         success = bridge.switch_context(req.contextId)
         return {"success": success}
@@ -1146,11 +1209,11 @@ async def switch_context(req: SwitchContextRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to switch context: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to switch context: {e!s}")
 
 
 @app.post("/recorder/record")
-async def record_step(req: RecordStepRequest, udid: Optional[str] = None):
+async def record_step(req: RecordStepRequest, udid: str | None = None):
     try:
         bridge = get_bridge(udid)
         if bridge is None:
@@ -1163,7 +1226,7 @@ async def record_step(req: RecordStepRequest, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to record step: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to record step: {e!s}")
 
 
 @app.get("/recorder/export")
@@ -1171,7 +1234,7 @@ async def export_recording(
     sessionId: str,
     lang: str = "python",
     platform: str = "android",
-    udid: Optional[str] = None,
+    udid: str | None = None,
 ):
     try:
         bridge = get_bridge(udid)
@@ -1190,11 +1253,11 @@ async def export_recording(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to export recording: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to export recording: {e!s}")
 
 
 @app.post("/recorder/clear")
-async def clear_recording(sessionId: str, udid: Optional[str] = None):
+async def clear_recording(sessionId: str, udid: str | None = None):
     try:
         bridge = get_bridge(udid)
         if bridge is None:
@@ -1207,12 +1270,12 @@ async def clear_recording(sessionId: str, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear recording: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear recording: {e!s}")
 
 
 @app.get("/screenshot")
 @limiter.limit("5/second")
-async def get_screenshot(request: Request, udid: Optional[str] = None):
+async def get_screenshot(request: Request, udid: str | None = None):
     logger.info("[get_screenshot] udid=%s", repr(udid))
     try:
         bridge = get_bridge(udid)
@@ -1222,21 +1285,18 @@ async def get_screenshot(request: Request, udid: Optional[str] = None):
         screenshot = await asyncio.to_thread(bridge.get_screenshot)
         if not screenshot:
             raise HTTPException(status_code=404, detail="Failed to capture screenshot. Is a device connected?")
-        return Response(
-            screenshot,
-            media_type="image/png"
-        )
+        return Response(screenshot, media_type="image/png")
     except AppError:
         raise
     except HTTPException:
         raise
     except Exception as e:
         logger.error("[get_screenshot] Error: %s", str(e), exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to get screenshot: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get screenshot: {e!s}")
 
 
 @app.get("/app/commands/info")
-async def get_app_info(package: str, udid: Optional[str] = None):
+async def get_app_info(package: str, udid: str | None = None):
     """Get detailed information about an installed package.
 
     Returns version, SDK requirements, permissions, install timestamps.
@@ -1249,7 +1309,7 @@ async def get_app_info(package: str, udid: Optional[str] = None):
         if is_ios:
             app_commands = IOSAppCommands(udid=udid)
         else:
-            serial = udid or (bridge.serial if hasattr(bridge, 'serial') else None)
+            serial = udid or (bridge.serial if hasattr(bridge, "serial") else None)
             app_commands = AppCommands(serial=serial)
         success, info = app_commands.get_app_info(package)
         if not success:
@@ -1259,11 +1319,11 @@ async def get_app_info(package: str, udid: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get app info: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get app info: {e!s}")
 
 
 @app.post("/commands/execute")
-async def execute_command(req: CommandRequest, udid: Optional[str] = None):
+async def execute_command(req: CommandRequest, udid: str | None = None):
     """Execute a device command.
 
     Supported command types:
@@ -1279,7 +1339,7 @@ async def execute_command(req: CommandRequest, udid: Optional[str] = None):
         if is_ios:
             app_commands = IOSAppCommands(udid=udid)
         else:
-            serial = udid or (bridge.serial if hasattr(bridge, 'serial') else None)
+            serial = udid or (bridge.serial if hasattr(bridge, "serial") else None)
             app_commands = AppCommands(serial=serial)
 
         cmd_type = req.type
@@ -1292,37 +1352,36 @@ async def execute_command(req: CommandRequest, udid: Optional[str] = None):
             success, output = app_commands.install_app(apk_path)
             return {"success": success, "output": output, "error": None if success else output}
 
-        elif cmd_type == "check_app":
+        if cmd_type == "check_app":
             package = params.get("package")
             if not package:
                 return {"success": False, "output": "", "error": "package parameter is required"}
             success, output = app_commands.is_app_installed(package)
             return {"success": success, "output": output}
 
-        elif cmd_type == "uninstall_app":
+        if cmd_type == "uninstall_app":
             package = params.get("package")
             if not package:
                 return {"success": False, "output": "", "error": "package parameter is required"}
             success, output = app_commands.uninstall_app(package)
             return {"success": success, "output": output, "error": None if success else output}
 
-        elif cmd_type == "launch_app":
+        if cmd_type == "launch_app":
             package = params.get("package")
             if not package:
                 return {"success": False, "output": "", "error": "package parameter is required"}
             success, output = app_commands.launch_app(package)
             return {"success": success, "output": output, "error": None if success else output}
 
-        elif cmd_type == "list_apps":
+        if cmd_type == "list_apps":
             success, output = app_commands.list_installed_apps()
             return {"success": success, "output": output}
 
-        else:
-            return {"success": False, "output": "", "error": f"Unknown command type: {cmd_type}"}
+        return {"success": False, "output": "", "error": f"Unknown command type: {cmd_type}"}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Command execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Command execution failed: {e!s}")
 
 
 app.include_router(network_router, prefix="/network", tags=["network"])

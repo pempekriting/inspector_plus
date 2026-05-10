@@ -3,17 +3,22 @@ Tests for iOS app commands — IOSAppCommands class.
 Mocks subprocess to test IPA install/uninstall/launch/list in isolation.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-import subprocess
-
-import sys
 import os
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from commands.ios_app_commands import (
-    IOSAppCommands, _safe_bundle_id, _BUNDLE_ID_RE,
-    _read_info_plist, _get_simctl_app_info, _extract_permissions_from_plist,
+    _BUNDLE_ID_RE,
+    IOSAppCommands,
+    _extract_permissions_from_plist,
+    _get_simctl_app_info,
+    _read_info_plist,
+    _safe_bundle_id,
 )
 
 
@@ -55,6 +60,7 @@ class TestReadInfoPlist:
     @patch("commands.ios_app_commands.subprocess.run")
     def test_reads_plist_successfully(self, mock_run):
         import plistlib
+
         plist_data = {
             "CFBundleShortVersionString": "1.2.3",
             "CFBundleVersion": "456",
@@ -92,6 +98,7 @@ class TestGetSimctlAppInfo:
     @patch("commands.ios_app_commands.subprocess.run")
     def test_parses_xml_plist_output(self, mock_run):
         import plistlib
+
         plist_data = {"CFBundleVersion": "789", "CFBundleDisplayName": "TestApp"}
         xml_bytes = plistlib.dumps(plist_data)
         mock_run.return_value = mock_proc(stdout=xml_bytes.decode("utf-8"), returncode=0)
@@ -146,7 +153,7 @@ class TestIOSAppCommands:
     def test_install_app_success(self, mock_cmd):
         mock_cmd.return_value = mock_proc(stdout="Installing... Done", returncode=0)
         cmd = IOSAppCommands("00001234-0001234567890123")
-        success, output = cmd.install_app("/tmp/app.ipa")
+        success, _output = cmd.install_app("/tmp/app.ipa")
         assert success is True
         mock_cmd.assert_called_once()
 
@@ -202,7 +209,7 @@ class TestIOSAppCommands:
     def test_uninstall_app_success(self, mock_cmd):
         mock_cmd.return_value = mock_proc(stdout="Uninstalling... Done", returncode=0)
         cmd = IOSAppCommands()
-        success, output = cmd.uninstall_app("com.example.app")
+        success, _output = cmd.uninstall_app("com.example.app")
         assert success is True
 
     @patch("commands.ios_app_commands._idb_cmd")
@@ -266,7 +273,7 @@ class TestIOSAppCommands:
     def test_list_installed_apps_filters_non_bundle_lines(self, mock_cmd):
         mock_cmd.return_value = mock_proc(stdout="Header\ncom.example.app\n\n", returncode=0)
         cmd = IOSAppCommands()
-        success, output = cmd.list_installed_apps()
+        _success, output = cmd.list_installed_apps()
         lines = output.strip().split("\n")
         assert all("." in line for line in lines)
 
@@ -274,7 +281,7 @@ class TestIOSAppCommands:
     def test_list_installed_apps_failure(self, mock_cmd):
         mock_cmd.return_value = mock_proc(stderr="error", returncode=1)
         cmd = IOSAppCommands()
-        success, output = cmd.list_installed_apps()
+        success, _output = cmd.list_installed_apps()
         assert success is False
 
     @patch("commands.ios_app_commands._idb_cmd")
@@ -289,11 +296,24 @@ class TestIOSAppCommands:
     @patch("commands.ios_app_commands._idb_cmd")
     def test_get_app_info_success(self, mock_cmd, mock_plist):
         import json
+
         mock_cmd.return_value = mock_proc(
-            stdout=json.dumps([
-                {"bundle_id": "com.example.app", "name": "TestApp", "install_type": "user", "architectures": ["arm64"]},
-                {"bundle_id": "com.other.app", "name": "Other", "install_type": "system", "architectures": ["arm64"]},
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "bundle_id": "com.example.app",
+                        "name": "TestApp",
+                        "install_type": "user",
+                        "architectures": ["arm64"],
+                    },
+                    {
+                        "bundle_id": "com.other.app",
+                        "name": "Other",
+                        "install_type": "system",
+                        "architectures": ["arm64"],
+                    },
+                ]
+            ),
             returncode=0,
         )
         mock_plist.return_value = None  # No plist available
@@ -309,10 +329,18 @@ class TestIOSAppCommands:
     @patch("commands.ios_app_commands._idb_cmd")
     def test_get_app_info_enriched_from_plist(self, mock_cmd, mock_plist):
         import json
+
         mock_cmd.return_value = mock_proc(
-            stdout=json.dumps([
-                {"bundle_id": "com.example.app", "name": "TestApp", "install_type": "user", "architectures": ["arm64"]},
-            ]),
+            stdout=json.dumps(
+                [
+                    {
+                        "bundle_id": "com.example.app",
+                        "name": "TestApp",
+                        "install_type": "user",
+                        "architectures": ["arm64"],
+                    },
+                ]
+            ),
             returncode=0,
         )
         mock_plist.return_value = {

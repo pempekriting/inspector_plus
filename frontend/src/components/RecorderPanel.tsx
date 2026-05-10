@@ -1,29 +1,33 @@
-import { useState, useRef, useEffect } from "react";
-import { useRecording } from "../hooks/useRecording";
-import { useRecorder } from "../services/api";
-import { useThemeStore } from "../stores/themeStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useRecorderStore } from "../stores/recorderStore";
+import { useState, useRef, useEffect } from 'react';
+
+import { useRecording } from '../hooks/useRecording';
+import { useRecorder } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useRecorderStore } from '../stores/recorderStore';
+import { useThemeStore } from '../stores/themeStore';
 
 export function RecorderPanel() {
-  const langFromStore = useRecorderStore(s => s.lang);
-  const setLangInStore = useRecorderStore(s => s.setLang);
-  const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } = useRecording(langFromStore);
+  const langFromStore = useRecorderStore((s) => s.lang);
+  const setLangInStore = useRecorderStore((s) => s.setLang);
+  const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } =
+    useRecording(langFromStore);
   const [frameworkOpen, setFrameworkOpen] = useState(false);
   const frameworkRef = useRef<HTMLDivElement>(null);
   const { exportRecording } = useRecorder();
   const { theme } = useThemeStore();
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
   const { devices, selectedDevice } = useDeviceStore();
 
-  const selectedDeviceInfo = devices.find(d => d.udid === selectedDevice || d.serial === selectedDevice);
-  const platform = selectedDeviceInfo?.platform === "ios" ? "ios" : "android";
+  const selectedDeviceInfo = devices.find(
+    (d) => d.udid === selectedDevice || d.serial === selectedDevice
+  );
+  const platform = selectedDeviceInfo?.platform === 'ios' ? 'ios' : 'android';
 
   const handleExport = async () => {
     const result = await exportRecording({ sessionId, lang: langFromStore, platform });
-    const blob = new Blob([result.script], { type: "text/plain" });
+    const blob = new Blob([result.script], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = result.filename;
     a.click();
@@ -36,8 +40,8 @@ export function RecorderPanel() {
         setFrameworkOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   return (
@@ -48,15 +52,15 @@ export function RecorderPanel() {
           {/* Animated recording indicator */}
           <div className="neo-recorder-indicator" data-recording={isRecording}>
             <div className="neo-recorder-dot" />
-            <span className="neo-recorder-label">
-              {isRecording ? "REC" : "IDLE"}
-            </span>
+            <span className="neo-recorder-label">{isRecording ? 'REC' : 'IDLE'}</span>
           </div>
 
           <div className="flex flex-col">
             <span className="neo-recorder-title">Test Recorder</span>
             <span className="neo-recorder-meta">
-              {steps.length > 0 ? `${steps.length} step${steps.length !== 1 ? "s" : ""}` : "No steps yet"}
+              {steps.length > 0
+                ? `${steps.length} step${steps.length !== 1 ? 's' : ''}`
+                : 'No steps yet'}
             </span>
           </div>
         </div>
@@ -64,7 +68,7 @@ export function RecorderPanel() {
         {/* Record/Stop button - Neo brutalist style */}
         <button
           onClick={toggleRecording}
-          className={`neo-recorder-btn ${isRecording ? "neo-recorder-btn-stop" : "neo-recorder-btn-record"}`}
+          className={`neo-recorder-btn ${isRecording ? 'neo-recorder-btn-stop' : 'neo-recorder-btn-record'}`}
         >
           {isRecording ? (
             <>
@@ -89,17 +93,21 @@ export function RecorderPanel() {
         {steps.length === 0 ? (
           <div className="neo-recorder-empty">
             <div className="neo-recorder-empty-icon">
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                className="w-8 h-8"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
                 <circle cx="12" cy="12" r="10" strokeDasharray="4 2" />
                 <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
               </svg>
             </div>
             <span className="neo-recorder-empty-text">
-              {isRecording ? "Click elements to record steps" : "Press RECORD to start"}
+              {isRecording ? 'Click elements to record steps' : 'Press RECORD to start'}
             </span>
-            <span className="neo-recorder-empty-hint">
-              Shift+Click to record text input
-            </span>
+            <span className="neo-recorder-empty-hint">Shift+Click to record text input</span>
           </div>
         ) : (
           <div className="neo-recorder-steps-list">
@@ -107,12 +115,12 @@ export function RecorderPanel() {
               <div key={i} className="neo-recorder-step" style={{ animationDelay: `${i * 30}ms` }}>
                 <span className="neo-recorder-step-num">{i + 1}</span>
                 <div className="neo-recorder-step-content">
-                  <span className={`neo-recorder-step-action neo-recorder-step-action-${step.action}`}>
+                  <span
+                    className={`neo-recorder-step-action neo-recorder-step-action-${step.action}`}
+                  >
                     {step.action}
                   </span>
-                  <code className="neo-recorder-step-code">
-                    {step.code}
-                  </code>
+                  <code className="neo-recorder-step-code">{step.code}</code>
                 </div>
               </div>
             ))}
@@ -130,17 +138,29 @@ export function RecorderPanel() {
               onClick={() => setFrameworkOpen(!frameworkOpen)}
               className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[10px] font-bold transition-all duration-150"
               style={{
-                background: "var(--bg-elevated)",
-                color: "var(--text-secondary)",
-                border: "2px solid var(--border-default)",
-                boxShadow: "2px 2px 0 var(--border-default)",
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-secondary)',
+                border: '2px solid var(--border-default)',
+                boxShadow: '2px 2px 0 var(--border-default)',
               }}
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
               </svg>
               <span className="max-w-[80px] truncate capitalize">{langFromStore}</span>
-              <svg className={`w-3 h-3 transition-transform ${frameworkOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className={`w-3 h-3 transition-transform ${frameworkOpen ? 'rotate-180' : ''}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
@@ -148,13 +168,13 @@ export function RecorderPanel() {
               <div
                 className="absolute left-0 bottom-full mb-2 z-50 rounded-lg overflow-hidden"
                 style={{
-                  background: "var(--bg-secondary)",
-                  border: "var(--nb-border)",
-                  boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
-                  minWidth: "140px",
+                  background: 'var(--bg-secondary)',
+                  border: 'var(--nb-border)',
+                  boxShadow: isDark ? 'var(--nb-shadow-dark)' : 'var(--nb-shadow-light)',
+                  minWidth: '140px',
                 }}
               >
-                {(["python", "java", "javascript"] as const).map((l) => (
+                {(['python', 'java', 'javascript'] as const).map((l) => (
                   <button
                     key={l}
                     onClick={() => {
@@ -163,9 +183,9 @@ export function RecorderPanel() {
                     }}
                     className="w-full px-3 py-2.5 text-left text-[11px] font-medium transition-colors flex items-center gap-2"
                     style={{
-                      color: langFromStore === l ? "var(--accent-cyan)" : "var(--text-secondary)",
-                      background: langFromStore === l ? "var(--bg-tertiary)" : "transparent",
-                      borderBottom: "1px solid var(--border-subtle)",
+                      color: langFromStore === l ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                      background: langFromStore === l ? 'var(--bg-tertiary)' : 'transparent',
+                      borderBottom: '1px solid var(--border-subtle)',
                     }}
                   >
                     <span className="capitalize">{l}</span>
@@ -183,7 +203,13 @@ export function RecorderPanel() {
             disabled={steps.length === 0}
             className="neo-recorder-action neo-recorder-action-clear"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
             </svg>
             <span>CLEAR</span>
@@ -191,13 +217,19 @@ export function RecorderPanel() {
 
           <button
             onClick={() => {
-              const code = steps.map((s) => s.code).join("\n");
+              const code = steps.map((s) => s.code).join('\n');
               navigator.clipboard.writeText(code);
             }}
             disabled={steps.length === 0}
             className="neo-recorder-action neo-recorder-action-copy"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <rect x="9" y="9" width="13" height="13" rx="1" />
               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
@@ -209,7 +241,13 @@ export function RecorderPanel() {
             disabled={steps.length === 0}
             className="neo-recorder-action neo-recorder-action-export"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
             </svg>
             <span>EXPORT</span>

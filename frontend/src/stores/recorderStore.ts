@@ -1,7 +1,8 @@
-import { create } from "zustand";
-import type { RecordingStep } from "../types/shared";
+import { create } from 'zustand';
 
-type Lang = "python" | "java" | "javascript";
+import type { RecordingStep } from '../types/shared';
+
+type Lang = 'python' | 'java' | 'javascript';
 
 interface RecorderState {
   isRecording: boolean;
@@ -21,7 +22,7 @@ export const useRecorderStore = create<RecorderState>((set, get) => ({
   isRecording: false,
   sessionId: generateSessionId(),
   steps: [],
-  lang: "python",
+  lang: 'python',
 
   setRecording: (v: boolean) => {
     if (v) {

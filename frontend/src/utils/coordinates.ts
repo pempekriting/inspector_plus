@@ -1,4 +1,4 @@
-import { Bounds } from "../stores/hierarchyStore";
+import { Bounds } from '../stores/hierarchyStore';
 
 export interface CanvasSize {
   width: number;

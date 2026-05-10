@@ -1,18 +1,19 @@
-import { useCallback } from "react";
-import { useRecorderStore } from "../stores/recorderStore";
-import { useRecorder } from "../services/api";
-import { useDeviceStore } from "../stores/deviceStore";
-import type { RecordingStep } from "../types/shared";
+import { useCallback } from 'react';
 
-type Lang = "python" | "java" | "javascript";
+import { useRecorder } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useRecorderStore } from '../stores/recorderStore';
+import type { RecordingStep } from '../types/shared';
 
-export function useRecording(lang: Lang = "python") {
+type Lang = 'python' | 'java' | 'javascript';
+
+export function useRecording(lang: Lang = 'python') {
   const store = useRecorderStore();
   const { addStep: apiAddStep, clearRecording: apiClearRecording } = useRecorder();
   const { selectedDevice } = useDeviceStore();
 
   const recordStep = useCallback(
-    (step: Omit<RecordingStep, "code">) => {
+    (step: Omit<RecordingStep, 'code'>) => {
       const { sessionId } = useRecorderStore.getState();
 
       // Generate code for display based on current lang from store
@@ -64,18 +65,18 @@ export function useRecording(lang: Lang = "python") {
   };
 }
 
-function stepToCode(step: Omit<RecordingStep, "code">, lang: Lang): string {
+function stepToCode(step: Omit<RecordingStep, 'code'>, lang: Lang): string {
   const { action, locator, value } = step;
   const locStr = `${locator.strategy}("${locator.value}")`;
 
-  if (lang === "python") {
+  if (lang === 'python') {
     switch (action) {
-      case "click":
+      case 'click':
         return `self.driver.find_element(AppiumBy.${locStr}).click()`;
-      case "fill":
-        return `self.driver.find_element(AppiumBy.${locStr}).send_keys("${value || ""}")`;
-      case "swipe":
-        if (value && typeof value === "string") {
+      case 'fill':
+        return `self.driver.find_element(AppiumBy.${locStr}).send_keys("${value || ''}")`;
+      case 'swipe':
+        if (value && typeof value === 'string') {
           try {
             const { startX, startY, endX, endY } = JSON.parse(value);
             return `self.driver.execute_script("mobile: swipe", ${JSON.stringify({ startX, startY, endX, endY, speed: 5000 })})`;
@@ -84,37 +85,42 @@ function stepToCode(step: Omit<RecordingStep, "code">, lang: Lang): string {
           }
         }
         return `self.driver.execute_script("mobile: swipe", {...})`;
-      case "wait":
+      case 'wait':
         return `time.sleep(${value || 1})`;
       default:
         return `self.driver.find_element(AppiumBy.${locStr})`;
     }
-  } else if (lang === "java") {
-    const by = locator.strategy === "id" ? "By.id" : "By.xpath";
+  } else if (lang === 'java') {
+    const by = locator.strategy === 'id' ? 'By.id' : 'By.xpath';
     switch (action) {
-      case "click":
+      case 'click':
         return `WebElement el = driver.findElement(${by}("${locator.value}")); el.click();`;
-      case "fill":
-        return `WebElement el = driver.findElement(${by}("${locator.value}")); el.sendKeys("${value || ""}");`;
-      case "swipe":
+      case 'fill':
+        return `WebElement el = driver.findElement(${by}("${locator.value}")); el.sendKeys("${value || ''}");`;
+      case 'swipe':
         return `// swipe from ${value}`;
-      case "wait":
+      case 'wait':
         return `Thread.sleep(${(Number(value) || 1) * 1000});`;
       default:
         return `driver.findElement(${by}("${locator.value}"))`;
     }
   } else {
     // javascript - WebDriverIO
-    const strategy = locator.strategy === "id" ? "id" : locator.strategy === "accessibility-id" ? "accessibility id" : "xpath";
+    const strategy =
+      locator.strategy === 'id'
+        ? 'id'
+        : locator.strategy === 'accessibility-id'
+          ? 'accessibility id'
+          : 'xpath';
     switch (action) {
-      case "click":
+      case 'click':
         return `await (await driver.$("${locator.value}")).click()`;
-      case "fill":
-        return `await (await driver.$("${locator.value}")).setValue("${value || ""}")`;
-      case "swipe":
+      case 'fill':
+        return `await (await driver.$("${locator.value}")).setValue("${value || ''}")`;
+      case 'swipe':
         return `// swipe`;
-      case "wait":
-        return `await driver.pause(${(Number(value) || 1000)})`;
+      case 'wait':
+        return `await driver.pause(${Number(value) || 1000})`;
       default:
         return `await driver.$("${locator.value}")`;
     }

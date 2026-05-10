@@ -1,10 +1,11 @@
-import { PropertyRow } from "./PropertyRow";
-import { LocatorPanel } from "./LocatorPanel";
-import { EmptyState } from "./EmptyState";
-import { useHierarchyStore } from "../stores/hierarchyStore";
-import { useThemeStore } from "../stores/themeStore";
+import { useHierarchyStore } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
 
-const _ = (v: unknown, fallback = "-"): string => {
+import { EmptyState } from './EmptyState';
+import { LocatorPanel } from './LocatorPanel';
+import { PropertyRow } from './PropertyRow';
+
+const _ = (v: unknown, fallback = '-'): string => {
   if (v === undefined || v === null) return fallback as string;
   return String(v);
 };
@@ -52,7 +53,7 @@ export function PropertiesPanel() {
       <PropertyRow
         key="class"
         label="class"
-        value={node.className.split('.').pop() ?? "-"}
+        value={node.className.split('.').pop() ?? '-'}
         isDark={isDark}
       >
         <span
@@ -69,26 +70,156 @@ export function PropertiesPanel() {
     );
   }
   identityRows.push(
-    <PropertyRow key="package" label="package" value={_(node?.package)} valueColor={isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)'} isDark={isDark} />,
-    <PropertyRow key="resource-id" label="resource-id" value={node?.resourceId ? `#${node.resourceId}` : "-"} valueColor={isDark ? '#00e5cc' : '#0c4a6e'} isDark={isDark} />,
-    <PropertyRow key="text" label="text" value={node?.text ? `"${node.text}"` : "-"} valueColor={isDark ? '#fde047' : '#b45309'} italic isDark={isDark} />,
-    <PropertyRow key="content-desc" label="content-desc" value={_(node?.contentDesc)} valueColor={isDark ? '#a78bfa' : '#5b21b6'} isDark={isDark} />,
-    <PropertyRow key="label" label="label" value={node?.label ? `"${node.label}"` : "-"} valueColor={isDark ? '#a78bfa' : '#5b21b6'} isDark={isDark} />
+    <PropertyRow
+      key="package"
+      label="package"
+      value={_(node?.package)}
+      valueColor={isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)'}
+      isDark={isDark}
+    />,
+    <PropertyRow
+      key="resource-id"
+      label="resource-id"
+      value={node?.resourceId ? `#${node.resourceId}` : '-'}
+      valueColor={isDark ? '#00e5cc' : '#0c4a6e'}
+      isDark={isDark}
+    />,
+    <PropertyRow
+      key="text"
+      label="text"
+      value={node?.text ? `"${node.text}"` : '-'}
+      valueColor={isDark ? '#fde047' : '#b45309'}
+      italic
+      isDark={isDark}
+    />,
+    <PropertyRow
+      key="content-desc"
+      label="content-desc"
+      value={_(node?.contentDesc)}
+      valueColor={isDark ? '#a78bfa' : '#5b21b6'}
+      isDark={isDark}
+    />,
+    <PropertyRow
+      key="label"
+      label="label"
+      value={node?.label ? `"${node.label}"` : '-'}
+      valueColor={isDark ? '#a78bfa' : '#5b21b6'}
+      isDark={isDark}
+    />
   );
 
   // State toggles
   const stateRows: React.ReactNode[] = [];
-  if (node?.enabled !== undefined) stateRows.push(<PropertyRow key="enabled" label="enabled" value={_(node?.enabled)} valueColor={isDark ? '#a3e635' : '#15803d'} isDark={isDark} />);
-  if (node?.focused !== undefined) stateRows.push(<PropertyRow key="focused" label="focused" value={node?.focused ? "true" : "false"} valueColor={isDark ? '#f87171' : '#dc2626'} isDark={isDark} />);
-  if (node?.clickable !== undefined) stateRows.push(<PropertyRow key="clickable" label="clickable" value={node?.clickable ? "true" : "false"} valueColor={isDark ? '#f472b6' : '#be185d'} isDark={isDark} />);
-  if (node?.scrollable !== undefined) stateRows.push(<PropertyRow key="scrollable" label="scrollable" value={node?.scrollable ? "true" : "false"} valueColor={isDark ? '#67e8f9' : '#0891b2'} isDark={isDark} />);
-  if (node?.checkable !== undefined) stateRows.push(<PropertyRow key="checkable" label="checkable" value={node?.checkable ? "true" : "false"} valueColor={isDark ? '#c4b5fd' : '#7c3aed'} isDark={isDark} />);
-  if (node?.checked !== undefined) stateRows.push(<PropertyRow key="checked" label="checked" value={_(node?.checked)} valueColor={isDark ? '#fb7185' : '#e11d48'} isDark={isDark} />);
-  if (node?.selected !== undefined) stateRows.push(<PropertyRow key="selected" label="selected" value={node?.selected ? "true" : "false"} valueColor={isDark ? '#4ade80' : '#16a34a'} isDark={isDark} />);
-  if (node?.longClickable !== undefined) stateRows.push(<PropertyRow key="long-clickable" label="long-clickable" value={node?.longClickable ? "true" : "false"} valueColor={isDark ? '#e879f9' : '#c026d3'} isDark={isDark} />);
-  if (node?.focusable !== undefined) stateRows.push(<PropertyRow key="focusable" label="focusable" value={node?.focusable ? "true" : "false"} valueColor={isDark ? '#fbbf24' : '#b45309'} isDark={isDark} />);
-  if (node?.password !== undefined) stateRows.push(<PropertyRow key="password" label="password" value={node?.password ? "true" : "false"} valueColor={isDark ? '#fbbf24' : '#b45309'} isDark={isDark} />);
-  if (node?.visibleToUser !== undefined) stateRows.push(<PropertyRow key="visible-to-user" label="visible-to-user" value={_(node?.visibleToUser)} valueColor={isDark ? '#a78bfa' : '#5b21b6'} isDark={isDark} />);
+  if (node?.enabled !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="enabled"
+        label="enabled"
+        value={_(node?.enabled)}
+        valueColor={isDark ? '#a3e635' : '#15803d'}
+        isDark={isDark}
+      />
+    );
+  if (node?.focused !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="focused"
+        label="focused"
+        value={node?.focused ? 'true' : 'false'}
+        valueColor={isDark ? '#f87171' : '#dc2626'}
+        isDark={isDark}
+      />
+    );
+  if (node?.clickable !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="clickable"
+        label="clickable"
+        value={node?.clickable ? 'true' : 'false'}
+        valueColor={isDark ? '#f472b6' : '#be185d'}
+        isDark={isDark}
+      />
+    );
+  if (node?.scrollable !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="scrollable"
+        label="scrollable"
+        value={node?.scrollable ? 'true' : 'false'}
+        valueColor={isDark ? '#67e8f9' : '#0891b2'}
+        isDark={isDark}
+      />
+    );
+  if (node?.checkable !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="checkable"
+        label="checkable"
+        value={node?.checkable ? 'true' : 'false'}
+        valueColor={isDark ? '#c4b5fd' : '#7c3aed'}
+        isDark={isDark}
+      />
+    );
+  if (node?.checked !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="checked"
+        label="checked"
+        value={_(node?.checked)}
+        valueColor={isDark ? '#fb7185' : '#e11d48'}
+        isDark={isDark}
+      />
+    );
+  if (node?.selected !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="selected"
+        label="selected"
+        value={node?.selected ? 'true' : 'false'}
+        valueColor={isDark ? '#4ade80' : '#16a34a'}
+        isDark={isDark}
+      />
+    );
+  if (node?.longClickable !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="long-clickable"
+        label="long-clickable"
+        value={node?.longClickable ? 'true' : 'false'}
+        valueColor={isDark ? '#e879f9' : '#c026d3'}
+        isDark={isDark}
+      />
+    );
+  if (node?.focusable !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="focusable"
+        label="focusable"
+        value={node?.focusable ? 'true' : 'false'}
+        valueColor={isDark ? '#fbbf24' : '#b45309'}
+        isDark={isDark}
+      />
+    );
+  if (node?.password !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="password"
+        label="password"
+        value={node?.password ? 'true' : 'false'}
+        valueColor={isDark ? '#fbbf24' : '#b45309'}
+        isDark={isDark}
+      />
+    );
+  if (node?.visibleToUser !== undefined)
+    stateRows.push(
+      <PropertyRow
+        key="visible-to-user"
+        label="visible-to-user"
+        value={_(node?.visibleToUser)}
+        valueColor={isDark ? '#a78bfa' : '#5b21b6'}
+        isDark={isDark}
+      />
+    );
 
   return (
     <div
@@ -99,7 +230,10 @@ export function PropertiesPanel() {
       }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#71717a' : '#666666' }}>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider"
+          style={{ color: isDark ? '#71717a' : '#666666' }}
+        >
           Properties
         </span>
         {lockedNode && (

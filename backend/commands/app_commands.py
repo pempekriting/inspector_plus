@@ -3,7 +3,6 @@
 import os
 import re
 import subprocess
-from typing import Optional
 
 
 def _safe_path(path: str, must_exist: bool = True) -> bool:
@@ -15,9 +14,7 @@ def _safe_path(path: str, must_exist: bool = True) -> bool:
     # Must end with .apk
     if not path.lower().endswith(".apk"):
         return False
-    if must_exist and not os.path.isfile(path):
-        return False
-    return True
+    return not (must_exist and not os.path.isfile(path))
 
 
 _PACKAGE_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
@@ -33,7 +30,7 @@ def _safe_package(package: str) -> bool:
 class AppCommands:
     """Commands for managing Android apps via ADB."""
 
-    def __init__(self, serial: Optional[str] = None):
+    def __init__(self, serial: str | None = None):
         self.serial = serial
 
     def _adb_cmd(self, args: list[str]) -> list[str]:
@@ -54,7 +51,10 @@ class AppCommands:
             Tuple of (success, output/error message)
         """
         if not _safe_path(apk_path):
-            return (False, "Invalid APK path: must be a .apk file, no path traversal, and must exist")
+            return (
+                False,
+                "Invalid APK path: must be a .apk file, no path traversal, and must exist",
+            )
         try:
             result = subprocess.run(
                 self._adb_cmd(["install", "-r", apk_path]),
@@ -68,7 +68,7 @@ class AppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Install command timed out")
         except Exception as e:
-            return (False, f"Install failed: {str(e)}")
+            return (False, f"Install failed: {e!s}")
 
     def is_app_installed(self, package: str) -> tuple[bool, str]:
         """Check if an app is installed on the device.
@@ -91,7 +91,7 @@ class AppCommands:
                 return (True, f"App is installed: {package}")
             return (False, f"App is NOT installed: {package}")
         except Exception as e:
-            return (False, f"Check failed: {str(e)}")
+            return (False, f"Check failed: {e!s}")
 
     def uninstall_app(self, package: str) -> tuple[bool, str]:
         """Uninstall an app from the device.
@@ -117,7 +117,7 @@ class AppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Uninstall command timed out")
         except Exception as e:
-            return (False, f"Uninstall failed: {str(e)}")
+            return (False, f"Uninstall failed: {e!s}")
 
     def launch_app(self, package: str) -> tuple[bool, str]:
         """Launch an app on the device.
@@ -132,7 +132,17 @@ class AppCommands:
             return (False, "Invalid package name")
         try:
             result = subprocess.run(
-                self._adb_cmd(["shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1"]),
+                self._adb_cmd(
+                    [
+                        "shell",
+                        "monkey",
+                        "-p",
+                        package,
+                        "-c",
+                        "android.intent.category.LAUNCHER",
+                        "1",
+                    ]
+                ),
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -143,7 +153,7 @@ class AppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Launch command timed out")
         except Exception as e:
-            return (False, f"Launch failed: {str(e)}")
+            return (False, f"Launch failed: {e!s}")
 
     def list_installed_apps(self) -> tuple[bool, str]:
         """Get list of all installed packages on the device.
@@ -166,7 +176,7 @@ class AppCommands:
         except subprocess.TimeoutExpired:
             return (False, "List packages command timed out")
         except Exception as e:
-            return (False, f"List packages failed: {str(e)}")
+            return (False, f"List packages failed: {e!s}")
 
     def get_app_info(self, package: str) -> tuple[bool, dict]:
         """Get detailed info about a specific installed package.
@@ -202,7 +212,7 @@ class AppCommands:
         except subprocess.TimeoutExpired:
             return (False, {"error": "Get app info command timed out"})
         except Exception as e:
-            return (False, {"error": f"Get app info failed: {str(e)}"})
+            return (False, {"error": f"Get app info failed: {e!s}"})
 
     def _parse_package_dump(self, raw: str) -> dict:
         """Parse dumpsys package output into a structured dict."""
@@ -245,6 +255,7 @@ class AppCommands:
         vc_line = get("versionCode")
         if vc_line:
             import re
+
             sdk_match = re.search(r"minSdk=(\d+)", vc_line)
             tgt_match = re.search(r"targetSdk=(\d+)", vc_line)
             if sdk_match:
@@ -287,7 +298,7 @@ class AppCommands:
             if "requested=" in stripped:
                 parts = stripped.split()
                 for p in parts:
-                    if p.startswith("android.permission.") or p.startswith("com.android"):
+                    if p.startswith(("android.permission.", "com.android")):
                         requested_perms.add(p.rstrip(","))
 
         # Build permission list
@@ -319,12 +330,14 @@ class AppCommands:
                 if perm.startswith(group_key.rstrip(".ABCDEFGHIJKLMNOPQRSTUVWXYZ")):
                     group = group_label
                     break
-            permissions.append({
-                "name": perm,
-                "label": get_perm_label(perm),
-                "granted": is_granted,
-                "group": group,
-            })
+            permissions.append(
+                {
+                    "name": perm,
+                    "label": get_perm_label(perm),
+                    "granted": is_granted,
+                    "group": group,
+                }
+            )
 
         return {
             "packageName": "",

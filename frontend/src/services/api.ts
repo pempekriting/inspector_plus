@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
-import type { Bounds, DeviceInfo, DeviceStatus, UiNode } from "../types/shared";
-import { getApiUrl } from "../config/apiConfig";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
+
+import { getApiUrl } from '../config/apiConfig';
+import type { Bounds, DeviceInfo, DeviceStatus, UiNode } from '../types/shared';
 
 // Re-export shared types
 export type { Bounds, DeviceInfo, DeviceStatus, UiNode };
@@ -37,7 +38,7 @@ export const DeviceInfoSchema = z.object({
   brand: z.string().optional(),
   android_version: z.string().optional(),
   sdk: z.string().optional(),
-  platform: z.enum(["android", "ios"]).optional(),
+  platform: z.enum(['android', 'ios']).optional(),
   os_version: z.string().optional(),
   architecture: z.string().optional(),
   device_type: z.string().optional(),
@@ -64,9 +65,8 @@ export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T
 // Device status
 export function useDeviceStatus() {
   return useQuery({
-    queryKey: ["device-status"],
-    queryFn: () =>
-      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`),
+    queryKey: ['device-status'],
+    queryFn: () => apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`),
     refetchInterval: 10000,
     retry: 2,
     staleTime: 3000,
@@ -77,11 +77,11 @@ export function useDeviceStatus() {
 // Devices list
 export function useDevices() {
   return useQuery({
-    queryKey: ["devices"],
+    queryKey: ['devices'],
     queryFn: () =>
-      apiFetch<{ devices: z.infer<typeof DeviceInfoSchema>[] }>(
-        `${getApiUrl()}/devices`
-      ).then((data) => data.devices),
+      apiFetch<{ devices: z.infer<typeof DeviceInfoSchema>[] }>(`${getApiUrl()}/devices`).then(
+        (data) => data.devices
+      ),
     retry: 2,
     staleTime: 10000,
     gcTime: 60000,
@@ -93,21 +93,18 @@ export function useSelectDevice() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (udid: string | null) =>
-      apiFetch<{ udid: string; platform: string }>(
-        `${getApiUrl()}/device/select`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ udid }),
-        }
-      ),
+      apiFetch<{ udid: string; platform: string }>(`${getApiUrl()}/device/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ udid }),
+      }),
     onError: (error) => {
-      console.error("Failed to select device:", error);
+      console.error('Failed to select device:', error);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["device-status"] });
-      queryClient.invalidateQueries({ queryKey: ["hierarchy"] });
-      queryClient.invalidateQueries({ queryKey: ["hierarchy-and-screenshot"] });
+      queryClient.invalidateQueries({ queryKey: ['device-status'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
     },
   });
 }
@@ -115,7 +112,7 @@ export function useSelectDevice() {
 // Hierarchy
 export function useHierarchy(udid?: string) {
   return useQuery({
-    queryKey: ["hierarchy", udid],
+    queryKey: ['hierarchy', udid],
     queryFn: () =>
       apiFetch<{ tree: z.infer<typeof UiNodeSchema> }>(
         udid
@@ -131,14 +128,17 @@ export function useHierarchy(udid?: string) {
 // Combined hierarchy + screenshot (single request, base64 encoded)
 export function useHierarchyAndScreenshot(udid?: string) {
   return useQuery({
-    queryKey: ["hierarchy-and-screenshot", udid],
+    queryKey: ['hierarchy-and-screenshot', udid],
     queryFn: async () => {
       const url = udid
         ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy-and-screenshot`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch hierarchy and screenshot");
-      const data = await res.json() as { hierarchy: z.infer<typeof UiNodeSchema>; screenshot: string };
+      if (!res.ok) throw new Error('Failed to fetch hierarchy and screenshot');
+      const data = (await res.json()) as {
+        hierarchy: z.infer<typeof UiNodeSchema>;
+        screenshot: string;
+      };
       return {
         hierarchy: data.hierarchy,
         screenshotUrl: `data:image/png;base64,${data.screenshot}`,
@@ -156,21 +156,19 @@ export function useTapDevice() {
   return useMutation({
     mutationFn: ({ x, y, udid }: { x: number; y: number; udid?: string }) =>
       apiFetch<void>(
-        udid
-          ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/tap`,
+        udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ x, y }),
         }
       ),
     onError: (error) => {
-      console.error("Tap command failed:", error);
+      console.error('Tap command failed:', error);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hierarchy-and-screenshot"] });
-      queryClient.invalidateQueries({ queryKey: ["hierarchy"] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
     },
   });
 }
@@ -178,19 +176,27 @@ export function useTapDevice() {
 // Command execution
 export function useExecuteCommand() {
   return useMutation({
-    mutationFn: ({ type, params, udid }: { type: string; params?: Record<string, unknown>; udid?: string }) =>
+    mutationFn: ({
+      type,
+      params,
+      udid,
+    }: {
+      type: string;
+      params?: Record<string, unknown>;
+      udid?: string;
+    }) =>
       apiFetch<{ success: boolean; output: string; error?: string }>(
         udid
           ? `${getApiUrl()}/commands/execute?udid=${encodeURIComponent(udid)}`
           : `${getApiUrl()}/commands/execute`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type, params }),
         }
       ),
     onError: (error) => {
-      console.error("Command execution failed:", error);
+      console.error('Command execution failed:', error);
     },
   });
 }
@@ -212,10 +218,10 @@ export interface LocatorResult {
 // Fetch locators for a node
 export function useLocators(nodeId: string | null) {
   return useQuery({
-    queryKey: ["locators", nodeId],
+    queryKey: ['locators', nodeId],
     queryFn: () =>
       apiFetch<LocatorResult>(
-        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || "")}`
+        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`
       ),
     enabled: !!nodeId,
     staleTime: 30000,
@@ -233,13 +239,13 @@ export function useAdbCommand() {
           ? `${getApiUrl()}/device/adb?udid=${encodeURIComponent(udid)}`
           : `${getApiUrl()}/device/adb`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command }),
         }
       ),
     onError: (error) => {
-      console.error("ADB command failed:", error);
+      console.error('ADB command failed:', error);
     },
   });
 }
@@ -247,7 +253,11 @@ export function useAdbCommand() {
 // Execute multi-pointer gesture
 export function useGestureExecute() {
   return useMutation({
-    mutationFn: ({ actions, coordinateMode, udid }: {
+    mutationFn: ({
+      actions,
+      coordinateMode,
+      udid,
+    }: {
       actions: Array<{
         type: string;
         x?: number;
@@ -264,13 +274,13 @@ export function useGestureExecute() {
           ? `${getApiUrl()}/gesture/execute?udid=${encodeURIComponent(udid)}`
           : `${getApiUrl()}/gesture/execute`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ actions, coordinateMode }),
         }
       ),
     onError: (error) => {
-      console.error("Gesture execution failed:", error);
+      console.error('Gesture execution failed:', error);
     },
   });
 }
@@ -285,17 +295,17 @@ export function useInputText() {
           ? `${getApiUrl()}/input/text?udid=${encodeURIComponent(udid)}`
           : `${getApiUrl()}/input/text`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text }),
         }
       ),
     onError: (error) => {
-      console.error("Input text failed:", error);
+      console.error('Input text failed:', error);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hierarchy-and-screenshot"] });
-      queryClient.invalidateQueries({ queryKey: ["hierarchy"] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
     },
   });
 }
@@ -303,23 +313,25 @@ export function useInputText() {
 // Execute arbitrary script/command
 export function useExecuteScript() {
   return useMutation({
-    mutationFn: ({ script, platform, udid }: {
+    mutationFn: ({
+      script,
+      platform,
+      udid,
+    }: {
       script: string;
       platform?: string;
       udid?: string;
     }) =>
       apiFetch<{ success: boolean; output: string; error?: string | null; exitCode: number }>(
-        udid
-          ? `${getApiUrl()}/execute?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/execute`,
+        udid ? `${getApiUrl()}/execute?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/execute`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ script, platform }),
         }
       ),
     onError: (error) => {
-      console.error("Script execution failed:", error);
+      console.error('Script execution failed:', error);
     },
   });
 }
@@ -354,16 +366,18 @@ export function useAccessibilityAudit() {
 // F3: Context (WebView support)
 export interface ContextInfo {
   id: string;
-  type: "native" | "webview";
+  type: 'native' | 'webview';
   description: string;
 }
 
 export function useDeviceContexts(udid?: string) {
   return useQuery({
-    queryKey: ["device-contexts", udid],
+    queryKey: ['device-contexts', udid],
     queryFn: () =>
       apiFetch<{ contexts: ContextInfo[] }>(
-        udid ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/device/contexts`
+        udid
+          ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}`
+          : `${getApiUrl()}/device/contexts`
       ),
     staleTime: 15000,
     gcTime: 30000,
@@ -379,8 +393,8 @@ export function useSwitchContext() {
           ? `${getApiUrl()}/device/switch-context?udid=${encodeURIComponent(udid)}`
           : `${getApiUrl()}/device/switch-context`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contextId }),
         }
       ),
@@ -394,7 +408,7 @@ export interface AppInfo {
   packageName: string;
   versionName: string;
   versionCode: number;
-  platform: "android" | "ios";
+  platform: 'android' | 'ios';
   minSdk: number;
   targetSdk: number;
   minimumOSVersion?: string;
@@ -420,21 +434,18 @@ export interface AppInfo {
 // Deferred: only fetch when selectedPackage is set (user selected an app)
 export function useInstalledPackages(enabled: boolean = false, udid?: string | null) {
   return useQuery({
-    queryKey: ["installed-packages", udid],
+    queryKey: ['installed-packages', udid],
     queryFn: () => {
       const url = udid
         ? `${getApiUrl()}/commands/execute?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/commands/execute`;
-      return apiFetch<{ success: boolean; output: string }>(
-        url,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "list_apps", params: {} }),
-        }
-      ).then((data) => {
+      return apiFetch<{ success: boolean; output: string }>(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'list_apps', params: {} }),
+      }).then((data) => {
         if (!data.success) throw new Error(data.output);
-        return data.output.split("\n").filter(Boolean).sort();
+        return data.output.split('\n').filter(Boolean).sort();
       });
     },
     enabled,
@@ -447,9 +458,9 @@ export function useInstalledPackages(enabled: boolean = false, udid?: string | n
 // Get detailed app info for a specific package
 export function useAppInfo(packageName: string | null, udid?: string | null) {
   return useQuery({
-    queryKey: ["app-info", packageName, udid],
+    queryKey: ['app-info', packageName, udid],
     queryFn: () => {
-      let url = `${getApiUrl()}/app/commands/info?package=${encodeURIComponent(packageName || "")}`;
+      let url = `${getApiUrl()}/app/commands/info?package=${encodeURIComponent(packageName || '')}`;
       if (udid) url += `&udid=${encodeURIComponent(udid)}`;
       return apiFetch<AppInfo>(url);
     },
@@ -473,8 +484,8 @@ export function useRecorder() {
       ? `${getApiUrl()}/recorder/record?udid=${encodeURIComponent(data.udid)}`
       : `${getApiUrl()}/recorder/record`;
     return apiFetch<{ stepCount: number }>(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: data.sessionId,
         action: data.action,
@@ -501,7 +512,7 @@ export function useRecorder() {
     const url = params.udid
       ? `${getApiUrl()}/recorder/clear?sessionId=${params.sessionId}&udid=${encodeURIComponent(params.udid)}`
       : `${getApiUrl()}/recorder/clear?sessionId=${params.sessionId}`;
-    return apiFetch<{ cleared: boolean }>(url, { method: "POST" });
+    return apiFetch<{ cleared: boolean }>(url, { method: 'POST' });
   };
 
   return { addStep, exportRecording, clearRecording };
@@ -510,10 +521,11 @@ export function useRecorder() {
 // Network Debug hooks
 export function useProxyStatus() {
   return useQuery({
-    queryKey: ["proxy-status"],
-    queryFn: () => apiFetch<{ running: boolean; port: number; flow_file: string | null; flows_count: number }>(
-      `${getApiUrl()}/network/proxy/status`
-    ),
+    queryKey: ['proxy-status'],
+    queryFn: () =>
+      apiFetch<{ running: boolean; port: number; flow_file: string | null; flows_count: number }>(
+        `${getApiUrl()}/network/proxy/status`
+      ),
     refetchInterval: 5000,
     staleTime: 1000,
   });
@@ -526,13 +538,13 @@ export function useStartProxy() {
       apiFetch<{ success: boolean; running: boolean; port: number; error?: string }>(
         `${getApiUrl()}/network/proxy/start`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ port: port || 8080, udid }),
         }
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["proxy-status"] });
+      queryClient.invalidateQueries({ queryKey: ['proxy-status'] });
     },
   });
 }
@@ -542,17 +554,17 @@ export function useStopProxy() {
   return useMutation({
     mutationFn: () =>
       apiFetch<{ success: boolean; running: boolean }>(`${getApiUrl()}/network/proxy/stop`, {
-        method: "POST",
+        method: 'POST',
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["proxy-status"] });
+      queryClient.invalidateQueries({ queryKey: ['proxy-status'] });
     },
   });
 }
 
 export function useNetworkTraffic(since: number = 0, enabled: boolean = true) {
   return useQuery({
-    queryKey: ["network-traffic", since, enabled],
+    queryKey: ['network-traffic', since, enabled],
     queryFn: async () => {
       if (!enabled) return { flows: [], count: 0 };
       return apiFetch<{ flows: unknown[]; count: number }>(
@@ -567,7 +579,7 @@ export function useNetworkTraffic(since: number = 0, enabled: boolean = true) {
 
 export function useNetworkInfo(udid?: string) {
   return useQuery({
-    queryKey: ["network-info", udid],
+    queryKey: ['network-info', udid],
     queryFn: () => {
       const url = udid
         ? `${getApiUrl()}/network/info?udid=${encodeURIComponent(udid)}`
@@ -588,21 +600,18 @@ export function useInstallCert() {
         note?: string;
         manual_steps?: string[];
         instructions?: string[];
-        error?: string
-      }>(
-        `${getApiUrl()}/network/cert/install`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ udid }),
-        }
-      ),
+        error?: string;
+      }>(`${getApiUrl()}/network/cert/install`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ udid }),
+      }),
   });
 }
 
 export function useVpnStatus(udid?: string) {
   return useQuery({
-    queryKey: ["vpn-status", udid],
+    queryKey: ['vpn-status', udid],
     queryFn: () => {
       const url = udid
         ? `${getApiUrl()}/network/proxy/vpn/status?udid=${encodeURIComponent(udid)}`
@@ -621,13 +630,13 @@ export function useStartVpn() {
       apiFetch<{ success: boolean; vpn_mode?: string; tunnel?: string; error?: string }>(
         `${getApiUrl()}/network/proxy/vpn/start`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ port: port || 8080, udid }),
         }
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vpn-status"] });
+      queryClient.invalidateQueries({ queryKey: ['vpn-status'] });
     },
   });
 }
@@ -636,16 +645,13 @@ export function useStopVpn() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ udid }: { udid?: string }) =>
-      apiFetch<{ success: boolean; error?: string }>(
-        `${getApiUrl()}/network/proxy/vpn/stop`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ udid }),
-        }
-      ),
+      apiFetch<{ success: boolean; error?: string }>(`${getApiUrl()}/network/proxy/vpn/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ udid }),
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vpn-status"] });
+      queryClient.invalidateQueries({ queryKey: ['vpn-status'] });
     },
   });
 }

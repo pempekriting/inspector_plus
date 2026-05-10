@@ -1,0 +1,20 @@
+fail_fast: true
+
+default_install_hook_types: []
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: /Users/azzamnizar/Documents/project/inspector_plus/backend/.venv/bin/ruff format
+        language: system
+        types: [python]
+        pass_filenames: true
+
+      - id: ruff-check
+        name: ruff check
+        entry: /Users/azzamnizar/Documents/project/inspector_plus/backend/.venv/bin/ruff check
+        language: system
+        types: [python]
+        pass_filenames: true

@@ -2,11 +2,12 @@
 Tests for RecorderSession export logic (python, java, javascript).
 """
 
-import pytest
+import os
+import sys
 import time
 
-import sys
-import os
+import pytest
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from device.android_bridge import RecorderSession
@@ -76,8 +77,12 @@ class TestRecorderSessionExportPython:
 
     def test_python_swipe_step(self):
         session = RecorderSession()
-        session.add_step("swipe", "node1", {"strategy": "class_index", "value": "RecyclerView[0]"},
-                         {"startX": 100, "startY": 200, "endX": 300, "endY": 400})
+        session.add_step(
+            "swipe",
+            "node1",
+            {"strategy": "class_index", "value": "RecyclerView[0]"},
+            {"startX": 100, "startY": 200, "endX": 300, "endY": 400},
+        )
         output = session.export("python", "android")
         assert "mobile: swipe" in output
         assert "startX" in output
@@ -158,6 +163,7 @@ class TestRecorderSessionExportJavaScript:
 class TestRecorderSessionStepToCode:
     def test_handles_non_string_strategy(self):
         from unittest.mock import MagicMock
+
         session = RecorderSession()
         # _step_to_python is called internally by export
         session.add_step("click", "node1", {"strategy": MagicMock(), "value": "btn"}, None)

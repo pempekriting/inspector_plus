@@ -3,20 +3,21 @@ Tests for device bridges: AndroidDeviceBridge and IOSDeviceBridge.
 Mocks all subprocess calls to test bridge logic in isolation.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-import subprocess
 import json
-
-import sys
 import os
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from device.android_bridge import AndroidDeviceBridge
 from device.ios_bridge import IOSDeviceBridge, _idb_cmd, _retry_with_backoff
 
-
 # --- Helpers ---
+
 
 def mock_proc(stdout="", returncode=0, timeout=False):
     """Create a mock CompletedProcess."""
@@ -29,6 +30,7 @@ def mock_proc(stdout="", returncode=0, timeout=False):
 
 
 # --- _retry_with_backoff ---
+
 
 class TestRetryWithBackoff:
     def test_returns_on_success(self):
@@ -57,6 +59,7 @@ class TestRetryWithBackoff:
 
 
 # --- AndroidDeviceBridge ---
+
 
 class TestAndroidDeviceBridge:
     @patch("subprocess.run")
@@ -95,6 +98,7 @@ class TestAndroidDeviceBridge:
             # First call: devices list (success, no devices)
             # Second call (getprop): timeout
             raise subprocess.TimeoutExpired("cmd", 5)
+
         mock_run.side_effect = side_effect
         bridge = AndroidDeviceBridge()
         devices = bridge.get_devices()
@@ -180,11 +184,19 @@ class TestAndroidDeviceBridge:
         ]
 
         bridge = AndroidDeviceBridge()
-        with patch("builtins.open", MagicMock(__enter__=MagicMock(return_value=open).__enter__, return_value=__import__("io").StringIO(xml))):
-            with patch("device.android_bridge.ET") as mock_et:
-                mock_et.fromstring.return_value = MagicMock()
-                result = bridge.get_hierarchy()
-                assert "error" not in result or result.get("error") is None
+        with (
+            patch(
+                "builtins.open",
+                MagicMock(
+                    __enter__=MagicMock(return_value=open).__enter__,
+                    return_value=__import__("io").StringIO(xml),
+                ),
+            ),
+            patch("device.android_bridge.ET") as mock_et,
+        ):
+            mock_et.fromstring.return_value = MagicMock()
+            result = bridge.get_hierarchy()
+            assert "error" not in result or result.get("error") is None
 
     @patch("subprocess.run")
     def test_get_hierarchy_raises_on_adb_not_found(self, mock_run):
@@ -197,7 +209,12 @@ class TestAndroidDeviceBridge:
     def test_search_hierarchy_xpath_filter(self, mock_run):
         bridge = AndroidDeviceBridge()
         with patch.object(bridge, "get_hierarchy") as mock_h:
-            mock_h.return_value = {"id": "root", "className": "Frame", "bounds": {"x":0,"y":0,"width":100,"height":100}, "children": []}
+            mock_h.return_value = {
+                "id": "root",
+                "className": "Frame",
+                "bounds": {"x": 0, "y": 0, "width": 100, "height": 100},
+                "children": [],
+            }
             with patch("device.android_bridge.HAS_LXML", True):
                 with patch("device.android_bridge.lxml_etree") as mock_lxml:
                     mock_root = MagicMock()
@@ -324,9 +341,7 @@ class TestAndroidDeviceBridge:
     @patch("subprocess.run")
     def test_execute_adb_command_success(self, mock_run):
         """execute_adb_command returns output and exitCode 0 on success."""
-        mock_run.return_value = MagicMock(
-            stdout="OK", stderr="", returncode=0
-        )
+        mock_run.return_value = MagicMock(stdout="OK", stderr="", returncode=0)
         bridge = AndroidDeviceBridge("emulator-5554")
         result = bridge.execute_adb_command("input tap 500 800")
         assert result["output"] == "OK"
@@ -340,9 +355,7 @@ class TestAndroidDeviceBridge:
     @patch("subprocess.run")
     def test_execute_adb_command_failure(self, mock_run):
         """execute_adb_command returns error in response on non-zero exit."""
-        mock_run.return_value = MagicMock(
-            stdout="", stderr="error: device not found", returncode=1
-        )
+        mock_run.return_value = MagicMock(stdout="", stderr="error: device not found", returncode=1)
         bridge = AndroidDeviceBridge()
         result = bridge.execute_adb_command("invalid command")
         assert result["output"] == ""
@@ -444,6 +457,7 @@ class TestAndroidDeviceBridge:
 
 # --- IOSDeviceBridge ---
 
+
 class TestIOSDeviceBridge:
     @patch("device.ios_bridge._idb_cmd")
     def test_connect_success(self, mock_idb):
@@ -536,12 +550,13 @@ class TestIOSDeviceBridge:
 
 # --- _idb_cmd ---
 
+
 class TestIdbCmd:
     @patch("subprocess.run")
     def test_uses_uv_run(self, mock_run):
         """Always uses uv run idb for consistent pip-installed idb behavior."""
         mock_run.return_value = mock_proc(returncode=0)
-        result = _idb_cmd(["list-targets"], udid=None, timeout=10)
+        _idb_cmd(["list-targets"], udid=None, timeout=10)
         call = mock_run.call_args[0][0]
         assert call[0] == "uv"
         assert "idb" in call

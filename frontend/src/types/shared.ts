@@ -14,18 +14,18 @@ export interface Bounds {
 
 export interface UiCapability {
   type: 'tap' | 'scroll' | 'input' | 'long' | 'link' | 'focus';
-  badge: string;    // text label: "TAP", "SCROLL", etc.
-  color: string;   // badge background hex
+  badge: string; // text label: "TAP", "SCROLL", etc.
+  color: string; // badge background hex
 }
 
 export interface UiStyles {
-  backgroundColor?: string;   // hex: "#FF5722"
-  textColor?: string;         // hex: "#212121"
-  fontSize?: string;           // e.g., "16sp" / "14pt"
-  fontWeight?: string;         // e.g., "400", "Bold"
-  fontFamily?: string;        // e.g., "Roboto"
-  padding?: { left: number; top: number; right: number; bottom: number; };
-  elevation?: string;         // e.g., "4dp"
+  backgroundColor?: string; // hex: "#FF5722"
+  textColor?: string; // hex: "#212121"
+  fontSize?: string; // e.g., "16sp" / "14pt"
+  fontWeight?: string; // e.g., "400", "Bold"
+  fontFamily?: string; // e.g., "Roboto"
+  padding?: { left: number; top: number; right: number; bottom: number };
+  elevation?: string; // e.g., "4dp"
 }
 
 export interface UiNode {
@@ -77,7 +77,7 @@ export interface DeviceInfo {
   brand?: string;
   android_version?: string;
   sdk?: string;
-  platform?: "android" | "ios";
+  platform?: 'android' | 'ios';
   os_version?: string;
   architecture?: string;
   device_type?: string;
@@ -89,7 +89,7 @@ export interface DeviceStatus {
   selected: string | null;
 }
 
-export type SearchFilter = "xpath" | "resource-id" | "text" | "content-desc" | "class";
+export type SearchFilter = 'xpath' | 'resource-id' | 'text' | 'content-desc' | 'class';
 
 export interface RecordingStep {
   action: string;

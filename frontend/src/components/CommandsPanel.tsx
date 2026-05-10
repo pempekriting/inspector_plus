@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from "react";
-import { useThemeStore } from "../stores/themeStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useCommands, CommandResult } from "../hooks/useCommands";
-import { useGestureExecute, useExecuteScript } from "../services/api";
+import React, { useState, useMemo } from 'react';
 
-type Platform = "android" | "ios" | "both";
+import { useCommands, CommandResult } from '../hooks/useCommands';
+import { useGestureExecute, useExecuteScript } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useThemeStore } from '../stores/themeStore';
+
+type Platform = 'android' | 'ios' | 'both';
 
 interface CommandItem {
   id: string;
@@ -33,8 +34,8 @@ export function CommandsPanel() {
   const executeScript = useExecuteScript();
   const { selectedDevice, devices } = useDeviceStore();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [packageName, setPackageName] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [packageName, setPackageName] = useState('');
   const [apkFile, setApkFile] = useState<File | null>(null);
   const [commandResult, setCommandResult] = useState<CommandResult | null>(null);
   const [showAppCommands, setShowAppCommands] = useState(true);
@@ -44,7 +45,7 @@ export function CommandsPanel() {
   const [viewMode, setViewMode] = useState<'raw' | 'table'>('raw');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [filterText, setFilterText] = useState("");
+  const [filterText, setFilterText] = useState('');
 
   // Gesture builder state
   const [gestureActions, setGestureActions] = useState<GestureAction[]>([]);
@@ -52,7 +53,7 @@ export function CommandsPanel() {
   const [showGestureBuilder, setShowGestureBuilder] = useState(false);
 
   // Script executor state
-  const [scriptText, setScriptText] = useState("");
+  const [scriptText, setScriptText] = useState('');
   const [showScriptPanel, setShowScriptPanel] = useState(false);
 
   const handleExecute = async (type: string, params?: Record<string, unknown>) => {
@@ -61,7 +62,7 @@ export function CommandsPanel() {
     setViewMode('raw');
     setSortColumn(null);
     setSortDirection('asc');
-    setFilterText("");
+    setFilterText('');
 
     if (type === 'gesture_builder') {
       setShowGestureBuilder(true);
@@ -127,25 +128,27 @@ export function CommandsPanel() {
   };
 
   const updateGestureAction = (index: number, updates: Partial<GestureAction>) => {
-    setGestureActions(gestureActions.map((action, i) => i === index ? { ...action, ...updates } : action));
+    setGestureActions(
+      gestureActions.map((action, i) => (i === index ? { ...action, ...updates } : action))
+    );
   };
 
   const androidAppCommands: CommandItem[] = [
     {
-      id: "list_apps",
-      name: "List Installed Apps",
-      description: "Get list of all installed packages on the device",
-      type: "list_apps",
+      id: 'list_apps',
+      name: 'List Installed Apps',
+      description: 'Get list of all installed packages on the device',
+      type: 'list_apps',
       params: {},
-      platform: "android",
+      platform: 'android',
     },
     {
-      id: "check_app",
-      name: "Check App Installed",
-      description: "Check if a specific app is installed",
-      type: "check_app",
+      id: 'check_app',
+      name: 'Check App Installed',
+      description: 'Check if a specific app is installed',
+      type: 'check_app',
       params: { package: packageName },
-      platform: "android",
+      platform: 'android',
       input: (
         <input
           type="text"
@@ -162,12 +165,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "launch_app",
-      name: "Launch App",
-      description: "Launch an app by package name",
-      type: "launch_app",
+      id: 'launch_app',
+      name: 'Launch App',
+      description: 'Launch an app by package name',
+      type: 'launch_app',
       params: { package: packageName },
-      platform: "android",
+      platform: 'android',
       input: (
         <input
           type="text"
@@ -184,12 +187,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "uninstall_app",
-      name: "Uninstall App",
-      description: "Uninstall an app by package name",
-      type: "uninstall_app",
+      id: 'uninstall_app',
+      name: 'Uninstall App',
+      description: 'Uninstall an app by package name',
+      type: 'uninstall_app',
       params: { package: packageName },
-      platform: "android",
+      platform: 'android',
       input: (
         <input
           type="text"
@@ -206,12 +209,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "install_app",
-      name: "Install App (APK)",
-      description: "Install an APK file",
-      type: "install_app",
-      params: { apk_path: apkFile?.name || "" },
-      platform: "android",
+      id: 'install_app',
+      name: 'Install App (APK)',
+      description: 'Install an APK file',
+      type: 'install_app',
+      params: { apk_path: apkFile?.name || '' },
+      platform: 'android',
       input: (
         <div className="flex-1 flex items-center gap-2">
           <input
@@ -222,7 +225,10 @@ export function CommandsPanel() {
             style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
           />
           {apkFile && (
-            <span className="text-[10px] truncate max-w-[100px]" style={{ color: isDark ? '#71717a' : '#666666' }}>
+            <span
+              className="text-[10px] truncate max-w-[100px]"
+              style={{ color: isDark ? '#71717a' : '#666666' }}
+            >
               {apkFile.name}
             </span>
           )}
@@ -233,20 +239,20 @@ export function CommandsPanel() {
 
   const iosAppCommands: CommandItem[] = [
     {
-      id: "list_apps_ios",
-      name: "List Installed Apps",
-      description: "Get list of all installed bundle IDs",
-      type: "list_apps",
+      id: 'list_apps_ios',
+      name: 'List Installed Apps',
+      description: 'Get list of all installed bundle IDs',
+      type: 'list_apps',
       params: {},
-      platform: "ios",
+      platform: 'ios',
     },
     {
-      id: "check_app_ios",
-      name: "Check App Installed",
-      description: "Check if a specific app is installed",
-      type: "check_app",
+      id: 'check_app_ios',
+      name: 'Check App Installed',
+      description: 'Check if a specific app is installed',
+      type: 'check_app',
       params: { bundle_id: packageName },
-      platform: "ios",
+      platform: 'ios',
       input: (
         <input
           type="text"
@@ -263,12 +269,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "launch_app_ios",
-      name: "Launch App",
-      description: "Launch an app by bundle ID",
-      type: "launch_app",
+      id: 'launch_app_ios',
+      name: 'Launch App',
+      description: 'Launch an app by bundle ID',
+      type: 'launch_app',
       params: { bundle_id: packageName },
-      platform: "ios",
+      platform: 'ios',
       input: (
         <input
           type="text"
@@ -285,12 +291,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "uninstall_app_ios",
-      name: "Uninstall App",
-      description: "Uninstall an app by bundle ID",
-      type: "uninstall_app",
+      id: 'uninstall_app_ios',
+      name: 'Uninstall App',
+      description: 'Uninstall an app by bundle ID',
+      type: 'uninstall_app',
       params: { bundle_id: packageName },
-      platform: "ios",
+      platform: 'ios',
       input: (
         <input
           type="text"
@@ -307,12 +313,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "install_app_ios",
-      name: "Install App (IPA)",
-      description: "Install an IPA file",
-      type: "install_app",
-      params: { ipa_path: apkFile?.name || "" },
-      platform: "ios",
+      id: 'install_app_ios',
+      name: 'Install App (IPA)',
+      description: 'Install an IPA file',
+      type: 'install_app',
+      params: { ipa_path: apkFile?.name || '' },
+      platform: 'ios',
       input: (
         <div className="flex-1 flex items-center gap-2">
           <input
@@ -323,7 +329,10 @@ export function CommandsPanel() {
             style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
           />
           {apkFile && (
-            <span className="text-[10px] truncate max-w-[100px]" style={{ color: isDark ? '#71717a' : '#666666' }}>
+            <span
+              className="text-[10px] truncate max-w-[100px]"
+              style={{ color: isDark ? '#71717a' : '#666666' }}
+            >
               {apkFile.name}
             </span>
           )}
@@ -331,12 +340,12 @@ export function CommandsPanel() {
       ),
     },
     {
-      id: "open_url_ios",
-      name: "Open URL",
-      description: "Open a URL in Safari",
-      type: "open_url",
+      id: 'open_url_ios',
+      name: 'Open URL',
+      description: 'Open a URL in Safari',
+      type: 'open_url',
       params: { url: packageName },
-      platform: "ios",
+      platform: 'ios',
       input: (
         <input
           type="text"
@@ -356,63 +365,63 @@ export function CommandsPanel() {
 
   const platformControlsAndroid: CommandItem[] = [
     {
-      id: "press_keycode",
-      name: "Press Home",
-      description: "Send home key event",
-      type: "press_keycode",
+      id: 'press_keycode',
+      name: 'Press Home',
+      description: 'Send home key event',
+      type: 'press_keycode',
       params: { keycode: 3 },
-      platform: "android",
+      platform: 'android',
     },
     {
-      id: "open_notifications",
-      name: "Open Notifications",
-      description: "Pull down notification shade",
-      type: "open_notifications",
+      id: 'open_notifications',
+      name: 'Open Notifications',
+      description: 'Pull down notification shade',
+      type: 'open_notifications',
       params: {},
-      platform: "android",
+      platform: 'android',
     },
     {
-      id: "toggle_airplane",
-      name: "Toggle Airplane Mode",
-      description: "Toggle airplane mode on/off",
-      type: "toggle_airplane",
+      id: 'toggle_airplane',
+      name: 'Toggle Airplane Mode',
+      description: 'Toggle airplane mode on/off',
+      type: 'toggle_airplane',
       params: {},
-      platform: "android",
+      platform: 'android',
     },
     {
-      id: "toggle_wifi",
-      name: "Toggle WiFi",
-      description: "Toggle WiFi on/off",
-      type: "toggle_wifi",
+      id: 'toggle_wifi',
+      name: 'Toggle WiFi',
+      description: 'Toggle WiFi on/off',
+      type: 'toggle_wifi',
       params: {},
-      platform: "android",
+      platform: 'android',
     },
     {
-      id: "toggle_mobile_data",
-      name: "Toggle Mobile Data",
-      description: "Toggle mobile data on/off",
-      type: "toggle_mobile_data",
+      id: 'toggle_mobile_data',
+      name: 'Toggle Mobile Data',
+      description: 'Toggle mobile data on/off',
+      type: 'toggle_mobile_data',
       params: {},
-      platform: "android",
+      platform: 'android',
     },
   ];
 
   const platformControlsIos: CommandItem[] = [
     {
-      id: "touch_id",
-      name: "Simulate Touch ID",
-      description: "Simulate Touch ID (iOS Simulator)",
-      type: "touch_id",
+      id: 'touch_id',
+      name: 'Simulate Touch ID',
+      description: 'Simulate Touch ID (iOS Simulator)',
+      type: 'touch_id',
       params: {},
-      platform: "ios",
+      platform: 'ios',
     },
     {
-      id: "open_url_ios_control",
-      name: "Open URL",
-      description: "Open URL in Safari",
-      type: "open_url",
+      id: 'open_url_ios_control',
+      name: 'Open URL',
+      description: 'Open URL in Safari',
+      type: 'open_url',
       params: { url: packageName },
-      platform: "ios",
+      platform: 'ios',
       input: (
         <input
           type="text"
@@ -432,92 +441,112 @@ export function CommandsPanel() {
 
   const advancedCommands: CommandItem[] = [
     {
-      id: "screen_record",
-      name: "Screen Recording",
-      description: "Start/stop screen recording",
-      type: "screen_record",
+      id: 'screen_record',
+      name: 'Screen Recording',
+      description: 'Start/stop screen recording',
+      type: 'screen_record',
       params: {},
-      platform: "both",
+      platform: 'both',
     },
     {
-      id: "get_device_info",
-      name: "Get Device Info",
-      description: "Get orientation, size, density",
-      type: "get_device_info",
+      id: 'get_device_info',
+      name: 'Get Device Info',
+      description: 'Get orientation, size, density',
+      type: 'get_device_info',
       params: {},
-      platform: "both",
+      platform: 'both',
     },
     {
-      id: "gesture_builder",
-      name: "Gesture Builder",
-      description: "Build and execute multi-pointer gesture sequences",
-      type: "gesture_builder",
+      id: 'gesture_builder',
+      name: 'Gesture Builder',
+      description: 'Build and execute multi-pointer gesture sequences',
+      type: 'gesture_builder',
       params: {},
-      platform: "both",
+      platform: 'both',
     },
     {
-      id: "execute_script",
-      name: "Execute Script",
-      description: "Run arbitrary shell command on device",
-      type: "execute_script",
+      id: 'execute_script',
+      name: 'Execute Script',
+      description: 'Run arbitrary shell command on device',
+      type: 'execute_script',
       params: {},
-      platform: "both",
+      platform: 'both',
     },
   ];
 
-  const selectedDev = devices.find(d => d.udid === selectedDevice);
+  const selectedDev = devices.find((d) => d.udid === selectedDevice);
   const platform = selectedDev?.platform ?? 'android';
 
   const appCommands = platform === 'ios' ? iosAppCommands : androidAppCommands;
   const platformControls = platform === 'ios' ? platformControlsIos : platformControlsAndroid;
 
-  const filteredAppCommands = useMemo(() =>
-    appCommands.filter(cmd =>
-      cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+  const filteredAppCommands = useMemo(
+    () =>
+      appCommands.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [appCommands, searchQuery]
   );
 
-  const filteredPlatformControls = useMemo(() =>
-    platformControls.filter(cmd =>
-      cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+  const filteredPlatformControls = useMemo(
+    () =>
+      platformControls.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [platformControls, searchQuery]
   );
 
-  const filteredAdvanced = useMemo(() =>
-    advancedCommands.filter(cmd =>
-      cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+  const filteredAdvanced = useMemo(
+    () =>
+      advancedCommands.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
     [advancedCommands, searchQuery]
   );
 
   const renderPlatformBadge = (cmdPlatform: Platform) => {
     if (cmdPlatform === 'both') {
       return (
-        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase" style={{
-          background: isDark ? '#3f3f46' : '#e5e5e5',
-          color: isDark ? '#a1a1aa' : '#666666',
-        }}>
+        <span
+          className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
+          style={{
+            background: isDark ? '#3f3f46' : '#e5e5e5',
+            color: isDark ? '#a1a1aa' : '#666666',
+          }}
+        >
           Both
         </span>
       );
     }
     return (
-      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase`} style={
-        cmdPlatform === 'ios'
-          ? { background: isDark ? '#f5f5f5' : '#e5e5e5', color: isDark ? '#1a1a1a' : '#1a1a1a' }
-          : { background: isDark ? '#1f1f23' : '#1e3a5f', color: isDark ? 'var(--accent-cyan, #00e5cc)' : 'var(--accent-blue, #2563eb)' }
-      }>
+      <span
+        className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase`}
+        style={
+          cmdPlatform === 'ios'
+            ? { background: isDark ? '#f5f5f5' : '#e5e5e5', color: isDark ? '#1a1a1a' : '#1a1a1a' }
+            : {
+                background: isDark ? '#1f1f23' : '#1e3a5f',
+                color: isDark ? 'var(--accent-cyan, #00e5cc)' : 'var(--accent-blue, #2563eb)',
+              }
+        }
+      >
         {cmdPlatform === 'ios' ? 'iOS' : 'Android'}
       </span>
     );
   };
 
-  const renderSection = (title: string, commands: CommandItem[], isOpen: boolean, onToggle: () => void) => (
+  const renderSection = (
+    title: string,
+    commands: CommandItem[],
+    isOpen: boolean,
+    onToggle: () => void
+  ) => (
     <div>
       <button
         onClick={onToggle}
@@ -542,47 +571,67 @@ export function CommandsPanel() {
       {isOpen && (
         <div className="grid gap-3 p-4">
           {commands.length === 0 ? (
-            <p className="text-[10px] text-center py-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
+            <p
+              className="text-[10px] text-center py-2"
+              style={{ color: isDark ? '#71717a' : '#666666' }}
+            >
               No commands match your search
             </p>
-          ) : commands.map((cmd) => (
-            <div
-              key={cmd.id}
-              className="rounded-lg p-3"
-              style={{
-                background: isDark ? '#18181b' : '#ffffff',
-                border: isDark ? '2px solid #3f3f46' : '2px solid #e5e5e5',
-              }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-[12px] font-bold" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>
-                    {cmd.name}
-                  </h3>
-                  {renderPlatformBadge(cmd.platform)}
+          ) : (
+            commands.map((cmd) => (
+              <div
+                key={cmd.id}
+                className="rounded-lg p-3"
+                style={{
+                  background: isDark ? '#18181b' : '#ffffff',
+                  border: isDark ? '2px solid #3f3f46' : '2px solid #e5e5e5',
+                }}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <h3
+                      className="text-[12px] font-bold"
+                      style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
+                    >
+                      {cmd.name}
+                    </h3>
+                    {renderPlatformBadge(cmd.platform)}
+                  </div>
+                </div>
+                <p className="text-[10px] mb-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
+                  {cmd.description}
+                </p>
+
+                <div className="flex items-center gap-2 mb-2">
+                  {cmd.input}
+                  <button
+                    onClick={() => handleExecute(cmd.type, cmd.params)}
+                    disabled={isExecuting}
+                    className="px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      background: isExecuting
+                        ? isDark
+                          ? '#3f3f46'
+                          : '#e5e5e5'
+                        : isDark
+                          ? 'var(--accent-cyan)'
+                          : 'var(--accent-blue, #1d4ed8)',
+                      color: isExecuting
+                        ? isDark
+                          ? '#71717a'
+                          : '#999999'
+                        : isDark
+                          ? '#0a0a0c'
+                          : '#ffffff',
+                      border: `2px solid ${isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'}`,
+                    }}
+                  >
+                    {isExecuting ? '...' : 'Execute'}
+                  </button>
                 </div>
               </div>
-              <p className="text-[10px] mb-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
-                {cmd.description}
-              </p>
-
-              <div className="flex items-center gap-2 mb-2">
-                {cmd.input}
-                <button
-                  onClick={() => handleExecute(cmd.type, cmd.params)}
-                  disabled={isExecuting}
-                  className="px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'),
-                    color: isExecuting ? (isDark ? '#71717a' : '#999999') : (isDark ? '#0a0a0c' : '#ffffff'),
-                    border: `2px solid ${isExecuting ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)')}`,
-                  }}
-                >
-                  {isExecuting ? "..." : "Execute"}
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
     </div>
@@ -611,7 +660,10 @@ export function CommandsPanel() {
       </div>
 
       {/* Search Bar */}
-      <div className="px-4 py-3" style={{ borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5' }}>
+      <div
+        className="px-4 py-3"
+        style={{ borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5' }}
+      >
         <div className="relative">
           <svg
             className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
@@ -638,7 +690,7 @@ export function CommandsPanel() {
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery("")}
+              onClick={() => setSearchQuery('')}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] hover:opacity-70"
               style={{ color: isDark ? '#71717a' : '#666666' }}
             >
@@ -649,13 +701,25 @@ export function CommandsPanel() {
       </div>
 
       {/* Core App Commands */}
-      {renderSection(`App Commands (${filteredAppCommands.length})`, filteredAppCommands, showAppCommands, () => setShowAppCommands(!showAppCommands))}
+      {renderSection(
+        `App Commands (${filteredAppCommands.length})`,
+        filteredAppCommands,
+        showAppCommands,
+        () => setShowAppCommands(!showAppCommands)
+      )}
 
       {/* Platform Controls */}
-      {renderSection(`Platform Controls (${filteredPlatformControls.length})`, filteredPlatformControls, showPlatformControls, () => setShowPlatformControls(!showPlatformControls))}
+      {renderSection(
+        `Platform Controls (${filteredPlatformControls.length})`,
+        filteredPlatformControls,
+        showPlatformControls,
+        () => setShowPlatformControls(!showPlatformControls)
+      )}
 
       {/* Advanced Features */}
-      {renderSection(`Advanced (${filteredAdvanced.length})`, filteredAdvanced, showAdvanced, () => setShowAdvanced(!showAdvanced))}
+      {renderSection(`Advanced (${filteredAdvanced.length})`, filteredAdvanced, showAdvanced, () =>
+        setShowAdvanced(!showAdvanced)
+      )}
 
       {/* Command Result Panel */}
       {commandResult && (
@@ -691,7 +755,13 @@ export function CommandsPanel() {
               <span
                 className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
                 style={{
-                  background: commandResult.success ? (isDark ? '#10b981' : '#047857') : (isDark ? '#fb7185' : '#dc2626'),
+                  background: commandResult.success
+                    ? isDark
+                      ? '#10b981'
+                      : '#047857'
+                    : isDark
+                      ? '#fb7185'
+                      : '#dc2626',
                   color: '#ffffff',
                 }}
               >
@@ -712,9 +782,14 @@ export function CommandsPanel() {
                     onClick={() => setViewMode('raw')}
                     className="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all"
                     style={{
-                      background: viewMode === 'raw' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : 'transparent',
-                      color: viewMode === 'raw' ? '#0a0a0c' : (isDark ? '#71717a' : '#666666'),
-                      border: `1px solid ${viewMode === 'raw' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : (isDark ? '#3f3f46' : '#cccccc')}`,
+                      background:
+                        viewMode === 'raw'
+                          ? isDark
+                            ? 'var(--accent-cyan)'
+                            : 'var(--accent-blue, #1d4ed8)'
+                          : 'transparent',
+                      color: viewMode === 'raw' ? '#0a0a0c' : isDark ? '#71717a' : '#666666',
+                      border: `1px solid ${viewMode === 'raw' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : isDark ? '#3f3f46' : '#cccccc'}`,
                     }}
                   >
                     Raw
@@ -723,9 +798,14 @@ export function CommandsPanel() {
                     onClick={() => setViewMode('table')}
                     className="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all"
                     style={{
-                      background: viewMode === 'table' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : 'transparent',
-                      color: viewMode === 'table' ? '#0a0a0c' : (isDark ? '#71717a' : '#666666'),
-                      border: `1px solid ${viewMode === 'table' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : (isDark ? '#3f3f46' : '#cccccc')}`,
+                      background:
+                        viewMode === 'table'
+                          ? isDark
+                            ? 'var(--accent-cyan)'
+                            : 'var(--accent-blue, #1d4ed8)'
+                          : 'transparent',
+                      color: viewMode === 'table' ? '#0a0a0c' : isDark ? '#71717a' : '#666666',
+                      border: `1px solid ${viewMode === 'table' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : isDark ? '#3f3f46' : '#cccccc'}`,
                     }}
                   >
                     Table
@@ -810,7 +890,10 @@ export function CommandsPanel() {
               borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
             }}
           >
-            <span className="text-[10px] font-bold uppercase" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>
+            <span
+              className="text-[10px] font-bold uppercase"
+              style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
+            >
               Gesture Builder
             </span>
             <button
@@ -833,7 +916,10 @@ export function CommandsPanel() {
           <div className="p-3">
             {/* Coordinate Mode Toggle */}
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-[10px] font-bold uppercase" style={{ color: isDark ? '#71717a' : '#666666' }}>
+              <span
+                className="text-[10px] font-bold uppercase"
+                style={{ color: isDark ? '#71717a' : '#666666' }}
+              >
                 Coordinate Mode:
               </span>
               <div className="flex items-center gap-1">
@@ -841,9 +927,15 @@ export function CommandsPanel() {
                   onClick={() => setCoordinateMode('absolute')}
                   className="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all"
                   style={{
-                    background: coordinateMode === 'absolute' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : 'transparent',
-                    color: coordinateMode === 'absolute' ? '#0a0a0c' : (isDark ? '#71717a' : '#666666'),
-                    border: `1px solid ${coordinateMode === 'absolute' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : (isDark ? '#3f3f46' : '#cccccc')}`,
+                    background:
+                      coordinateMode === 'absolute'
+                        ? isDark
+                          ? 'var(--accent-cyan)'
+                          : 'var(--accent-blue, #1d4ed8)'
+                        : 'transparent',
+                    color:
+                      coordinateMode === 'absolute' ? '#0a0a0c' : isDark ? '#71717a' : '#666666',
+                    border: `1px solid ${coordinateMode === 'absolute' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : isDark ? '#3f3f46' : '#cccccc'}`,
                   }}
                 >
                   Absolute (px)
@@ -852,9 +944,15 @@ export function CommandsPanel() {
                   onClick={() => setCoordinateMode('relative')}
                   className="px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all"
                   style={{
-                    background: coordinateMode === 'relative' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : 'transparent',
-                    color: coordinateMode === 'relative' ? '#0a0a0c' : (isDark ? '#71717a' : '#666666'),
-                    border: `1px solid ${coordinateMode === 'relative' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : (isDark ? '#3f3f46' : '#cccccc')}`,
+                    background:
+                      coordinateMode === 'relative'
+                        ? isDark
+                          ? 'var(--accent-cyan)'
+                          : 'var(--accent-blue, #1d4ed8)'
+                        : 'transparent',
+                    color:
+                      coordinateMode === 'relative' ? '#0a0a0c' : isDark ? '#71717a' : '#666666',
+                    border: `1px solid ${coordinateMode === 'relative' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)') : isDark ? '#3f3f46' : '#cccccc'}`,
                   }}
                 >
                   Relative (%)
@@ -864,7 +962,10 @@ export function CommandsPanel() {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-[10px] font-bold uppercase mr-1" style={{ color: isDark ? '#71717a' : '#666666' }}>
+              <span
+                className="text-[10px] font-bold uppercase mr-1"
+                style={{ color: isDark ? '#71717a' : '#666666' }}
+              >
                 Add Action:
               </span>
               {(['move', 'pointerDown', 'pointerUp', 'pause'] as const).map((actionType) => (
@@ -886,100 +987,136 @@ export function CommandsPanel() {
             {/* Actions List */}
             <div className="space-y-2 mb-3">
               {gestureActions.length === 0 ? (
-                <p className="text-[10px] text-center py-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
+                <p
+                  className="text-[10px] text-center py-2"
+                  style={{ color: isDark ? '#71717a' : '#666666' }}
+                >
                   No actions added. Click buttons above to add gesture actions.
                 </p>
-              ) : gestureActions.map((action, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 rounded"
-                  style={{
-                    background: isDark ? '#0f0f12' : '#f5f5f5',
-                    border: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
-                  }}
-                >
-                  <span className="text-[9px] font-bold uppercase w-16" style={{ color: isDark ? '#71717a' : '#666666' }}>
-                    #{index + 1} {action.type}
-                  </span>
-
-                  {(action.type === 'move' || action.type === 'pointerDown') && (
-                    <>
-                      <input
-                        type="number"
-                        value={action.x ?? 0}
-                        onChange={(e) => updateGestureAction(index, { x: parseInt(e.target.value) || 0 })}
-                        placeholder="X"
-                        className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
-                        style={{
-                          background: isDark ? '#1f1f23' : '#ffffff',
-                          color: isDark ? '#e4e4e7' : '#1a1a1a',
-                          border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
-                        }}
-                      />
-                      <input
-                        type="number"
-                        value={action.y ?? 0}
-                        onChange={(e) => updateGestureAction(index, { y: parseInt(e.target.value) || 0 })}
-                        placeholder="Y"
-                        className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
-                        style={{
-                          background: isDark ? '#1f1f23' : '#ffffff',
-                          color: isDark ? '#e4e4e7' : '#1a1a1a',
-                          border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
-                        }}
-                      />
-                    </>
-                  )}
-
-                  {action.type === 'move' && (
-                    <>
-                      <span className="text-[9px]" style={{ color: isDark ? '#71717a' : '#666666' }}>Duration:</span>
-                      <input
-                        type="number"
-                        value={action.duration ?? 100}
-                        onChange={(e) => updateGestureAction(index, { duration: parseInt(e.target.value) || 0 })}
-                        className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
-                        style={{
-                          background: isDark ? '#1f1f23' : '#ffffff',
-                          color: isDark ? '#e4e4e7' : '#1a1a1a',
-                          border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
-                        }}
-                      />
-                      <span className="text-[9px]" style={{ color: isDark ? '#71717a' : '#666666' }}>ms</span>
-                    </>
-                  )}
-
-                  {action.type === 'pause' && (
-                    <>
-                      <span className="text-[9px]" style={{ color: isDark ? '#71717a' : '#666666' }}>Duration:</span>
-                      <input
-                        type="number"
-                        value={action.duration ?? 100}
-                        onChange={(e) => updateGestureAction(index, { duration: parseInt(e.target.value) || 0 })}
-                        className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
-                        style={{
-                          background: isDark ? '#1f1f23' : '#ffffff',
-                          color: isDark ? '#e4e4e7' : '#1a1a1a',
-                          border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
-                        }}
-                      />
-                      <span className="text-[9px]" style={{ color: isDark ? '#71717a' : '#666666' }}>ms</span>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => removeGestureAction(index)}
-                    className="ml-auto px-2 py-0.5 rounded text-[9px] font-bold uppercase hover:opacity-80"
+              ) : (
+                gestureActions.map((action, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 rounded"
                     style={{
-                      background: 'transparent',
-                      color: isDark ? '#fb7185' : '#dc2626',
-                      border: `1px solid ${isDark ? '#fb7185' : '#dc2626'}`,
+                      background: isDark ? '#0f0f12' : '#f5f5f5',
+                      border: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
                     }}
                   >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                    <span
+                      className="text-[9px] font-bold uppercase w-16"
+                      style={{ color: isDark ? '#71717a' : '#666666' }}
+                    >
+                      #{index + 1} {action.type}
+                    </span>
+
+                    {(action.type === 'move' || action.type === 'pointerDown') && (
+                      <>
+                        <input
+                          type="number"
+                          value={action.x ?? 0}
+                          onChange={(e) =>
+                            updateGestureAction(index, { x: parseInt(e.target.value) || 0 })
+                          }
+                          placeholder="X"
+                          className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
+                          style={{
+                            background: isDark ? '#1f1f23' : '#ffffff',
+                            color: isDark ? '#e4e4e7' : '#1a1a1a',
+                            border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
+                          }}
+                        />
+                        <input
+                          type="number"
+                          value={action.y ?? 0}
+                          onChange={(e) =>
+                            updateGestureAction(index, { y: parseInt(e.target.value) || 0 })
+                          }
+                          placeholder="Y"
+                          className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
+                          style={{
+                            background: isDark ? '#1f1f23' : '#ffffff',
+                            color: isDark ? '#e4e4e7' : '#1a1a1a',
+                            border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
+                          }}
+                        />
+                      </>
+                    )}
+
+                    {action.type === 'move' && (
+                      <>
+                        <span
+                          className="text-[9px]"
+                          style={{ color: isDark ? '#71717a' : '#666666' }}
+                        >
+                          Duration:
+                        </span>
+                        <input
+                          type="number"
+                          value={action.duration ?? 100}
+                          onChange={(e) =>
+                            updateGestureAction(index, { duration: parseInt(e.target.value) || 0 })
+                          }
+                          className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
+                          style={{
+                            background: isDark ? '#1f1f23' : '#ffffff',
+                            color: isDark ? '#e4e4e7' : '#1a1a1a',
+                            border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
+                          }}
+                        />
+                        <span
+                          className="text-[9px]"
+                          style={{ color: isDark ? '#71717a' : '#666666' }}
+                        >
+                          ms
+                        </span>
+                      </>
+                    )}
+
+                    {action.type === 'pause' && (
+                      <>
+                        <span
+                          className="text-[9px]"
+                          style={{ color: isDark ? '#71717a' : '#666666' }}
+                        >
+                          Duration:
+                        </span>
+                        <input
+                          type="number"
+                          value={action.duration ?? 100}
+                          onChange={(e) =>
+                            updateGestureAction(index, { duration: parseInt(e.target.value) || 0 })
+                          }
+                          className="w-16 px-1 py-0.5 rounded text-[10px] font-mono"
+                          style={{
+                            background: isDark ? '#1f1f23' : '#ffffff',
+                            color: isDark ? '#e4e4e7' : '#1a1a1a',
+                            border: `1px solid ${isDark ? '#3f3f46' : '#cccccc'}`,
+                          }}
+                        />
+                        <span
+                          className="text-[9px]"
+                          style={{ color: isDark ? '#71717a' : '#666666' }}
+                        >
+                          ms
+                        </span>
+                      </>
+                    )}
+
+                    <button
+                      onClick={() => removeGestureAction(index)}
+                      className="ml-auto px-2 py-0.5 rounded text-[9px] font-bold uppercase hover:opacity-80"
+                      style={{
+                        background: 'transparent',
+                        color: isDark ? '#fb7185' : '#dc2626',
+                        border: `1px solid ${isDark ? '#fb7185' : '#dc2626'}`,
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Execute Button */}
@@ -988,9 +1125,23 @@ export function CommandsPanel() {
               disabled={gestureActions.length === 0 || executeGesture.isPending}
               className="w-full px-3 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: gestureActions.length === 0 ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'),
-                color: gestureActions.length === 0 ? (isDark ? '#71717a' : '#999999') : (isDark ? '#0a0a0c' : '#ffffff'),
-                border: `2px solid ${gestureActions.length === 0 ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)')}`,
+                background:
+                  gestureActions.length === 0
+                    ? isDark
+                      ? '#3f3f46'
+                      : '#e5e5e5'
+                    : isDark
+                      ? 'var(--accent-cyan)'
+                      : 'var(--accent-blue, #1d4ed8)',
+                color:
+                  gestureActions.length === 0
+                    ? isDark
+                      ? '#71717a'
+                      : '#999999'
+                    : isDark
+                      ? '#0a0a0c'
+                      : '#ffffff',
+                border: `2px solid ${gestureActions.length === 0 ? (isDark ? '#3f3f46' : '#e5e5e5') : isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'}`,
               }}
             >
               {executeGesture.isPending ? 'Executing...' : 'Execute Gesture Sequence'}
@@ -1016,7 +1167,10 @@ export function CommandsPanel() {
               borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
             }}
           >
-            <span className="text-[10px] font-bold uppercase" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>
+            <span
+              className="text-[10px] font-bold uppercase"
+              style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
+            >
               Execute Script
             </span>
             <button
@@ -1038,7 +1192,8 @@ export function CommandsPanel() {
           {/* Script Panel Content */}
           <div className="p-3">
             <p className="text-[9px] mb-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
-              Enter a shell command to execute on the device. Commands are validated against an allowlist for safety.
+              Enter a shell command to execute on the device. Commands are validated against an
+              allowlist for safety.
             </p>
 
             {/* Script Input */}
@@ -1084,9 +1239,21 @@ export function CommandsPanel() {
               disabled={!scriptText.trim() || executeScript.isPending}
               className="w-full mt-3 px-3 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: !scriptText.trim() ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'),
-                color: !scriptText.trim() ? (isDark ? '#71717a' : '#999999') : (isDark ? '#0a0a0c' : '#ffffff'),
-                border: `2px solid ${!scriptText.trim() ? (isDark ? '#3f3f46' : '#e5e5e5') : (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)')}`,
+                background: !scriptText.trim()
+                  ? isDark
+                    ? '#3f3f46'
+                    : '#e5e5e5'
+                  : isDark
+                    ? 'var(--accent-cyan)'
+                    : 'var(--accent-blue, #1d4ed8)',
+                color: !scriptText.trim()
+                  ? isDark
+                    ? '#71717a'
+                    : '#999999'
+                  : isDark
+                    ? '#0a0a0c'
+                    : '#ffffff',
+                border: `2px solid ${!scriptText.trim() ? (isDark ? '#3f3f46' : '#e5e5e5') : isDark ? 'var(--accent-cyan)' : 'var(--accent-blue, #1d4ed8)'}`,
               }}
             >
               {executeScript.isPending ? 'Executing...' : 'Execute Script'}
@@ -1110,7 +1277,16 @@ interface TableViewProps {
   isDark: boolean;
 }
 
-function TableView({ data, filterText, setFilterText, sortColumn, sortDirection, setSortColumn, setSortDirection, isDark }: TableViewProps) {
+function TableView({
+  data,
+  filterText,
+  setFilterText,
+  sortColumn,
+  sortDirection,
+  setSortColumn,
+  setSortDirection,
+  isDark,
+}: TableViewProps) {
   const parsed = useMemo(() => {
     try {
       const json = JSON.parse(data);
@@ -1125,7 +1301,10 @@ function TableView({ data, filterText, setFilterText, sortColumn, sortDirection,
   if (!parsed) {
     return (
       <div className="p-3">
-        <pre className="text-[11px] font-mono whitespace-pre-wrap" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>
+        <pre
+          className="text-[11px] font-mono whitespace-pre-wrap"
+          style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
+        >
           {data}
         </pre>
       </div>
@@ -1136,8 +1315,8 @@ function TableView({ data, filterText, setFilterText, sortColumn, sortDirection,
 
   const filteredData = useMemo(() => {
     if (!filterText) return parsed;
-    return parsed.filter(row =>
-      columns.some(col => String(row[col]).toLowerCase().includes(filterText.toLowerCase()))
+    return parsed.filter((row) =>
+      columns.some((col) => String(row[col]).toLowerCase().includes(filterText.toLowerCase()))
     );
   }, [parsed, filterText, columns]);
 
@@ -1186,7 +1365,7 @@ function TableView({ data, filterText, setFilterText, sortColumn, sortDirection,
         <table className="w-full text-[10px]">
           <thead>
             <tr style={{ background: isDark ? '#0f0f12' : '#f5f5f5' }}>
-              {columns.map(col => (
+              {columns.map((col) => (
                 <th
                   key={col}
                   onClick={() => handleSort(col)}
@@ -1199,7 +1378,13 @@ function TableView({ data, filterText, setFilterText, sortColumn, sortDirection,
                   <div className="flex items-center gap-1">
                     <span>{col}</span>
                     {sortColumn === col && (
-                      <svg className={`w-2.5 h-2.5 ${sortDirection === 'desc' ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        className={`w-2.5 h-2.5 ${sortDirection === 'desc' ? 'rotate-180' : ''}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <polyline points="18 15 12 9 6 15" />
                       </svg>
                     )}
@@ -1211,40 +1396,46 @@ function TableView({ data, filterText, setFilterText, sortColumn, sortDirection,
           <tbody>
             {sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-2 py-3 text-center" style={{ color: isDark ? '#71717a' : '#666666' }}>
+                <td
+                  colSpan={columns.length}
+                  className="px-2 py-3 text-center"
+                  style={{ color: isDark ? '#71717a' : '#666666' }}
+                >
                   No matching rows
                 </td>
               </tr>
-            ) : sortedData.map((row, idx) => (
-              <tr
-                key={idx}
-                style={{
-                  background: idx % 2 === 0 ? 'transparent' : (isDark ? '#0f0f12' : '#f5f5f5'),
-                  borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
-                }}
-              >
-                {columns.map(col => (
-                  <td
-                    key={col}
-                    className="px-2 py-1.5 font-mono truncate max-w-[200px]"
-                    style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
-                    title={String(row[col] ?? '')}
-                  >
-                    {row[col] === null ? (
-                      <span style={{ color: isDark ? '#71717a' : '#999999' }}>null</span>
-                    ) : row[col] === undefined ? (
-                      <span style={{ color: isDark ? '#71717a' : '#999999' }}>undefined</span>
-                    ) : typeof row[col] === 'object' ? (
-                      <span style={{ color: isDark ? '#a78bfa' : '#7c3aed' }}>
-                        {JSON.stringify(row[col])}
-                      </span>
-                    ) : (
-                      String(row[col])
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            ) : (
+              sortedData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  style={{
+                    background: idx % 2 === 0 ? 'transparent' : isDark ? '#0f0f12' : '#f5f5f5',
+                    borderBottom: isDark ? '1px solid #3f3f46' : '1px solid #e5e5e5',
+                  }}
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={col}
+                      className="px-2 py-1.5 font-mono truncate max-w-[200px]"
+                      style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}
+                      title={String(row[col] ?? '')}
+                    >
+                      {row[col] === null ? (
+                        <span style={{ color: isDark ? '#71717a' : '#999999' }}>null</span>
+                      ) : row[col] === undefined ? (
+                        <span style={{ color: isDark ? '#71717a' : '#999999' }}>undefined</span>
+                      ) : typeof row[col] === 'object' ? (
+                        <span style={{ color: isDark ? '#a78bfa' : '#7c3aed' }}>
+                          {JSON.stringify(row[col])}
+                        </span>
+                      ) : (
+                        String(row[col])
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

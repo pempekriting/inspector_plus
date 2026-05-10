@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 import threading
@@ -22,7 +21,7 @@ class MitmproxyManager:
     _lock = threading.Lock()
 
     def __init__(self):
-        self._process: Optional[subprocess.Popen] = None
+        self._process: subprocess.Popen | None = None
         self._port: int = 8080
         self._flow_file: str = ""
         self._pid_file: str = os.path.join(_CAPTURE_DIR, "mitmdump.pid")
@@ -47,14 +46,19 @@ class MitmproxyManager:
 
         mitmdump_path = self._find_mitmdump()
         if not mitmdump_path:
-            return {"success": False, "error": "mitmdump not found. Install mitmproxy: pip install mitmproxy"}
+            return {
+                "success": False,
+                "error": "mitmdump not found. Install mitmproxy: pip install mitmproxy",
+            }
 
         # Try the requested port first, then auto-find next available
         for attempt_port in [port, port + 1, port + 2, port + 3, port + 4]:
             cmd = [
                 mitmdump_path,
-                "-p", str(attempt_port),
-                "-w", self._flow_file,
+                "-p",
+                str(attempt_port),
+                "-w",
+                self._flow_file,
             ]
             try:
                 self._process = subprocess.Popen(
@@ -64,6 +68,7 @@ class MitmproxyManager:
                 )
                 # Give it a moment to start or fail
                 import time as _time
+
                 _time.sleep(0.5)
                 if self._process.poll() is not None:
                     # Process died, port likely in use, try next
@@ -74,7 +79,12 @@ class MitmproxyManager:
                 with open(self._pid_file, "w") as f:
                     f.write(str(self._process.pid))
                 logger.info(f"[MitmproxyManager] started mitmdump on port {attempt_port}, PID={self._process.pid}")
-                return {"success": True, "running": True, "port": attempt_port, "pid": self._process.pid}
+                return {
+                    "success": True,
+                    "running": True,
+                    "port": attempt_port,
+                    "pid": self._process.pid,
+                }
             except Exception as e:
                 logger.warning(f"[MitmproxyManager] port {attempt_port} failed: {e}")
                 self._process = None
@@ -85,13 +95,15 @@ class MitmproxyManager:
 
     def stop(self) -> dict:
         """Stop mitmdump process and kill anything listening on its port."""
-        import socket
+
         # Kill by port to handle forked processes
         for attempt_port in range(self._port, self._port - 5, -1):
             try:
                 result = subprocess.run(
                     ["lsof", "-ti", f":{attempt_port}"],
-                    capture_output=True, text=True, timeout=5,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
                 )
                 if result.stdout.strip():
                     pids = result.stdout.strip().split("\n")
@@ -143,9 +155,12 @@ class MitmproxyManager:
 
         try:
             from network.flow_parser import parse_flow_file
+
             flows = parse_flow_file(self._flow_file)
             filtered = [f for f in flows if f.get("timestamp", 0) > since]
-            logger.info(f"[MitmproxyManager] get_flows: parsed {len(flows)} flows, {len(filtered)} after since filter, file={self._flow_file}")
+            logger.info(
+                f"[MitmproxyManager] get_flows: parsed {len(flows)} flows, {len(filtered)} after since filter, file={self._flow_file}"
+            )
             self._flows_cache = filtered
             return filtered
         except Exception as e:
@@ -156,9 +171,10 @@ class MitmproxyManager:
         """Get path to latest flow file."""
         return self._flow_file
 
-    def _find_mitmdump(self) -> Optional[str]:
+    def _find_mitmdump(self) -> str | None:
         """Find mitmdump in PATH."""
         import shutil as sh
+
         mitmdump = sh.which("mitmdump")
         if mitmdump:
             return mitmdump

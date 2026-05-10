@@ -1,4 +1,4 @@
-import { useThemeStore } from "../stores/themeStore";
+import { useThemeStore } from '../stores/themeStore';
 
 type TabType = 'inspector' | 'commands';
 
@@ -16,7 +16,13 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
       id: 'inspector',
       label: 'Inspector',
       icon: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          className="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <path d="M9 9h6M9 13h6M9 17h4" />
         </svg>
@@ -26,7 +32,13 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
       id: 'commands',
       label: 'Commands',
       icon: (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          className="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M4 17l6-6-6-6M12 19h8" />
         </svg>
       ),
@@ -50,9 +62,11 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
             className="flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm font-bold transition-all relative"
             style={{
               background: isActive ? (isDark ? '#111114' : '#ffffff') : 'transparent',
-              color: isActive ? (isDark ? '#e4e4e7' : '#1a1a1a') : (isDark ? '#71717a' : '#666666'),
+              color: isActive ? (isDark ? '#e4e4e7' : '#1a1a1a') : isDark ? '#71717a' : '#666666',
               borderBottom: isActive
-                ? (isDark ? '3px solid var(--accent-cyan, #00e5cc)' : '3px solid var(--accent-blue, #1d4ed8)')
+                ? isDark
+                  ? '3px solid var(--accent-cyan, #00e5cc)'
+                  : '3px solid var(--accent-blue, #1d4ed8)'
                 : '3px solid transparent',
             }}
           >

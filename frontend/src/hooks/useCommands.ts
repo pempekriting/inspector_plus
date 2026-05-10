@@ -1,5 +1,5 @@
-import { useExecuteCommand } from "../services/api";
-import { useDeviceStore } from "../stores/deviceStore";
+import { useExecuteCommand } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
 
 export interface CommandResult {
   success: boolean;
@@ -25,8 +25,8 @@ export function useCommands() {
     } catch (err) {
       return {
         success: false,
-        output: "",
-        error: err instanceof Error ? err.message : "Unknown error",
+        output: '',
+        error: err instanceof Error ? err.message : 'Unknown error',
       };
     }
   };

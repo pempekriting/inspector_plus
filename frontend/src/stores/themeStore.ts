@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -8,7 +8,7 @@ interface ThemeState {
   toggleTheme: () => void;
 }
 
-const STORAGE_KEY = "inspector-plus-theme";
+const STORAGE_KEY = 'inspector-plus-theme';
 
 function getInitialTheme(): ThemeMode {
   try {
@@ -29,11 +29,12 @@ export const useThemeStore = create<ThemeState>((set) => ({
     } catch {}
     set({ theme });
   },
-  toggleTheme: () => set((state) => {
-    const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-    try {
-      localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch {}
-    return { theme: newTheme };
-  }),
+  toggleTheme: () =>
+    set((state) => {
+      const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(STORAGE_KEY, newTheme);
+      } catch {}
+      return { theme: newTheme };
+    }),
 }));

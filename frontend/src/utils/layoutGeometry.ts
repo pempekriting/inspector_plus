@@ -3,9 +3,9 @@
 // to position highlight boxes and bounding boxes at pixel-accurate positions.
 
 export interface ImageLayout {
-  imgLeft: number;    // screenshot left edge offset from container left (px)
-  imgTop: number;     // screenshot top edge offset from container top (px)
-  scale: number;      // displayWidth / naturalWidth (how screenshot is CSS-fitted)
+  imgLeft: number; // screenshot left edge offset from container left (px)
+  imgTop: number; // screenshot top edge offset from container top (px)
+  scale: number; // displayWidth / naturalWidth (how screenshot is CSS-fitted)
   displayWidth: number;
   displayHeight: number;
 }

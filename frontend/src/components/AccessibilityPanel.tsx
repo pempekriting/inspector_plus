@@ -1,15 +1,16 @@
-import { useState, memo, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { useHierarchyStore } from "../stores/hierarchyStore";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useThemeStore } from "../stores/themeStore";
-import type { UiNode } from "../types/shared";
-import { getApiUrl } from "../config/apiConfig";
+import { useMutation } from '@tanstack/react-query';
+import { useState, memo, useCallback } from 'react';
+
+import { getApiUrl } from '../config/apiConfig';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
+import type { UiNode } from '../types/shared';
 
 interface AccessibilityIssue {
   nodeId: string;
   check: string;
-  severity: "high" | "medium" | "low";
+  severity: 'high' | 'medium' | 'low';
   description: string;
   element: Record<string, unknown>;
 }
@@ -28,8 +29,8 @@ export function useAccessibilityAudit() {
         ? `${getApiUrl()}/hierarchy/audit?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy/audit`;
       const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error(`Audit failed: ${res.status}`);
@@ -40,19 +41,37 @@ export function useAccessibilityAudit() {
 
 const SEVERITY_ICONS = {
   high: (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      className="w-3.5 h-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <path d="M12 9v4M12 17h.01" strokeLinecap="round" />
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
     </svg>
   ),
   medium: (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      className="w-3.5 h-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
     </svg>
   ),
   low: (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      className="w-3.5 h-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="M12 16v.01M12 8h.01" strokeLinecap="round" />
     </svg>
@@ -60,22 +79,22 @@ const SEVERITY_ICONS = {
 };
 
 const SEVERITY_COLORS = {
-  high: { bg: "rgba(251,113,133,0.15)", border: "#fb7185", text: "#fb7185" },
-  medium: { bg: "rgba(251,191,36,0.15)", border: "#fbbf24", text: "#fbbf24" },
-  low: { bg: "rgba(52,211,153,0.15)", border: "#34d399", text: "#34d399" },
+  high: { bg: 'rgba(251,113,133,0.15)', border: '#fb7185', text: '#fb7185' },
+  medium: { bg: 'rgba(251,191,36,0.15)', border: '#fbbf24', text: '#fbbf24' },
+  low: { bg: 'rgba(52,211,153,0.15)', border: '#34d399', text: '#34d399' },
 };
 
 const CHECK_LABELS: Record<string, string> = {
-  contrast: "Contrast",
-  touch_target: "Touch Target",
-  missing_label: "Missing Label",
-  duplicate_text: "Duplicate Text",
-  text_overflow: "Text Overflow",
+  contrast: 'Contrast',
+  touch_target: 'Touch Target',
+  missing_label: 'Missing Label',
+  duplicate_text: 'Duplicate Text',
+  text_overflow: 'Text Overflow',
 };
 
 export const AccessibilityPanel = memo(function AccessibilityPanel() {
   const { theme } = useThemeStore();
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
   const { setSelectedNode, setHoveredNode, uiTree } = useHierarchyStore();
   const { selectedDevice } = useDeviceStore();
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
@@ -94,10 +113,10 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
   const handleExportReport = useCallback(() => {
     if (!auditResult) return;
     const blob = new Blob([JSON.stringify(auditResult, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `accessibility-audit-${Date.now()}.json`;
     a.click();
@@ -133,15 +152,25 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
       <div
         className="px-3 py-2 flex items-center justify-between flex-shrink-0"
         style={{
-          background: "var(--bg-tertiary)",
-          borderBottom: "var(--nb-border)",
+          background: 'var(--bg-tertiary)',
+          borderBottom: 'var(--nb-border)',
         }}
       >
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4" style={{ color: isDark ? "#34d399" : "#059669" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            className="w-4 h-4"
+            style={{ color: isDark ? '#34d399' : '#059669' }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isDark ? "#34d399" : "#059669" }}>
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: isDark ? '#34d399' : '#059669' }}
+          >
             Accessibility Audit
           </span>
         </div>
@@ -150,24 +179,36 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
           disabled={isRunning || !uiTree}
           className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold rounded transition-all active:scale-95"
           style={{
-                background: "var(--accent-emerald)",
-                color: "#ffffff",
-                border: "2px solid var(--accent-emerald)",
-                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
-                opacity: isRunning || !uiTree ? 0.6 : 1,
-              }}
+            background: 'var(--accent-emerald)',
+            color: '#ffffff',
+            border: '2px solid var(--accent-emerald)',
+            boxShadow: isDark ? 'var(--nb-shadow-dark)' : 'var(--nb-shadow-light)',
+            opacity: isRunning || !uiTree ? 0.6 : 1,
+          }}
         >
           {isRunning ? (
-            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <svg
+              className="w-3 h-3 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+            >
               <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           ) : (
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg
+              className="w-3 h-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
           )}
-          {isRunning ? "Running..." : "Run Audit"}
+          {isRunning ? 'Running...' : 'Run Audit'}
         </button>
       </div>
 
@@ -178,19 +219,29 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
             <div
               className="w-16 h-16 flex items-center justify-center mb-4"
               style={{
-                background: "var(--bg-secondary)",
-                border: "var(--nb-border)",
-                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
+                background: 'var(--bg-secondary)',
+                border: 'var(--nb-border)',
+                boxShadow: isDark ? 'var(--nb-shadow-dark)' : 'var(--nb-shadow-light)',
               }}
             >
-              <svg className="w-8 h-8" style={{ color: isDark ? "#52525b" : "#999999" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                className="w-8 h-8"
+                style={{ color: isDark ? '#52525b' : '#999999' }}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </div>
-            <p className="text-sm font-bold mb-1" style={{ color: isDark ? "#a1a1aa" : "#4a4a4a" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: isDark ? '#a1a1aa' : '#4a4a4a' }}>
               Run an audit to check accessibility
             </p>
-            <p className="text-[11px] text-center" style={{ color: isDark ? "#71717a" : "#666666" }}>
+            <p
+              className="text-[11px] text-center"
+              style={{ color: isDark ? '#71717a' : '#666666' }}
+            >
               Checks contrast, touch targets, missing labels, and more
             </p>
           </div>
@@ -200,15 +251,21 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
             <div
               className="p-2.5 rounded"
               style={{
-                background: "var(--bg-elevated)",
-                border: "2px solid var(--border-default)",
+                background: 'var(--bg-elevated)',
+                border: '2px solid var(--border-default)',
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold" style={{ color: isDark ? "#71717a" : "#666666" }}>
+                <span
+                  className="text-[10px] font-bold"
+                  style={{ color: isDark ? '#71717a' : '#666666' }}
+                >
                   Issues: {auditResult.issues.length} total
                 </span>
-                <span className="text-[10px] font-mono" style={{ color: isDark ? "#52525b" : "#999999" }}>
+                <span
+                  className="text-[10px] font-mono"
+                  style={{ color: isDark ? '#52525b' : '#999999' }}
+                >
                   {auditResult.totalNodes} nodes checked
                 </span>
               </div>
@@ -251,31 +308,45 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
               onClick={handleExportReport}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-bold rounded transition-all active:scale-95"
               style={{
-                background: "var(--bg-elevated)",
-                color: isDark ? "#a1a1aa" : "#4a4a4a",
-                border: "2px solid var(--border-default)",
-                boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
+                background: 'var(--bg-elevated)',
+                color: isDark ? '#a1a1aa' : '#4a4a4a',
+                border: '2px solid var(--border-default)',
+                boxShadow: isDark ? 'var(--nb-shadow-dark)' : 'var(--nb-shadow-light)',
               }}
             >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>
               Export Report
             </button>
 
             {/* Issues list grouped by severity */}
-            {["high", "medium", "low"].map((severity) => {
+            {['high', 'medium', 'low'].map((severity) => {
               const issues = auditResult.issues.filter((i) => i.severity === severity);
               if (issues.length === 0) return null;
               const colors = SEVERITY_COLORS[severity as keyof typeof SEVERITY_COLORS];
               return (
                 <div key={severity}>
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span style={{ color: colors.text }}>{SEVERITY_ICONS[severity as keyof typeof SEVERITY_ICONS]}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.text }}>
+                    <span style={{ color: colors.text }}>
+                      {SEVERITY_ICONS[severity as keyof typeof SEVERITY_ICONS]}
+                    </span>
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: colors.text }}
+                    >
                       {severity}
                     </span>
-                    <span className="text-[10px] font-mono" style={{ color: isDark ? "#52525b" : "#999999" }}>
+                    <span
+                      className="text-[10px] font-mono"
+                      style={{ color: isDark ? '#52525b' : '#999999' }}
+                    >
                       {issues.length}
                     </span>
                   </div>
@@ -288,30 +359,31 @@ export const AccessibilityPanel = memo(function AccessibilityPanel() {
                           onClick={() => handleIssueClick(issue)}
                           className="w-full text-left p-2 rounded transition-all"
                           style={{
-                            background: isSelected
-                              ? colors.bg
-                              : "var(--bg-tertiary)",
-                            border: `1.5px solid ${isSelected ? colors.border : "var(--border-default)"}`,
+                            background: isSelected ? colors.bg : 'var(--bg-tertiary)',
+                            border: `1.5px solid ${isSelected ? colors.border : 'var(--border-default)'}`,
                           }}
                         >
                           <div className="flex items-center justify-between mb-0.5">
                             <span
                               className="text-[10px] font-bold font-mono"
-                              style={{ color: isDark ? "var(--accent-cyan)" : "#0066cc" }}
+                              style={{ color: isDark ? 'var(--accent-cyan)' : '#0066cc' }}
                             >
                               {CHECK_LABELS[issue.check] || issue.check}
                             </span>
                             <span
                               className="text-[9px] font-mono px-1 py-0.5 rounded"
                               style={{
-                                background: "var(--bg-tertiary)",
-                                color: isDark ? "#71717a" : "#999999",
+                                background: 'var(--bg-tertiary)',
+                                color: isDark ? '#71717a' : '#999999',
                               }}
                             >
                               {issue.nodeId}
                             </span>
                           </div>
-                          <p className="text-[10px]" style={{ color: isDark ? "#a1a1aa" : "#4a4a4a" }}>
+                          <p
+                            className="text-[10px]"
+                            style={{ color: isDark ? '#a1a1aa' : '#4a4a4a' }}
+                          >
                             {issue.description}
                           </p>
                         </button>

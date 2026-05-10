@@ -3,11 +3,12 @@ Tests for commands/app_commands.py — AppCommands class.
 Mocks subprocess to test APK install/uninstall/launch/list in isolation.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from commands.app_commands import AppCommands
@@ -44,6 +45,7 @@ class TestAppCommands:
     @patch("subprocess.run")
     def test_install_app_timeout(self, mock_run, mock_safe_path):
         import subprocess
+
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 120)
         cmd = AppCommands()
         success, output = cmd.install_app("/tmp/app.apk")
@@ -80,33 +82,34 @@ class TestAppCommands:
     def test_is_app_installed_returns_true(self, mock_run):
         mock_run.return_value = mock_proc(stdout="package:com.example.app")
         cmd = AppCommands()
-        success, output = cmd.is_app_installed("com.example.app")
+        success, _output = cmd.is_app_installed("com.example.app")
         assert success is True
 
     @patch("subprocess.run")
     def test_is_app_installed_returns_false(self, mock_run):
         mock_run.return_value = mock_proc(stdout="")
         cmd = AppCommands()
-        success, output = cmd.is_app_installed("com.notfound")
+        success, _output = cmd.is_app_installed("com.notfound")
         assert success is False
 
     @patch("subprocess.run")
     def test_uninstall_app_success(self, mock_run):
         mock_run.return_value = mock_proc(stdout="Success", returncode=0)
         cmd = AppCommands()
-        success, output = cmd.uninstall_app("com.example.app")
+        success, _output = cmd.uninstall_app("com.example.app")
         assert success is True
 
     @patch("subprocess.run")
     def test_uninstall_app_failure(self, mock_run):
         mock_run.return_value = mock_proc(stderr="Failure", returncode=1)
         cmd = AppCommands()
-        success, output = cmd.uninstall_app("com.example.app")
+        success, _output = cmd.uninstall_app("com.example.app")
         assert success is False
 
     @patch("subprocess.run")
     def test_uninstall_app_timeout(self, mock_run):
         import subprocess
+
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
         cmd = AppCommands()
         success, output = cmd.uninstall_app("com.example.app")
@@ -132,12 +135,13 @@ class TestAppCommands:
     def test_launch_app_failure(self, mock_run):
         mock_run.return_value = mock_proc(stderr="bad", returncode=1)
         cmd = AppCommands()
-        success, output = cmd.launch_app("com.example.app")
+        success, _output = cmd.launch_app("com.example.app")
         assert success is False
 
     @patch("subprocess.run")
     def test_launch_app_timeout(self, mock_run):
         import subprocess
+
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 10)
         cmd = AppCommands()
         success, output = cmd.launch_app("com.example.app")
@@ -170,7 +174,7 @@ class TestAppCommands:
             returncode=0,
         )
         cmd = AppCommands()
-        success, output = cmd.list_installed_apps()
+        _success, output = cmd.list_installed_apps()
         lines = output.split("\n")
         assert all(not line.startswith("package:") for line in lines)
 
@@ -178,7 +182,7 @@ class TestAppCommands:
     def test_list_installed_apps_failure(self, mock_run):
         mock_run.return_value = mock_proc(stderr="error", returncode=1)
         cmd = AppCommands()
-        success, output = cmd.list_installed_apps()
+        success, _output = cmd.list_installed_apps()
         assert success is False
 
     @patch("subprocess.run")

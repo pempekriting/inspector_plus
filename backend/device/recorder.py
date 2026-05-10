@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional, Any
+from typing import Any
 
 
 def _safe_str(value) -> str:
@@ -15,16 +15,18 @@ class RecorderSession:
     AUTOMATION_NAME = "Appium"
 
     def __init__(self):
-        self.steps: List[dict] = []
+        self.steps: list[dict] = []
 
     def add_step(self, action: str, node_id: str, locator: dict, value: Any = None):
-        self.steps.append({
-            "action": action,
-            "nodeId": node_id,
-            "locator": locator,
-            "value": value,
-            "timestamp": time.time()
-        })
+        self.steps.append(
+            {
+                "action": action,
+                "nodeId": node_id,
+                "locator": locator,
+                "value": value,
+                "timestamp": time.time(),
+            }
+        )
 
     def clear(self):
         self.steps = []
@@ -33,9 +35,9 @@ class RecorderSession:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         if lang == "python":
             return self._export_python(platform, timestamp)
-        elif lang == "java":
+        if lang == "java":
             return self._export_java(platform, timestamp)
-        elif lang == "javascript":
+        if lang == "javascript":
             return self._export_javascript(platform, timestamp)
         return ""
 
@@ -53,7 +55,7 @@ class RecorderSession:
             "class TestRecording:",
             "    def setup_method(self):",
             f'        caps = {{"platformName": "{platform}", "app": "your_app.apk", "automationName": "{self.AUTOMATION_NAME}"}}',
-            "        self.driver = webdriver.Remote(\"http://localhost:4723\", caps)",
+            '        self.driver = webdriver.Remote("http://localhost:4723", caps)',
             "",
         ]
         for i, step in enumerate(self.steps, 1):
@@ -73,11 +75,15 @@ class RecorderSession:
         loc_value = _safe_str(locator.get("value", ""))
         if action == "click":
             return f'self.driver.find_element(AppiumBy.{strategy}("{loc_value}")).click()'
-        elif action == "fill":
+        if action == "fill":
             return f'self.driver.find_element(AppiumBy.{strategy}("{loc_value}")).send_keys("{value}")'
-        elif action == "swipe":
-            return f'self.driver.execute_script("mobile: swipe", {{\'startX\': {value.get("startX", 0)}, \'startY\': {value.get("startY", 0)}, \'endX\': {value.get("endX", 0)}, \'endY\': {value.get("endY", 0)}, \'speed\': 5000}})' if isinstance(value, dict) else "// swipe"
-        elif action == "wait":
+        if action == "swipe":
+            return (
+                f"self.driver.execute_script(\"mobile: swipe\", {{'startX': {value.get('startX', 0)}, 'startY': {value.get('startY', 0)}, 'endX': {value.get('endX', 0)}, 'endY': {value.get('endY', 0)}, 'speed': 5000}})"
+                if isinstance(value, dict)
+                else "// swipe"
+            )
+        if action == "wait":
             return f"import time; time.sleep({value or 1})"
         return "pass"
 
@@ -100,15 +106,15 @@ class RecorderSession:
             "    public void setUp() {",
             "        DesiredCapabilities caps = new DesiredCapabilities();",
             f'        caps.setCapability("platformName", "{platform}");',
-            "        caps.setCapability(\"app\", \"your_app.apk\");",
+            '        caps.setCapability("app", "your_app.apk");',
             f'        caps.setCapability("automationName", "{self.AUTOMATION_NAME}");',
-            "        driver = new RemoteWebDriver(new URL(\"http://localhost:4723\"), caps);",
+            '        driver = new RemoteWebDriver(new URL("http://localhost:4723"), caps);',
             "    }",
             "",
         ]
         for i, step in enumerate(self.steps, 1):
             code = self._step_to_java(step)
-            lines.append(f"    @Test")
+            lines.append("    @Test")
             lines.append(f"    public void testStep{i}() {{")
             lines.append(f"        {code}")
             lines.append("    }")
@@ -129,12 +135,12 @@ class RecorderSession:
         by = "By.id" if strategy == "ID" else "By.xpath"
         if action == "click":
             return f'WebElement el = driver.findElement({by}("{loc_value}")); el.click();'
-        elif action == "fill":
+        if action == "fill":
             return f'WebElement el = driver.findElement({by}("{loc_value}")); el.sendKeys("{value}");'
-        elif action == "swipe":
-            return f'// swipe from {value}'
-        elif action == "wait":
-            return f'Thread.sleep({(value or 1) * 1000});'
+        if action == "swipe":
+            return f"// swipe from {value}"
+        if action == "wait":
+            return f"Thread.sleep({(value or 1) * 1000});"
         return ""
 
     def _export_javascript(self, platform: str, timestamp: str) -> str:
@@ -149,7 +155,7 @@ class RecorderSession:
             "    const driver = await remote({",
             '        protocol: "http",',
             '        hostname: "localhost",',
-            '        port: 4723,',
+            "        port: 4723,",
             f'        capabilities: {{ platformName: "{platform}", app: "your_app.apk", automationName: "{self.AUTOMATION_NAME}" }}',
             "    });",
             "",
@@ -176,13 +182,13 @@ class RecorderSession:
         elif strategy == "accessibility-id":
             by = f'`using: "accessibility id", value: "{loc_value}"`'
         if action == "click":
-            return f'driver.$({{{by}}}).click()'
-        elif action == "fill":
+            return f"driver.$({{{by}}}).click()"
+        if action == "fill":
             return f'driver.$({{{by}}}).setValue("{value}")'
-        elif action == "swipe":
-            return '// swipe'
-        elif action == "wait":
-            return f'driver.pause({(value or 1) * 1000})'
+        if action == "swipe":
+            return "// swipe"
+        if action == "wait":
+            return f"driver.pause({(value or 1) * 1000})"
         return "driver.pause(1000)"
 
 

@@ -1,9 +1,18 @@
-import { memo } from "react";
-import type { InspectorSubTab } from "../App";
+import { memo } from 'react';
+
+import type { InspectorSubTab } from '../App';
 
 const SUB_TAB_ICONS: Record<InspectorSubTab, React.ReactNode> = {
   hierarchy: (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -11,19 +20,43 @@ const SUB_TAB_ICONS: Record<InspectorSubTab, React.ReactNode> = {
     </svg>
   ),
   accessibility: (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="4" r="2" />
       <path d="M12 6v6m-5 8l5-10 5 10m-4-4h2" />
     </svg>
   ),
   recorder: (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="9" />
       <circle cx="12" cy="12" r="3" fill="currentColor" />
     </svg>
   ),
   network: (
-    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="w-3 h-3"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12.55a11 11 0 0 1 14.08 0" />
       <path d="M1.42 9a16 16 0 0 1 21.16 0" />
       <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
@@ -45,7 +78,11 @@ interface SubTabBarProps {
   isDark: boolean;
 }
 
-export const SubTabBar = memo(function SubTabBar({ activeTab, onTabChange, isDark }: SubTabBarProps) {
+export const SubTabBar = memo(function SubTabBar({
+  activeTab,
+  onTabChange,
+  isDark,
+}: SubTabBarProps) {
   return (
     <div
       className="flex items-center px-3 py-2 gap-1"
@@ -64,19 +101,11 @@ export const SubTabBar = memo(function SubTabBar({ activeTab, onTabChange, isDar
             onClick={() => onTabChange(tabId)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200"
             style={{
-              background: isActive
-                ? (isDark ? 'var(--accent-cyan)' : '#0066cc')
-                : 'transparent',
-              color: isActive
-                ? (isDark ? '#0a0a0c' : '#ffffff')
-                : (isDark ? '#71717a' : '#666666'),
-              boxShadow: isActive
-                ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a')
-                : 'none',
+              background: isActive ? (isDark ? 'var(--accent-cyan)' : '#0066cc') : 'transparent',
+              color: isActive ? (isDark ? '#0a0a0c' : '#ffffff') : isDark ? '#71717a' : '#666666',
+              boxShadow: isActive ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
               transform: isActive ? 'translateY(1px)' : 'translateY(0)',
-              border: isActive
-                ? 'none'
-                : (isDark ? '2px solid #3f3f46' : '2px solid #cccccc'),
+              border: isActive ? 'none' : isDark ? '2px solid #3f3f46' : '2px solid #cccccc',
             }}
             onMouseEnter={(e) => {
               if (!isActive) {

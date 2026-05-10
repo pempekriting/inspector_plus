@@ -1,11 +1,13 @@
-import { useRef, useEffect, useState } from "react";
-import { useDeviceStore } from "../stores/deviceStore";
-import { useHierarchyStore, UiNode } from "../stores/hierarchyStore";
-import { useThemeStore } from "../stores/themeStore";
-import { SkeletonCanvas } from "./SkeletonLoader";
-import { LayoutBoundsOverlay } from "./LayoutBoundsOverlay";
-import { useRecording } from "../hooks/useRecording";
-import { useInputText } from "../services/api";
+import { useRef, useEffect, useState } from 'react';
+
+import { useRecording } from '../hooks/useRecording';
+import { useInputText } from '../services/api';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore, UiNode } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
+
+import { LayoutBoundsOverlay } from './LayoutBoundsOverlay';
+import { SkeletonCanvas } from './SkeletonLoader';
 
 interface ImageMetrics {
   naturalWidth: number;
@@ -17,7 +19,7 @@ interface ImageMetrics {
 }
 
 function getImageMetrics(container: HTMLElement): ImageMetrics | null {
-  const img = container.querySelector("img") as HTMLImageElement;
+  const img = container.querySelector('img') as HTMLImageElement;
   if (!img || !img.naturalWidth) return null;
 
   const containerRect = container.getBoundingClientRect();
@@ -34,35 +36,39 @@ function getImageMetrics(container: HTMLElement): ImageMetrics | null {
 }
 
 // Convert a UiNode to a locator object for the recorder
-export function nodeToLocator(node: UiNode): { strategy: string; value: string; expression?: string } {
+export function nodeToLocator(node: UiNode): {
+  strategy: string;
+  value: string;
+  expression?: string;
+} {
   // Priority: resourceId > contentDesc > text > className + index
   if (node.resourceId) {
     return {
-      strategy: "id",
+      strategy: 'id',
       value: node.resourceId,
       expression: `//*[@resource-id="${node.resourceId}"]`,
     };
   }
   if (node.contentDesc) {
     return {
-      strategy: "accessibility-id",
+      strategy: 'accessibility-id',
       value: node.contentDesc,
       expression: `//*[@content-desc="${node.contentDesc}"]`,
     };
   }
   if (node.text) {
     return {
-      strategy: "text",
+      strategy: 'text',
       value: node.text,
       expression: `//*[contains(@text,"${node.text}")]`,
     };
   }
   // Fallback to class name + index-based xpath
-  const className = node.className?.split(".").pop() || "View";
+  const className = node.className?.split('.').pop() || 'View';
   return {
-    strategy: "xpath",
-    value: `//${className}[${node.id.split("_").pop() || "1"}]`,
-    expression: `//${className}[${node.id.split("_").pop() || "1"}]`,
+    strategy: 'xpath',
+    value: `//${className}[${node.id.split('_').pop() || '1'}]`,
+    expression: `//${className}[${node.id.split('_').pop() || '1'}]`,
   };
 }
 
@@ -70,13 +76,25 @@ export function ScreenshotCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [coordPopup, setCoordPopup] = useState<{ x: number; y: number; screenX: number; screenY: number } | null>(null);
+  const [coordPopup, setCoordPopup] = useState<{
+    x: number;
+    y: number;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
 
   const { selectedDevice, setDeviceResolution } = useDeviceStore();
   const {
-    isLoadingScreenshot, uiTree, setHoveredNode, setSelectedNode, lockSelection,
-    setLoadingScreenshot, combinedScreenshotUrl, lockedNode,
-    canvasMode, setCanvasMode,
+    isLoadingScreenshot,
+    uiTree,
+    setHoveredNode,
+    setSelectedNode,
+    lockSelection,
+    setLoadingScreenshot,
+    combinedScreenshotUrl,
+    lockedNode,
+    canvasMode,
+    setCanvasMode,
   } = useHierarchyStore();
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
@@ -91,9 +109,12 @@ export function ScreenshotCanvas() {
   const zoomRef = useRef(0.7);
   zoomRef.current = zoom;
 
-  const resetZoom = () => { setZoom(0.7); setPan({ x: 0, y: 0 }); };
-  const zoomIn  = () => setZoom(z => Math.min(4, +(z * 1.25).toFixed(2)));
-  const zoomOut = () => setZoom(z => Math.max(0.25, +(z / 1.25).toFixed(2)));
+  const resetZoom = () => {
+    setZoom(0.7);
+    setPan({ x: 0, y: 0 });
+  };
+  const zoomIn = () => setZoom((z) => Math.min(4, +(z * 1.25).toFixed(2)));
+  const zoomOut = () => setZoom((z) => Math.max(0.25, +(z / 1.25).toFixed(2)));
 
   // Load screenshot from combined /hierarchy-and-screenshot endpoint
   useEffect(() => {
@@ -158,7 +179,12 @@ export function ScreenshotCanvas() {
 
     // Coordinate mode: show coords only, no tap
     if (canvasMode === 'coordinate') {
-      setCoordPopup({ x: deviceX, y: deviceY, screenX: Math.round(clickX), screenY: Math.round(clickY) });
+      setCoordPopup({
+        x: deviceX,
+        y: deviceY,
+        screenX: Math.round(clickX),
+        screenY: Math.round(clickY),
+      });
       setTimeout(() => setCoordPopup(null), 3000);
       return;
     }
@@ -175,7 +201,7 @@ export function ScreenshotCanvas() {
       if (isRecording) {
         if (e.shiftKey) {
           // Shift+Click: record fill action with user-provided text
-          const fillValue = window.prompt("Enter text to fill:");
+          const fillValue = window.prompt('Enter text to fill:');
           if (fillValue !== null) {
             const locator = nodeToLocator(node);
             // Execute fill on device first
@@ -185,7 +211,7 @@ export function ScreenshotCanvas() {
             });
             // Then record the step
             recordStep({
-              action: "fill",
+              action: 'fill',
               nodeId: node.id,
               locator,
               value: fillValue,
@@ -195,7 +221,7 @@ export function ScreenshotCanvas() {
           // Normal click: record click action
           const locator = nodeToLocator(node);
           recordStep({
-            action: "click",
+            action: 'click',
             nodeId: node.id,
             locator,
           });
@@ -239,14 +265,16 @@ export function ScreenshotCanvas() {
     setHoveredNode(node, { x: mouseX, y: mouseY });
   };
 
-  const handleMouseLeave = () => { setHoveredNode(null); };
+  const handleMouseLeave = () => {
+    setHoveredNode(null);
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       // Note: cannot call preventDefault on passive wheel listener
       // Container has overflow:hidden so page scroll is already blocked
       const delta = e.deltaY < 0 ? 1.1 : 0.9;
-      setZoom(z => Math.min(4, Math.max(0.25, +(z * delta).toFixed(2))));
+      setZoom((z) => Math.min(4, Math.max(0.25, +(z * delta).toFixed(2))));
     }
   };
 
@@ -261,7 +289,10 @@ export function ScreenshotCanvas() {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (isPanning && panStart.current) {
-      setPan({ x: panStart.current.panX + e.clientX - panStart.current.x, y: panStart.current.panY + e.clientY - panStart.current.y });
+      setPan({
+        x: panStart.current.panX + e.clientX - panStart.current.x,
+        y: panStart.current.panY + e.clientY - panStart.current.y,
+      });
     }
   };
 
@@ -286,7 +317,14 @@ export function ScreenshotCanvas() {
       onPointerUp={handlePointerUp}
       style={{
         background: isDark ? '#0f0f12' : '#faf9f7',
-        cursor: canvasMode === 'coordinate' ? 'crosshair' : (zoom !== 1 ? (isPanning ? 'grabbing' : 'grab') : 'default'),
+        cursor:
+          canvasMode === 'coordinate'
+            ? 'crosshair'
+            : zoom !== 1
+              ? isPanning
+                ? 'grabbing'
+                : 'grab'
+              : 'default',
       }}
     >
       {/* Screenshot wrapper with zoom/pan — overflow clipped to prevent zoom spillover */}
@@ -297,7 +335,10 @@ export function ScreenshotCanvas() {
             width: '100%',
             height: '100%',
             overflow: 'hidden',
-            transform: zoom !== 1 ? `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)` : undefined,
+            transform:
+              zoom !== 1
+                ? `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`
+                : undefined,
             transition: isPanning ? 'none' : 'transform 150ms ease-out',
             transformOrigin: 'center center',
             zIndex: 1,
@@ -315,72 +356,165 @@ export function ScreenshotCanvas() {
 
       {/* Layout Boundless Mode — Portal rendered at document.body, positioned over canvas */}
       {canvasMode === 'layout' && uiTree && (
-        <LayoutBoundsOverlay
-          canvasRef={containerRef.current}
-          zoom={zoom}
-          pan={pan}
-        />
+        <LayoutBoundsOverlay canvasRef={containerRef.current} zoom={zoom} pan={pan} />
       )}
 
       {isLoadingScreenshot && !imageUrl && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ background: isDark ? 'rgba(15, 15, 18, 0.95)' : 'rgba(250, 249, 247, 0.95)' }}>
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+          style={{ background: isDark ? 'rgba(15, 15, 18, 0.95)' : 'rgba(250, 249, 247, 0.95)' }}
+        >
           {/* Scan line container */}
           <div className="relative mb-6" style={{ width: 120, height: 120 }}>
             {/* Outer ring */}
-            <div className="absolute inset-0 rounded-full border-2 animate-pulse-slow" style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.2)' : 'rgba(4, 120, 87, 0.2)' }} />
+            <div
+              className="absolute inset-0 rounded-full border-2 animate-pulse-slow"
+              style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.2)' : 'rgba(4, 120, 87, 0.2)' }}
+            />
             {/* Middle ring */}
-            <div className="absolute inset-3 rounded-full border border-dashed animate-spin-slow" style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.35)' : 'rgba(4, 120, 87, 0.35)' }} />
+            <div
+              className="absolute inset-3 rounded-full border border-dashed animate-spin-slow"
+              style={{ borderColor: isDark ? 'rgba(0, 245, 212, 0.35)' : 'rgba(4, 120, 87, 0.35)' }}
+            />
             {/* Inner crosshair */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: isDark ? '#1a1a1f' : '#ffffff', border: `2px solid ${isDark ? 'rgba(0, 245, 212, 0.6)' : 'rgba(4, 120, 87, 0.6)'}` }}>
-                <svg className="w-5 h-5" style={{ color: isDark ? 'var(--accent-cyan)' : '#047857' }} fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background: isDark ? '#1a1a1f' : '#ffffff',
+                  border: `2px solid ${isDark ? 'rgba(0, 245, 212, 0.6)' : 'rgba(4, 120, 87, 0.6)'}`,
+                }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: isDark ? 'var(--accent-cyan)' : '#047857' }}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                >
                   <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" />
-                  <line x1="12" y1="18" x2="12" y2="18.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <line
+                    x1="12"
+                    y1="18"
+                    x2="12"
+                    y2="18.01"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </div>
             </div>
             {/* Scanning line */}
-            <div className="absolute left-0 right-0 h-0.5 animate-scan-line" style={{ background: `linear-gradient(90deg, transparent, ${isDark ? 'var(--accent-cyan)' : '#047857'}, transparent)` }} />
+            <div
+              className="absolute left-0 right-0 h-0.5 animate-scan-line"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${isDark ? 'var(--accent-cyan)' : '#047857'}, transparent)`,
+              }}
+            />
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse-text" style={{ color: isDark ? '#52525b' : '#a3a3a3', letterSpacing: '0.15em' }}>Preparing device view</span>
-          <span className="text-[9px] mt-1 animate-pulse-text" style={{ color: isDark ? '#3f3f46' : '#d4d4d4', animationDelay: '0.15s' }}>capturing screen</span>
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse-text"
+            style={{ color: isDark ? '#52525b' : '#a3a3a3', letterSpacing: '0.15em' }}
+          >
+            Preparing device view
+          </span>
+          <span
+            className="text-[9px] mt-1 animate-pulse-text"
+            style={{ color: isDark ? '#3f3f46' : '#d4d4d4', animationDelay: '0.15s' }}
+          >
+            capturing screen
+          </span>
         </div>
       )}
 
       {isLoadingScreenshot && imageUrl && (
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg z-20 animate-pulse-subtle" style={{ background: isDark ? 'rgba(26, 26, 31, 0.92)' : 'rgba(255, 255, 255, 0.92)', backdropFilter: 'blur(6px)', border: `1.5px solid ${isDark ? 'rgba(0, 245, 212, 0.4)' : 'rgba(4, 120, 87, 0.4)'}` }}>
-          <div className="w-2 h-2 rounded-full animate-ping-slow" style={{ background: isDark ? 'var(--accent-cyan)' : '#047857' }} />
-          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: isDark ? '#a1a1aa' : '#4a4a5c' }}>Updating</span>
+        <div
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg z-20 animate-pulse-subtle"
+          style={{
+            background: isDark ? 'rgba(26, 26, 31, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(6px)',
+            border: `1.5px solid ${isDark ? 'rgba(0, 245, 212, 0.4)' : 'rgba(4, 120, 87, 0.4)'}`,
+          }}
+        >
+          <div
+            className="w-2 h-2 rounded-full animate-ping-slow"
+            style={{ background: isDark ? 'var(--accent-cyan)' : '#047857' }}
+          />
+          <span
+            className="text-[9px] font-bold uppercase tracking-wider"
+            style={{ color: isDark ? '#a1a1aa' : '#4a4a5c' }}
+          >
+            Updating
+          </span>
         </div>
       )}
 
       {imageSize.width > 0 && (
-        <div className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-lg z-[50100]" style={{
-          background: isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(8px)',
-          border: isDark ? '1.5px solid #4a4a55' : '1.5px solid #c5c2bb',
-        }}>
-          <svg className="w-3 h-3" style={{ color: isDark ? 'var(--accent-cyan)' : '#1a1a2e' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
+        <div
+          className="absolute top-3 left-3 flex items-center gap-2 px-2 py-1 rounded-lg z-[50100]"
+          style={{
+            background: isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(8px)',
+            border: isDark ? '1.5px solid #4a4a55' : '1.5px solid #c5c2bb',
+          }}
+        >
+          <svg
+            className="w-3 h-3"
+            style={{ color: isDark ? 'var(--accent-cyan)' : '#1a1a2e' }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <rect x="5" y="2" width="14" height="20" rx="2" />
+            <line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="3" strokeLinecap="round" />
           </svg>
-          <span className="text-[10px] font-mono" style={{ color: isDark ? '#a8a8b3' : '#4a4a5c' }}>{imageSize.width}x{imageSize.height}</span>
+          <span className="text-[10px] font-mono" style={{ color: isDark ? '#a8a8b3' : '#4a4a5c' }}>
+            {imageSize.width}x{imageSize.height}
+          </span>
         </div>
       )}
 
       {/* Mode Toggle - Top Left */}
-      <div className="absolute top-3 left-3 flex items-center gap-1 z-[50100]" style={{ marginTop: imageSize.width > 0 ? '32px' : '0' }}>
+      <div
+        className="absolute top-3 left-3 flex items-center gap-1 z-[50100]"
+        style={{ marginTop: imageSize.width > 0 ? '32px' : '0' }}
+      >
         <button
           onClick={() => setCanvasMode('inspect')}
           className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
           style={{
-            background: canvasMode === 'inspect' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
+            background:
+              canvasMode === 'inspect'
+                ? isDark
+                  ? 'var(--accent-cyan)'
+                  : 'var(--accent-blue)'
+                : isDark
+                  ? 'rgba(26, 26, 31, 0.9)'
+                  : 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(8px)',
-            border: `2px solid ${canvasMode === 'inspect' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
-            boxShadow: canvasMode === 'inspect' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
+            border: `2px solid ${canvasMode === 'inspect' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : isDark ? '#4a4a55' : '#c5c2bb'}`,
+            boxShadow:
+              canvasMode === 'inspect' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
           }}
           title="Inspect Mode"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={canvasMode === 'inspect' ? (isDark ? '#0a0a0c' : '#ffffff') : (isDark ? '#a1a1aa' : '#4a4a4a')} strokeWidth="2">
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={
+              canvasMode === 'inspect'
+                ? isDark
+                  ? '#0a0a0c'
+                  : '#ffffff'
+                : isDark
+                  ? '#a1a1aa'
+                  : '#4a4a4a'
+            }
+            strokeWidth="2"
+          >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
@@ -389,14 +523,40 @@ export function ScreenshotCanvas() {
           onClick={() => setCanvasMode('coordinate')}
           className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
           style={{
-            background: canvasMode === 'coordinate' ? (isDark ? '#10b981' : '#059669') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
+            background:
+              canvasMode === 'coordinate'
+                ? isDark
+                  ? '#10b981'
+                  : '#059669'
+                : isDark
+                  ? 'rgba(26, 26, 31, 0.9)'
+                  : 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(8px)',
-            border: `2px solid ${canvasMode === 'coordinate' ? (isDark ? '#10b981' : '#059669') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
-            boxShadow: canvasMode === 'coordinate' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
+            border: `2px solid ${canvasMode === 'coordinate' ? (isDark ? '#10b981' : '#059669') : isDark ? '#4a4a55' : '#c5c2bb'}`,
+            boxShadow:
+              canvasMode === 'coordinate'
+                ? isDark
+                  ? '2px 2px 0 #000'
+                  : '2px 2px 0 #1a1a1a'
+                : 'none',
           }}
           title="Coordinate Mode"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={canvasMode === 'coordinate' ? (isDark ? '#0a0a0c' : '#ffffff') : (isDark ? '#a1a1aa' : '#4a4a4a')} strokeWidth="2">
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={
+              canvasMode === 'coordinate'
+                ? isDark
+                  ? '#0a0a0c'
+                  : '#ffffff'
+                : isDark
+                  ? '#a1a1aa'
+                  : '#4a4a4a'
+            }
+            strokeWidth="2"
+          >
             <path d="M12 2L2 7l10 5 10-5-10-5z" />
             <path d="M2 17l10 5 10-5" />
             <path d="M2 12l10 5 10-5" />
@@ -406,14 +566,36 @@ export function ScreenshotCanvas() {
           onClick={() => setCanvasMode(canvasMode === 'layout' ? 'inspect' : 'layout')}
           className="w-8 h-8 flex items-center justify-center rounded-lg transition-all active:scale-95"
           style={{
-            background: canvasMode === 'layout' ? (isDark ? 'rgba(0, 245, 212, 0.20)' : 'rgba(0, 102, 204, 0.15)') : (isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)'),
+            background:
+              canvasMode === 'layout'
+                ? isDark
+                  ? 'rgba(0, 245, 212, 0.20)'
+                  : 'rgba(0, 102, 204, 0.15)'
+                : isDark
+                  ? 'rgba(26, 26, 31, 0.9)'
+                  : 'rgba(255, 255, 255, 0.9)',
             backdropFilter: 'blur(8px)',
-            border: `2px solid ${canvasMode === 'layout' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#4a4a55' : '#c5c2bb')}`,
-            boxShadow: canvasMode === 'layout' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
+            border: `2px solid ${canvasMode === 'layout' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : isDark ? '#4a4a55' : '#c5c2bb'}`,
+            boxShadow:
+              canvasMode === 'layout' ? (isDark ? '2px 2px 0 #000' : '2px 2px 0 #1a1a1a') : 'none',
           }}
           title="Layout Mode (L)"
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={canvasMode === 'layout' ? (isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)') : (isDark ? '#a1a1aa' : '#4a4a4a')} strokeWidth="2">
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={
+              canvasMode === 'layout'
+                ? isDark
+                  ? 'var(--accent-cyan)'
+                  : 'var(--accent-blue)'
+                : isDark
+                  ? '#a1a1aa'
+                  : '#4a4a4a'
+            }
+            strokeWidth="2"
+          >
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -424,60 +606,131 @@ export function ScreenshotCanvas() {
 
       {/* D2: Zoom toolbar */}
       {imageUrl && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-lg z-20" style={{
-          background: isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(8px)',
-          border: isDark ? '1.5px solid #4a4a55' : '1.5px solid #c5c2bb',
-        }}>
-          <button onClick={zoomOut} className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95" style={{
-            background: isDark ? '#1f1f23' : '#ffffff',
-            color: isDark ? '#a1a1aa' : '#4a4a4a',
-            border: isDark ? '1.5px solid #3f3f46' : '1.5px solid #cccccc',
-          }} title="Zoom out">
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /></svg>
+        <div
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-lg z-20"
+          style={{
+            background: isDark ? 'rgba(26, 26, 31, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(8px)',
+            border: isDark ? '1.5px solid #4a4a55' : '1.5px solid #c5c2bb',
+          }}
+        >
+          <button
+            onClick={zoomOut}
+            className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95"
+            style={{
+              background: isDark ? '#1f1f23' : '#ffffff',
+              color: isDark ? '#a1a1aa' : '#4a4a4a',
+              border: isDark ? '1.5px solid #3f3f46' : '1.5px solid #cccccc',
+            }}
+            title="Zoom out"
+          >
+            <svg
+              className="w-3 h-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M5 12h14" />
+            </svg>
           </button>
-          <div className="w-20 h-1 rounded-full mx-1" style={{ background: isDark ? '#3f3f46' : '#cccccc' }}>
-            <div className="h-full rounded-full" style={{ background: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)', width: `${((zoom - 0.25) / 3.75) * 100}%` }} />
+          <div
+            className="w-20 h-1 rounded-full mx-1"
+            style={{ background: isDark ? '#3f3f46' : '#cccccc' }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                background: isDark ? 'var(--accent-cyan)' : 'var(--accent-blue)',
+                width: `${((zoom - 0.25) / 3.75) * 100}%`,
+              }}
+            />
           </div>
-          <button onClick={zoomIn} className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95" style={{
-            background: isDark ? '#1f1f23' : '#ffffff',
-            color: isDark ? '#a1a1aa' : '#4a4a4a',
-            border: isDark ? '1.5px solid #3f3f46' : '1.5px solid #cccccc',
-          }} title="Zoom in">
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
+          <button
+            onClick={zoomIn}
+            className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95"
+            style={{
+              background: isDark ? '#1f1f23' : '#ffffff',
+              color: isDark ? '#a1a1aa' : '#4a4a4a',
+              border: isDark ? '1.5px solid #3f3f46' : '1.5px solid #cccccc',
+            }}
+            title="Zoom in"
+          >
+            <svg
+              className="w-3 h-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
           </button>
-          <span className="text-[10px] font-mono font-bold mx-1 w-10 text-center" style={{ color: isDark ? '#a1a1aa' : '#4a4a4a' }}>
+          <span
+            className="text-[10px] font-mono font-bold mx-1 w-10 text-center"
+            style={{ color: isDark ? '#a1a1aa' : '#4a4a4a' }}
+          >
             {zoom === 0.3 ? '0.3x' : `${zoom.toFixed(1)}x`}
           </span>
           {zoom !== 1 && (
-            <button onClick={resetZoom} className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95" style={{
-              background: isDark ? '#1f1f23' : '#ffffff',
-              color: isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)',
-              border: isDark ? '1.5px solid var(--accent-orange, #fb923c)' : '1.5px solid var(--accent-button, #c2410c)',
-            }} title="Reset zoom">
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            <button
+              onClick={resetZoom}
+              className="w-6 h-6 flex items-center justify-center rounded transition-all active:scale-95"
+              style={{
+                background: isDark ? '#1f1f23' : '#ffffff',
+                color: isDark ? 'var(--accent-orange, #fb923c)' : 'var(--accent-button, #c2410c)',
+                border: isDark
+                  ? '1.5px solid var(--accent-orange, #fb923c)'
+                  : '1.5px solid var(--accent-button, #c2410c)',
+              }}
+              title="Reset zoom"
+            >
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
           )}
         </div>
       )}
 
       {!imageUrl && !isLoadingScreenshot && (
-        <SkeletonCanvas aspectRatio={imageSize.height > 0 ? imageSize.width / imageSize.height : 9 / 16} isDark={isDark} />
+        <SkeletonCanvas
+          aspectRatio={imageSize.height > 0 ? imageSize.width / imageSize.height : 9 / 16}
+          isDark={isDark}
+        />
       )}
 
       {coordPopup && (
-        <div className="absolute pointer-events-none z-30 animate-coord-popup font-code" style={{
-          left: coordPopup.screenX + 16,
-          top: coordPopup.screenY - 60,
-          background: isDark ? '#1a1a1f' : '#ffffff',
-          border: isDark ? '2px solid #10b981' : '2px solid #059669',
-          borderRadius: '6px',
-          padding: '8px 12px',
-          boxShadow: isDark ? '4px 4px 0 #000' : '4px 4px 0 #1a1a1a',
-        }}>
-          <div className="text-[10px] font-bold mb-1" style={{ color: isDark ? '#10b981' : '#059669' }}>Device Coords</div>
-          <div className="text-[12px] font-bold" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>[{coordPopup.x}, {coordPopup.y}]</div>
-          <div className="text-[10px] mt-1" style={{ color: isDark ? '#71717a' : '#666666' }}>Screen [{coordPopup.screenX}, {coordPopup.screenY}]</div>
+        <div
+          className="absolute pointer-events-none z-30 animate-coord-popup font-code"
+          style={{
+            left: coordPopup.screenX + 16,
+            top: coordPopup.screenY - 60,
+            background: isDark ? '#1a1a1f' : '#ffffff',
+            border: isDark ? '2px solid #10b981' : '2px solid #059669',
+            borderRadius: '6px',
+            padding: '8px 12px',
+            boxShadow: isDark ? '4px 4px 0 #000' : '4px 4px 0 #1a1a1a',
+          }}
+        >
+          <div
+            className="text-[10px] font-bold mb-1"
+            style={{ color: isDark ? '#10b981' : '#059669' }}
+          >
+            Device Coords
+          </div>
+          <div className="text-[12px] font-bold" style={{ color: isDark ? '#e4e4e7' : '#1a1a1a' }}>
+            [{coordPopup.x}, {coordPopup.y}]
+          </div>
+          <div className="text-[10px] mt-1" style={{ color: isDark ? '#71717a' : '#666666' }}>
+            Screen [{coordPopup.screenX}, {coordPopup.screenY}]
+          </div>
         </div>
       )}
     </div>

@@ -5,8 +5,6 @@ import plistlib
 import re
 import subprocess
 import tempfile
-from typing import Optional
-
 
 _BUNDLE_ID_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$")
 """Regex for valid iOS bundle IDs (e.g. com.apple.mobilesafari)"""
@@ -22,7 +20,7 @@ def _safe_bundle_id(bundle_id: str) -> bool:
     return bool(_BUNDLE_ID_RE.match(bundle_id))
 
 
-def _idb_cmd(args: list[str], udid: Optional[str] = None, timeout: int = 30) -> subprocess.CompletedProcess:
+def _idb_cmd(args: list[str], udid: str | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
     """Run an idb command via uv run with IDB_UDID env var.
 
     On this machine, the venv contains a Python idb shim (pip-installed) that requires:
@@ -50,7 +48,7 @@ def _idb_cmd(args: list[str], udid: Optional[str] = None, timeout: int = 30) -> 
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
 
 
-def _read_info_plist(udid: Optional[str], bundle_id: str) -> Optional[dict]:
+def _read_info_plist(udid: str | None, bundle_id: str) -> dict | None:
     """Read and parse Info.plist from an installed iOS app via idb.
 
     Uses `idb file pull` to extract the plist, then parses with plistlib.
@@ -59,7 +57,17 @@ def _read_info_plist(udid: Optional[str], bundle_id: str) -> Optional[dict]:
     try:
         with tempfile.NamedTemporaryFile(suffix=".plist", delete=True) as tmp:
             env = dict(os.environ)
-            cmd = ["uv", "run", "idb", "file", "pull", "--bundle-id", bundle_id, "Info.plist", tmp.name]
+            cmd = [
+                "uv",
+                "run",
+                "idb",
+                "file",
+                "pull",
+                "--bundle-id",
+                bundle_id,
+                "Info.plist",
+                tmp.name,
+            ]
             if udid:
                 env["IDB_UDID"] = udid
                 cmd.extend(["--udid", udid])
@@ -72,7 +80,7 @@ def _read_info_plist(udid: Optional[str], bundle_id: str) -> Optional[dict]:
         return None
 
 
-def _get_simctl_app_info(udid: Optional[str], bundle_id: str) -> Optional[dict]:
+def _get_simctl_app_info(udid: str | None, bundle_id: str) -> dict | None:
     """Get app info via xcrun simctl appinfo (simulator only).
 
     Returns parsed dict or None if not a simulator or command fails.
@@ -121,7 +129,7 @@ def _extract_permissions_from_plist(plist_data: dict) -> list[dict]:
 class IOSAppCommands:
     """Commands for managing iOS apps via idb."""
 
-    def __init__(self, udid: Optional[str] = None):
+    def __init__(self, udid: str | None = None):
         self.udid = udid
 
     def install_app(self, ipa_path: str) -> tuple[bool, str]:
@@ -143,7 +151,7 @@ class IOSAppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Install command timed out")
         except Exception as e:
-            return (False, f"Install failed: {str(e)}")
+            return (False, f"Install failed: {e!s}")
 
     def is_app_installed(self, bundle_id: str) -> tuple[bool, str]:
         """Check if an app is installed on the device.
@@ -168,7 +176,7 @@ class IOSAppCommands:
                     return (True, f"App is installed: {bundle_id}")
             return (False, f"App is NOT installed: {bundle_id}")
         except Exception as e:
-            return (False, f"Check failed: {str(e)}")
+            return (False, f"Check failed: {e!s}")
 
     def uninstall_app(self, bundle_id: str) -> tuple[bool, str]:
         """Uninstall an app from the device.
@@ -189,7 +197,7 @@ class IOSAppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Uninstall command timed out")
         except Exception as e:
-            return (False, f"Uninstall failed: {str(e)}")
+            return (False, f"Uninstall failed: {e!s}")
 
     def launch_app(self, bundle_id: str) -> tuple[bool, str]:
         """Launch an app on the device.
@@ -210,7 +218,7 @@ class IOSAppCommands:
         except subprocess.TimeoutExpired:
             return (False, "Launch command timed out")
         except Exception as e:
-            return (False, f"Launch failed: {str(e)}")
+            return (False, f"Launch failed: {e!s}")
 
     def list_installed_apps(self) -> tuple[bool, str]:
         """Get list of all installed bundle IDs on the device.
@@ -240,7 +248,7 @@ class IOSAppCommands:
         except subprocess.TimeoutExpired:
             return (False, "List apps command timed out")
         except Exception as e:
-            return (False, f"List apps failed: {str(e)}")
+            return (False, f"List apps failed: {e!s}")
 
     def get_app_info(self, bundle_id: str) -> tuple[bool, dict]:
         """Get detailed info about a specific installed app.
@@ -264,6 +272,7 @@ class IOSAppCommands:
             result = _idb_cmd(["list-apps", "--json"], self.udid, timeout=15)
             if result.returncode == 0 and result.stdout.strip():
                 import json
+
                 apps = json.loads(result.stdout)
                 for app in apps:
                     app_bundle = app.get("bundle_id", app.get("BundleIdentifier", ""))
@@ -353,4 +362,3 @@ class IOSAppCommands:
             "permissionCount": 0,
             "grantedCount": 0,
         }
-

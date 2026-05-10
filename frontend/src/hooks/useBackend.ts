@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from '@tauri-apps/api/core';
+import { useState, useEffect } from 'react';
 
 interface BackendStatus {
-  status: "starting" | "running" | "stopped" | "error";
+  status: 'starting' | 'running' | 'stopped' | 'error';
   url: string;
 }
 
 export function useBackendStatus() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({
-    status: "starting",
-    url: "http://127.0.0.1:8001",
+    status: 'starting',
+    url: 'http://127.0.0.1:8001',
   });
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function useBackendStatus() {
 
     async function check() {
       try {
-        const status = await invoke<BackendStatus>("get_backend_status");
+        const status = await invoke<BackendStatus>('get_backend_status');
         if (!cancelled) {
           setBackendStatus(status);
         }
@@ -25,11 +25,11 @@ export function useBackendStatus() {
         if (!cancelled) {
           // In non-Tauri web mode, backend status from Tauri invoke will fail.
           // We assume backend is running in web mode (user manages it manually).
-          const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI__;
+          const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
           if (!isTauri) {
-            setBackendStatus(prev => ({ ...prev, status: "running" }));
+            setBackendStatus((prev) => ({ ...prev, status: 'running' }));
           } else {
-            setBackendStatus(prev => ({ ...prev, status: "stopped" }));
+            setBackendStatus((prev) => ({ ...prev, status: 'stopped' }));
           }
         }
       }
@@ -50,5 +50,5 @@ export function useBackendStatus() {
 }
 
 export async function restartBackend() {
-  await invoke("restart_backend");
+  await invoke('restart_backend');
 }

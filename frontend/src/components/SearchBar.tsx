@@ -1,20 +1,21 @@
-import { useState, useCallback, memo, useEffect, useRef } from "react";
-import { useHierarchyStore, SearchFilter } from "../stores/hierarchyStore";
-import { useThemeStore } from "../stores/themeStore";
-import { searchHierarchy } from "../hooks/useDevice";
-import { useDeviceStore } from "../stores/deviceStore";
+import { useState, useCallback, memo, useEffect, useRef } from 'react';
+
+import { searchHierarchy } from '../hooks/useDevice';
+import { useDeviceStore } from '../stores/deviceStore';
+import { useHierarchyStore, SearchFilter } from '../stores/hierarchyStore';
+import { useThemeStore } from '../stores/themeStore';
 
 const FILTER_OPTIONS: { value: SearchFilter; label: string }[] = [
-  { value: "xpath", label: "XPath" },
-  { value: "resource-id", label: "Res-ID" },
-  { value: "text", label: "Text" },
-  { value: "content-desc", label: "Content" },
-  { value: "class", label: "Class" },
+  { value: 'xpath', label: 'XPath' },
+  { value: 'resource-id', label: 'Res-ID' },
+  { value: 'text', label: 'Text' },
+  { value: 'content-desc', label: 'Content' },
+  { value: 'class', label: 'Class' },
 ];
 
 export const SearchBar = memo(function SearchBar() {
   const { theme } = useThemeStore();
-  const isDark = theme === "dark";
+  const isDark = theme === 'dark';
   const {
     searchQuery,
     searchFilter,
@@ -46,9 +47,15 @@ export const SearchBar = memo(function SearchBar() {
   const setSearchResultsRef = useRef(setSearchResults);
 
   // Keep refs in sync with store values
-  useEffect(() => { searchFilterRef.current = searchFilter; }, [searchFilter]);
-  useEffect(() => { selectedDeviceRef.current = selectedDevice; }, [selectedDevice]);
-  useEffect(() => { setSearchResultsRef.current = setSearchResults; }, [setSearchResults]);
+  useEffect(() => {
+    searchFilterRef.current = searchFilter;
+  }, [searchFilter]);
+  useEffect(() => {
+    selectedDeviceRef.current = selectedDevice;
+  }, [selectedDevice]);
+  useEffect(() => {
+    setSearchResultsRef.current = setSearchResults;
+  }, [setSearchResults]);
 
   useEffect(() => {
     return () => {
@@ -64,18 +71,22 @@ export const SearchBar = memo(function SearchBar() {
   }, [localQuery]);
 
   // D4: Navigate search results with up/down
-  const navigateResults = useCallback((direction: 1 | -1) => {
-    if (!isSearchActive || searchResults.length === 0) return;
-    const nextIndex = currentSearchIndex === -1
-      ? 0
-      : (currentSearchIndex + direction + searchResults.length) % searchResults.length;
-    setCurrentSearchIndex(nextIndex);
-  }, [isSearchActive, currentSearchIndex, searchResults.length, setCurrentSearchIndex]);
+  const navigateResults = useCallback(
+    (direction: 1 | -1) => {
+      if (!isSearchActive || searchResults.length === 0) return;
+      const nextIndex =
+        currentSearchIndex === -1
+          ? 0
+          : (currentSearchIndex + direction + searchResults.length) % searchResults.length;
+      setCurrentSearchIndex(nextIndex);
+    },
+    [isSearchActive, currentSearchIndex, searchResults.length, setCurrentSearchIndex]
+  );
 
   // Clear search
   const handleClear = useCallback(() => {
-    setLocalQuery("");
-    localQueryRef.current = "";
+    setLocalQuery('');
+    localQueryRef.current = '';
     if (debounceRef.current) clearTimeout(debounceRef.current);
     clearSearch();
     lockSelection(null);
@@ -90,16 +101,34 @@ export const SearchBar = memo(function SearchBar() {
     }
     setIsSearching(true);
     try {
-      const data = await searchHierarchy(query, filter, selectedDeviceRef.current ?? undefined) as {
-        matches: Array<{ id: string; text?: string; contentDesc?: string; resourceId?: string; resourceIdFull?: string; className?: string; [key: string]: unknown }>;
+      const data = (await searchHierarchy(
+        query,
+        filter,
+        selectedDeviceRef.current ?? undefined
+      )) as {
+        matches: Array<{
+          id: string;
+          text?: string;
+          contentDesc?: string;
+          resourceId?: string;
+          resourceIdFull?: string;
+          className?: string;
+          [key: string]: unknown;
+        }>;
         count: number;
       };
-      console.debug("[SearchBar] raw BE response:", JSON.stringify(data));
+      console.debug('[SearchBar] raw BE response:', JSON.stringify(data));
       const results = (data.matches || []).map((m) => ({
         nodeId: m.id,
-        matchField: m.text ? "text" : m.contentDesc ? "content-desc" : m.resourceId ? "resource-id" : "class",
-        matchedText: m.text || m.contentDesc || m.resourceId || m.className || "",
-        node: m as Parameters<typeof setSearchResults>[0][number]["node"],
+        matchField: m.text
+          ? 'text'
+          : m.contentDesc
+            ? 'content-desc'
+            : m.resourceId
+              ? 'resource-id'
+              : 'class',
+        matchedText: m.text || m.contentDesc || m.resourceId || m.className || '',
+        node: m as Parameters<typeof setSearchResults>[0][number]['node'],
       }));
       setSearchResultsRef.current(results, data.count || 0);
     } catch {
@@ -126,7 +155,7 @@ export const SearchBar = memo(function SearchBar() {
       setCharError(false);
 
       if (!val.trim()) {
-        runSearch("", "xpath");
+        runSearch('', 'xpath');
         return;
       }
 
@@ -151,26 +180,29 @@ export const SearchBar = memo(function SearchBar() {
     [setSearchFilter, runSearch]
   );
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    // Only navigate results when there are actual results to navigate
-    // This allows arrow keys to work for cursor movement when search is empty
-    if (e.key === "ArrowDown" && searchResults.length > 0) {
-      e.preventDefault();
-      navigateResults(1);
-    } else if (e.key === "ArrowUp" && searchResults.length > 0) {
-      e.preventDefault();
-      navigateResults(-1);
-    } else if (e.key === "Escape") {
-      handleClear();
-    }
-  }, [navigateResults, handleClear, searchResults.length]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      // Only navigate results when there are actual results to navigate
+      // This allows arrow keys to work for cursor movement when search is empty
+      if (e.key === 'ArrowDown' && searchResults.length > 0) {
+        e.preventDefault();
+        navigateResults(1);
+      } else if (e.key === 'ArrowUp' && searchResults.length > 0) {
+        e.preventDefault();
+        navigateResults(-1);
+      } else if (e.key === 'Escape') {
+        handleClear();
+      }
+    },
+    [navigateResults, handleClear, searchResults.length]
+  );
 
   return (
     <div
       className="px-3 py-2 flex-shrink-0"
       style={{
-        background: "var(--bg-tertiary)",
-        borderBottom: "var(--nb-border)",
+        background: 'var(--bg-tertiary)',
+        borderBottom: 'var(--nb-border)',
       }}
     >
       {/* Search Input Row */}
@@ -187,12 +219,10 @@ export const SearchBar = memo(function SearchBar() {
             maxLength={500}
             className="w-full h-8 px-3 pr-16 text-[11px] font-medium rounded outline-none transition-all"
             style={{
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: charError
-                ? "2px solid #ef4444"
-                : "2px solid var(--border-default)",
-              boxShadow: isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)",
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-primary)',
+              border: charError ? '2px solid #ef4444' : '2px solid var(--border-default)',
+              boxShadow: isDark ? 'var(--nb-shadow-dark)' : 'var(--nb-shadow-light)',
             }}
           />
           {/* Char limit error tooltip */}
@@ -207,11 +237,17 @@ export const SearchBar = memo(function SearchBar() {
               onClick={handleClear}
               className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded transition-transform active:scale-90"
               style={{
-                background: "var(--border-default)",
-                color: "var(--text-secondary)",
+                background: 'var(--border-default)',
+                color: 'var(--text-secondary)',
               }}
             >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              >
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
@@ -220,21 +256,21 @@ export const SearchBar = memo(function SearchBar() {
 
         {/* Regex Toggle */}
         <button
-          onClick={() => setIsRegex(prev => !prev)}
+          onClick={() => setIsRegex((prev) => !prev)}
           className="h-8 px-2.5 flex items-center gap-1 rounded text-[10px] font-bold font-mono transition-all active:scale-95"
           style={{
-            background: isRegex
-              ? (isDark ? "var(--bg-primary)" : "#1a1a1a")
-              : "var(--bg-elevated)",
+            background: isRegex ? (isDark ? 'var(--bg-primary)' : '#1a1a1a') : 'var(--bg-elevated)',
             color: isRegex
-              ? (isDark ? "var(--accent-amber)" : "var(--accent-orange)")
-              : "var(--text-secondary)",
-            border: isRegex
-              ? "2px solid var(--accent-amber)"
-              : "2px solid var(--border-default)",
+              ? isDark
+                ? 'var(--accent-amber)'
+                : 'var(--accent-orange)'
+              : 'var(--text-secondary)',
+            border: isRegex ? '2px solid var(--accent-amber)' : '2px solid var(--border-default)',
             boxShadow: isRegex
-              ? (isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)")
-              : "none",
+              ? isDark
+                ? 'var(--nb-shadow-dark)'
+                : 'var(--nb-shadow-light)'
+              : 'none',
           }}
           title="Toggle regex mode"
         >
@@ -245,10 +281,16 @@ export const SearchBar = memo(function SearchBar() {
         {isSearching && (
           <div
             className="h-8 w-8 flex items-center justify-center rounded"
-            style={{ background: "var(--bg-elevated)", border: "2px solid var(--border-default)" }}
+            style={{ background: 'var(--bg-elevated)', border: '2px solid var(--border-default)' }}
           >
-            <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
-              style={{ color: "var(--accent-cyan)" }}>
+            <svg
+              className="w-3 h-3 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              style={{ color: 'var(--accent-cyan)' }}
+            >
               <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeOpacity="0.2" />
               <path d="M21 12a9 9 0 01-9 9" strokeLinecap="round" />
             </svg>
@@ -260,13 +302,13 @@ export const SearchBar = memo(function SearchBar() {
           <div
             className="h-8 px-2 flex items-center rounded"
             style={{
-              background: isDark ? "rgba(253,224,71,0.15)" : "rgba(180,83,9,0.15)",
-              color: "var(--accent-amber)",
-              border: "2px solid var(--accent-amber)",
+              background: isDark ? 'rgba(253,224,71,0.15)' : 'rgba(180,83,9,0.15)',
+              color: 'var(--accent-amber)',
+              border: '2px solid var(--accent-amber)',
             }}
           >
             <span className="text-[10px] font-bold font-mono">
-              {currentSearchIndex >= 0 ? currentSearchIndex + 1 : "?"}/{searchResultsCount}
+              {currentSearchIndex >= 0 ? currentSearchIndex + 1 : '?'}/{searchResultsCount}
             </span>
           </div>
         )}
@@ -282,18 +324,16 @@ export const SearchBar = memo(function SearchBar() {
               onClick={() => handleFilterChange(option.value)}
               className="px-2.5 py-1 flex-shrink-0 text-[10px] font-bold rounded transition-all active:scale-95"
               style={{
-                background: isActive
-                  ? "var(--bg-primary)"
-                  : "var(--bg-elevated)",
-                color: isActive
-                  ? "var(--text-primary)"
-                  : "var(--text-secondary)",
+                background: isActive ? 'var(--bg-primary)' : 'var(--bg-elevated)',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                 border: isActive
-                  ? "2px solid var(--border-default)"
-                  : "2px solid var(--border-default)",
+                  ? '2px solid var(--border-default)'
+                  : '2px solid var(--border-default)',
                 boxShadow: isActive
-                  ? (isDark ? "var(--nb-shadow-dark)" : "var(--nb-shadow-light)")
-                  : "none",
+                  ? isDark
+                    ? 'var(--nb-shadow-dark)'
+                    : 'var(--nb-shadow-light)'
+                  : 'none',
               }}
             >
               {option.label}

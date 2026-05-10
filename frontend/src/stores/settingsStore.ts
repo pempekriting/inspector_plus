@@ -1,5 +1,13 @@
-import { create } from "zustand";
-import { getApiUrl, setApiUrl as persistApiUrl, resetApiUrl, getMcpUrl, setMcpUrl as persistMcpUrl, resetMcpUrl } from "../config/apiConfig";
+import { create } from 'zustand';
+
+import {
+  getApiUrl,
+  setApiUrl as persistApiUrl,
+  resetApiUrl,
+  getMcpUrl,
+  setMcpUrl as persistMcpUrl,
+  resetMcpUrl,
+} from '../config/apiConfig';
 
 interface SettingsState {
   backendUrl: string;
@@ -35,8 +43,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     resetApiUrl();
     resetMcpUrl();
     set({
-      backendUrl: "http://localhost:8001",
-      mcpUrl: "http://localhost:8002",
+      backendUrl: 'http://localhost:8001',
+      mcpUrl: 'http://localhost:8002',
     });
   },
 }));

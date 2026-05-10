@@ -3,10 +3,10 @@
  * Supports runtime overrides via localStorage, falling back to build-time env vars.
  */
 
-const API_URL_STORAGE_KEY = "inspector-plus-api-url";
-const MCP_URL_STORAGE_KEY = "inspector-plus-mcp-url";
-const DEFAULT_API_URL = "http://localhost:8001";
-const DEFAULT_MCP_URL = "http://localhost:8002";
+const API_URL_STORAGE_KEY = 'inspector-plus-api-url';
+const MCP_URL_STORAGE_KEY = 'inspector-plus-mcp-url';
+const DEFAULT_API_URL = 'http://localhost:8001';
+const DEFAULT_MCP_URL = 'http://localhost:8002';
 
 // --- Backend API URL ---
 

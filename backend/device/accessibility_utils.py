@@ -1,7 +1,6 @@
 """Shared WCAG accessibility audit utilities for both Android and iOS bridges."""
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 MIN_TOUCH_TARGET = 48
 CONTRAST_NORMAL = 4.5
@@ -60,11 +59,15 @@ class AndroidMapper(PlatformMapper):
 class IOSMapper(PlatformMapper):
     """Property mapper for iOS (WDA accessibility hierarchy via idb)."""
 
-    CLICKABLE_TYPES = frozenset((
-        "XCUIElementTypeButton", "XCUIElementTypeLink",
-        "XCUIElementTypeTab", "XCUIElementTypeCell",
-        "XCUIElementTypeStaticText",
-    ))
+    CLICKABLE_TYPES = frozenset(
+        (
+            "XCUIElementTypeButton",
+            "XCUIElementTypeLink",
+            "XCUIElementTypeTab",
+            "XCUIElementTypeCell",
+            "XCUIElementTypeStaticText",
+        )
+    )
 
     def text(self, node: dict) -> str:
         return node.get("label", "") or node.get("value", "")
@@ -80,9 +83,11 @@ class IOSMapper(PlatformMapper):
 
 def luminance(r: int, g: int, b: int) -> float:
     """Convert RGB to relative luminance per WCAG."""
+
     def channel(c: float) -> float:
         c = c / 255.0
         return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
     return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 
 
@@ -92,7 +97,7 @@ def contrast_ratio(l1: float, l2: float) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def hex_to_rgb(hex_color: str) -> Optional[tuple]:
+def hex_to_rgb(hex_color: str) -> tuple | None:
     """Parse #RRGGBB to (r, g, b)."""
     if not hex_color or not isinstance(hex_color, str):
         return None
@@ -121,18 +126,18 @@ def _check_contrast(node: dict, node_id: str, mapper: PlatformMapper, issues: li
     l2 = luminance(*bg_rgb)
     ratio = contrast_ratio(l1, l2)
     styles = node.get("styles", {})
-    is_large = styles.get("fontSize", "") and any(
-        sz in str(styles["fontSize"]) for sz in LARGE_TEXT_SIZES
-    )
+    is_large = styles.get("fontSize", "") and any(sz in str(styles["fontSize"]) for sz in LARGE_TEXT_SIZES)
     min_ratio = CONTRAST_LARGE if is_large else CONTRAST_NORMAL
     if ratio < min_ratio:
-        issues.append({
-            "nodeId": node_id,
-            "check": "contrast",
-            "severity": "high",
-            "description": f"Text color {text_color} on background {bg_color} has ratio {ratio:.1f}:1, below WCAG AA minimum of {min_ratio}:1",
-            "element": {"text": mapper.text(node), "className": node.get("className", "")},
-        })
+        issues.append(
+            {
+                "nodeId": node_id,
+                "check": "contrast",
+                "severity": "high",
+                "description": f"Text color {text_color} on background {bg_color} has ratio {ratio:.1f}:1, below WCAG AA minimum of {min_ratio}:1",
+                "element": {"text": mapper.text(node), "className": node.get("className", "")},
+            }
+        )
 
 
 def _check_touch_target(node: dict, node_id: str, mapper: PlatformMapper, issues: list) -> None:
@@ -145,17 +150,19 @@ def _check_touch_target(node: dict, node_id: str, mapper: PlatformMapper, issues
     width = bounds.get("width", 0)
     height = bounds.get("height", 0)
     if width > 0 and height > 0 and (width < MIN_TOUCH_TARGET or height < MIN_TOUCH_TARGET):
-        issues.append({
-            "nodeId": node_id,
-            "check": "touch_target",
-            "severity": "medium",
-            "description": f"Touch target {width}dp x {height}dp is below WCAG minimum of {MIN_TOUCH_TARGET}dp x {MIN_TOUCH_TARGET}dp",
-            "element": {
-                "contentDesc": mapper.content_desc(node),
-                "text": mapper.text(node),
-                "className": node.get("className", ""),
-            },
-        })
+        issues.append(
+            {
+                "nodeId": node_id,
+                "check": "touch_target",
+                "severity": "medium",
+                "description": f"Touch target {width}dp x {height}dp is below WCAG minimum of {MIN_TOUCH_TARGET}dp x {MIN_TOUCH_TARGET}dp",
+                "element": {
+                    "contentDesc": mapper.content_desc(node),
+                    "text": mapper.text(node),
+                    "className": node.get("className", ""),
+                },
+            }
+        )
 
 
 def _check_missing_label(node: dict, node_id: str, mapper: PlatformMapper, issues: list) -> None:
@@ -166,51 +173,58 @@ def _check_missing_label(node: dict, node_id: str, mapper: PlatformMapper, issue
     content_desc = mapper.content_desc(node).strip()
     if not text and not content_desc:
         short_class = mapper.short_class(node)
-        issues.append({
-            "nodeId": node_id,
-            "check": "missing_label",
-            "severity": "high",
-            "description": f"Interactive element ({short_class}) has no text or content-desc for screen readers",
-            "element": {
-                "className": node.get("className", ""),
-                "resourceId": node.get("resourceId", ""),
-            },
-        })
+        issues.append(
+            {
+                "nodeId": node_id,
+                "check": "missing_label",
+                "severity": "high",
+                "description": f"Interactive element ({short_class}) has no text or content-desc for screen readers",
+                "element": {
+                    "className": node.get("className", ""),
+                    "resourceId": node.get("resourceId", ""),
+                },
+            }
+        )
 
 
-def _check_duplicate_text(text: str, node_id: str, siblings: list, mapper: PlatformMapper, issues: list) -> None:
+def _check_duplicate_text(
+    text: str, node_id: str, siblings: list, mapper: PlatformMapper, issues: list, node: dict
+) -> None:
     """Check for duplicate text among sibling elements."""
     if not text:
         return
-    dup_count = sum(
-        1 for s in siblings
-        if mapper.text(s).strip() == text.strip() and s.get("id") != node_id
-    )
+    dup_count = sum(1 for s in siblings if mapper.text(s).strip() == text.strip() and s.get("id") != node_id)
     if dup_count > 0:
-        issues.append({
-            "nodeId": node_id,
-            "check": "duplicate_text",
-            "severity": "low",
-            "description": f"Text '{text}' appears {dup_count + 1} times among siblings -- screen readers may confuse users",
-            "element": {"text": text, "className": node.get("className", "")},
-        })
+        issues.append(
+            {
+                "nodeId": node_id,
+                "check": "duplicate_text",
+                "severity": "low",
+                "description": f"Text '{text}' appears {dup_count + 1} times among siblings -- screen readers may confuse users",
+                "element": {"text": text, "className": node.get("className", "")},
+            }
+        )
 
 
 def _check_text_overflow(node_id: str, bounds: dict, parent_bounds: dict, text: str, node: dict, issues: list) -> None:
     """Check if element bounds exceed parent bounds."""
     if not text or not bounds or not parent_bounds:
         return
-    if (bounds.get("x", 0) < parent_bounds.get("x", 0) or
-        bounds.get("y", 0) < parent_bounds.get("y", 0) or
-        bounds.get("x", 0) + bounds.get("width", 0) > parent_bounds.get("x", 0) + parent_bounds.get("width", 0) or
-        bounds.get("y", 0) + bounds.get("height", 0) > parent_bounds.get("y", 0) + parent_bounds.get("height", 0)):
-        issues.append({
-            "nodeId": node_id,
-            "check": "text_overflow",
-            "severity": "medium",
-            "description": "Text element bounds exceed parent bounds",
-            "element": {"text": text[:30], "className": node.get("className", "")},
-        })
+    if (
+        bounds.get("x", 0) < parent_bounds.get("x", 0)
+        or bounds.get("y", 0) < parent_bounds.get("y", 0)
+        or bounds.get("x", 0) + bounds.get("width", 0) > parent_bounds.get("x", 0) + parent_bounds.get("width", 0)
+        or bounds.get("y", 0) + bounds.get("height", 0) > parent_bounds.get("y", 0) + parent_bounds.get("height", 0)
+    ):
+        issues.append(
+            {
+                "nodeId": node_id,
+                "check": "text_overflow",
+                "severity": "medium",
+                "description": "Text element bounds exceed parent bounds",
+                "element": {"text": text[:30], "className": node.get("className", "")},
+            }
+        )
 
 
 def walk_and_audit(tree: dict, mapper: PlatformMapper) -> tuple[list, int]:
@@ -226,7 +240,7 @@ def walk_and_audit(tree: dict, mapper: PlatformMapper) -> tuple[list, int]:
     issues: list = []
     total_nodes = 0
 
-    def walk_node(node: dict, siblings: list = None, parent_bounds: dict = None):
+    def walk_node(node: dict, siblings: list | None = None, parent_bounds: dict | None = None):
         nonlocal issues, total_nodes
         total_nodes += 1
 
@@ -238,7 +252,7 @@ def walk_and_audit(tree: dict, mapper: PlatformMapper) -> tuple[list, int]:
         _check_touch_target(node, node_id, mapper, issues)
         _check_missing_label(node, node_id, mapper, issues)
         if siblings:
-            _check_duplicate_text(text, node_id, siblings, mapper, issues)
+            _check_duplicate_text(text, node_id, siblings, mapper, issues, node)
         _check_text_overflow(node_id, bounds, parent_bounds, text, node, issues)
 
         children = node.get("children", [])
@@ -259,7 +273,7 @@ def build_audit_result(issues: list, total_nodes: int) -> dict:
         "low": sum(1 for i in issues if i["severity"] == "low"),
     }
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "totalNodes": total_nodes,
         "issues": sorted_issues,
         "summary": summary,
