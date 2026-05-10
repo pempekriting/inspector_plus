@@ -162,7 +162,7 @@ npm run tauri dev
 
 ## Contributing
 
-Contributions are welcome. Please feel free to submit a Pull Request.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 ---
 
