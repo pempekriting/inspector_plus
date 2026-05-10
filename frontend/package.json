@@ -44,7 +44,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.0",
     "eslint-plugin-react": "^4.3.0",
     "eslint-plugin-react-compiler": "^19.0.0-beta",
-    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "happy-dom": "^20.9.0",
     "husky": "^9.1.0",
     "identity-obj-proxy": "^3.0.0",
