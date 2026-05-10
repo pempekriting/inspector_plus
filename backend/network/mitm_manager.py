@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import subprocess
@@ -34,6 +35,17 @@ class MitmproxyManager:
             if cls._instance is None:
                 cls._instance = cls()
             return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton instance. Used for test isolation."""
+        with cls._lock:
+            if cls._instance is not None:
+                if cls._instance._running and cls._instance._process:
+                    cls._instance._process.terminate()
+                    with contextlib.suppress(Exception):
+                        cls._instance._process.wait(timeout=1)
+                cls._instance = None
 
     def start(self, port: int = 8080) -> dict:
         """Start mitmdump in background, capturing to flow file."""
