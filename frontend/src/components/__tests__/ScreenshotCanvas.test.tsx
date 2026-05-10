@@ -1,4 +1,5 @@
 import { render, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -6,6 +7,14 @@ import { ScreenshotCanvas } from '../ScreenshotCanvas';
 
 // Spy on fetch to verify ScreenshotCanvas no longer calls /screenshot directly
 let fetchSpy: ReturnType<typeof vi.fn>;
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
 
 beforeEach(() => {
   fetchSpy = vi.fn();
@@ -43,7 +52,7 @@ describe('ScreenshotCanvas', () => {
       useThemeStore: vi.fn(() => ({ theme: 'dark' })),
     }));
 
-    render(<ScreenshotCanvas />);
+    render(<ScreenshotCanvas />, { wrapper: Wrapper });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));
     });
@@ -87,7 +96,7 @@ describe('ScreenshotCanvas', () => {
 
     // Should not throw
     expect(() => {
-      render(<ScreenshotCanvas />);
+      render(<ScreenshotCanvas />, { wrapper: Wrapper });
     }).not.toThrow();
   });
 });

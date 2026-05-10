@@ -2,6 +2,7 @@ import { useEffect, useState, memo } from 'react';
 
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
+import type { UiNode } from '../types/shared';
 
 interface ImageLayout {
   left: number;
@@ -110,7 +111,7 @@ const InfoTooltip = memo(function InfoTooltip({
 }: {
   bounds: { x: number; y: number; width: number; height: number };
   layout: ImageLayout;
-  node: any;
+  node: UiNode;
   isDark: boolean;
 }) {
   const left = layout.imgLeft + (bounds.x + bounds.width) * layout.scale + 12;
@@ -181,19 +182,18 @@ export function Overlay() {
     window.addEventListener('resize', updateLayout);
     window.addEventListener('scroll', updateLayout);
 
-    let lastSrc = '';
-    const interval = setInterval(() => {
-      const img = document.querySelector('.screenshot-img') as HTMLImageElement;
-      if (img?.src && img.src !== lastSrc) {
-        lastSrc = img.src;
-      }
-      updateLayout(); // Always run to pick up zoom/pan changes
-    }, 200);
+    // Use ResizeObserver for event-driven layout updates instead of polling
+    const img = document.querySelector('.screenshot-img');
+    let observer: ResizeObserver | null = null;
+    if (img) {
+      observer = new ResizeObserver(updateLayout);
+      observer.observe(img);
+    }
 
     return () => {
       window.removeEventListener('resize', updateLayout);
       window.removeEventListener('scroll', updateLayout);
-      clearInterval(interval);
+      if (observer) observer.disconnect();
     };
   }, []);
 

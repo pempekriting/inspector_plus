@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getApiUrl } from '../config/apiConfig';
 import type { Bounds, DeviceInfo, DeviceStatus, UiNode } from '../types/shared';
+import type { NetworkFlow } from '../types/network';
 
 // Re-export shared types
 export type { Bounds, DeviceInfo, DeviceStatus, UiNode };
@@ -53,20 +54,91 @@ export const HierarchyResponseSchema = z.object({
   tree: UiNodeSchema,
 });
 
-// API fetch wrapper with error handling
-export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+export const HierarchyAndScreenshotSchema = z.object({
+  hierarchy: UiNodeSchema,
+  screenshot: z.string(),
+});
+
+export const SearchHierarchyMatchSchema = z.object({
+  nodeId: z.string(),
+  matchField: z.string(),
+  matchedText: z.string(),
+  node: UiNodeSchema,
+});
+
+export const SearchHierarchyResponseSchema = z.object({
+  matches: z.array(SearchHierarchyMatchSchema),
+  count: z.number(),
+});
+
+export const NetworkFlowSchema: z.ZodType<NetworkFlow> = z.object({
+  id: z.string(),
+  timestamp: z.number(),
+  request: z.object({
+    method: z.string(),
+    url: z.string(),
+    host: z.string(),
+    path: z.string(),
+    headers: z.record(z.string(), z.string()),
+    body: z.string().optional(),
+  }),
+  response: z
+    .object({
+      status_code: z.number(),
+      reason: z.string(),
+      headers: z.record(z.string(), z.string()),
+      body: z.string().optional(),
+    })
+    .optional(),
+  duration_ms: z.number(),
+  websocket: z.boolean(),
+  error: z.string().optional(),
+});
+
+export const NetworkInfoSchema = z.object({
+  ip_addresses: z.array(z.object({ iface: z.string(), address: z.string(), family: z.string() })),
+  connections: z.array(z.string()),
+  dns: z.array(z.string()),
+});
+
+// API key getter (reads from localStorage, set via settings store)
+function getApiKey(): string | null {
+  try {
+    return localStorage.getItem('inspector-plus-api-key');
+  } catch {
+    return null;
   }
-  return response.json() as Promise<T>;
+}
+
+// API fetch wrapper with error handling and optional Zod validation
+export async function apiFetch<T>(url: string, options?: RequestInit, schema?: z.ZodType<T>): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    let message = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const err = await response.json();
+      message = err.detail || err.error || message;
+    } catch {
+      // response body isn't JSON, use status text
+    }
+    throw new Error(message);
+  }
+  const data = await response.json();
+  return schema ? schema.parse(data) : (data as T);
 }
 
 // Device status
 export function useDeviceStatus() {
   return useQuery({
     queryKey: ['device-status'],
-    queryFn: () => apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`),
+    queryFn: () => apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`, undefined, DeviceStatusSchema),
     refetchInterval: 10000,
     retry: 2,
     staleTime: 3000,
@@ -79,7 +151,7 @@ export function useDevices() {
   return useQuery({
     queryKey: ['devices'],
     queryFn: () =>
-      apiFetch<{ devices: z.infer<typeof DeviceInfoSchema>[] }>(`${getApiUrl()}/devices`).then(
+      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`, undefined, DeviceStatusSchema).then(
         (data) => data.devices
       ),
     retry: 2,
@@ -88,37 +160,18 @@ export function useDevices() {
   });
 }
 
-// Select device
-export function useSelectDevice() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (udid: string | null) =>
-      apiFetch<{ udid: string; platform: string }>(`${getApiUrl()}/device/select`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ udid }),
-      }),
-    onError: (error) => {
-      console.error('Failed to select device:', error);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['device-status'] });
-      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
-      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
-    },
-  });
-}
-
 // Hierarchy
 export function useHierarchy(udid?: string) {
   return useQuery({
     queryKey: ['hierarchy', udid],
     queryFn: () =>
-      apiFetch<{ tree: z.infer<typeof UiNodeSchema> }>(
+      apiFetch<z.infer<typeof HierarchyResponseSchema>>(
         udid
           ? `${getApiUrl()}/hierarchy?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/hierarchy`
-      ),
+          : `${getApiUrl()}/hierarchy`,
+        undefined,
+        HierarchyResponseSchema
+      ).then((data) => data.tree),
     staleTime: 1000,
     gcTime: 30000,
     retry: 2,
@@ -133,12 +186,11 @@ export function useHierarchyAndScreenshot(udid?: string) {
       const url = udid
         ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy-and-screenshot`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch hierarchy and screenshot');
-      const data = (await res.json()) as {
-        hierarchy: z.infer<typeof UiNodeSchema>;
-        screenshot: string;
-      };
+      const data = await apiFetch<z.infer<typeof HierarchyAndScreenshotSchema>>(
+        url,
+        undefined,
+        HierarchyAndScreenshotSchema
+      );
       return {
         hierarchy: data.hierarchy,
         screenshotUrl: `data:image/png;base64,${data.screenshot}`,
@@ -209,19 +261,34 @@ export interface Locator {
   stability: number;
 }
 
+export const LocatorSchema: z.ZodType<Locator> = z.object({
+  strategy: z.string(),
+  value: z.string(),
+  expression: z.string(),
+  stability: z.number(),
+});
+
 export interface LocatorResult {
   nodeId: string;
   locators: Locator[];
-  best: string;
+  best?: string;
 }
+
+export const LocatorResultSchema: z.ZodType<LocatorResult> = z.object({
+  nodeId: z.string(),
+  locators: z.array(LocatorSchema),
+  best: z.string().optional(),
+});
 
 // Fetch locators for a node
 export function useLocators(nodeId: string | null) {
   return useQuery({
     queryKey: ['locators', nodeId],
     queryFn: () =>
-      apiFetch<LocatorResult>(
-        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`
+      apiFetch<z.infer<typeof LocatorResultSchema>>(
+        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`,
+        undefined,
+        LocatorResultSchema
       ),
     enabled: !!nodeId,
     staleTime: 30000,
@@ -264,7 +331,7 @@ export function useGestureExecute() {
         y?: number;
         duration?: number;
         pointer?: number;
-        button?: string;
+        button?: 'left' | 'right';
       }>;
       coordinateMode: string;
       udid?: string;
@@ -370,15 +437,27 @@ export interface ContextInfo {
   description: string;
 }
 
+export const ContextInfoSchema = z.object({
+  id: z.string(),
+  type: z.enum(['native', 'webview']),
+  description: z.string(),
+});
+
+export const DeviceContextsResponseSchema = z.object({
+  contexts: z.array(ContextInfoSchema),
+});
+
 export function useDeviceContexts(udid?: string) {
   return useQuery({
     queryKey: ['device-contexts', udid],
     queryFn: () =>
-      apiFetch<{ contexts: ContextInfo[] }>(
+      apiFetch<z.infer<typeof DeviceContextsResponseSchema>>(
         udid
           ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/device/contexts`
-      ),
+          : `${getApiUrl()}/device/contexts`,
+        undefined,
+        DeviceContextsResponseSchema
+      ).then((data) => data.contexts),
     staleTime: 15000,
     gcTime: 30000,
     retry: 1,
@@ -567,12 +646,14 @@ export function useNetworkTraffic(since: number = 0, enabled: boolean = true) {
     queryKey: ['network-traffic', since, enabled],
     queryFn: async () => {
       if (!enabled) return { flows: [], count: 0 };
-      return apiFetch<{ flows: unknown[]; count: number }>(
-        `${getApiUrl()}/network/traffic?since=${since}`
+      return apiFetch<{ flows: NetworkFlow[]; count: number }>(
+        `${getApiUrl()}/network/traffic?since=${since}`,
+        undefined,
+        z.object({ flows: z.array(NetworkFlowSchema), count: z.number() })
       );
     },
     enabled,
-    refetchInterval: enabled ? 12000 : false, // slow fallback poll (12s), WS is primary
+    refetchInterval: enabled ? 12000 : false,
     staleTime: 500,
   });
 }
@@ -584,7 +665,7 @@ export function useNetworkInfo(udid?: string) {
       const url = udid
         ? `${getApiUrl()}/network/info?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/network/info`;
-      return apiFetch<{ ip_addresses: unknown[]; connections: unknown[]; dns: unknown[] }>(url);
+      return apiFetch<z.infer<typeof NetworkInfoSchema>>(url, undefined, NetworkInfoSchema);
     },
     staleTime: 10000,
   });
@@ -644,14 +725,42 @@ export function useStartVpn() {
 export function useStopVpn() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ udid }: { udid?: string }) =>
-      apiFetch<{ success: boolean; error?: string }>(`${getApiUrl()}/network/proxy/vpn/stop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ udid }),
-      }),
+    mutationFn: ({ udid }: { udid?: string }) => {
+      const params = udid ? `?udid=${encodeURIComponent(udid)}` : '';
+      return apiFetch<{ success: boolean; error?: string }>(
+        `${getApiUrl()}/network/proxy/vpn/stop${params}`,
+        { method: 'POST' }
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vpn-status'] });
     },
   });
+}
+
+// --- Standalone API functions (for components that don't use TanStack Query) ---
+
+export async function searchHierarchy(
+  query: string,
+  filter: 'xpath' | 'resource-id' | 'text' | 'content-desc' | 'class',
+  udid?: string
+): Promise<z.infer<typeof SearchHierarchyResponseSchema>> {
+  const params = new URLSearchParams({ query, filter });
+  if (udid) params.set('udid', udid);
+  return apiFetch(
+    `${getApiUrl()}/hierarchy/search?${params.toString()}`,
+    undefined,
+    SearchHierarchyResponseSchema
+  );
+}
+
+export async function inputDeviceText(text: string, udid?: string): Promise<void> {
+  await apiFetch<{ success: boolean }>(
+    udid ? `${getApiUrl()}/input/text?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/input/text`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }
+  );
 }

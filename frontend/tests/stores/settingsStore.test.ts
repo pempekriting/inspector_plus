@@ -12,6 +12,19 @@ vi.mock('../../src/config/apiConfig', () => ({
   resetMcpUrl: vi.fn(),
 }));
 
+// Mock localStorage using Object.defineProperty for proper writable config
+let localStorageData: Record<string, string> = {};
+Object.defineProperty(globalThis, 'localStorage', {
+  value: {
+    getItem: vi.fn((key: string) => localStorageData[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => { localStorageData[key] = value; }),
+    removeItem: vi.fn((key: string) => { delete localStorageData[key]; }),
+    clear: vi.fn(() => { localStorageData = {}; }),
+  },
+  writable: true,
+  configurable: true,
+});
+
 describe('settingsStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,6 +90,66 @@ describe('settingsStore', () => {
       expect(mcpUrl).toBe('http://localhost:8002');
       expect(resetApiUrl).toHaveBeenCalled();
       expect(resetMcpUrl).toHaveBeenCalled();
+    });
+  });
+
+  describe('setApiKey', () => {
+    it('stores key in localStorage', () => {
+      useSettingsStore.getState().setApiKey('my-secret-key');
+      expect(localStorage.setItem).toHaveBeenCalledWith('inspector-plus-api-key', 'my-secret-key');
+      expect(useSettingsStore.getState().apiKey).toBe('my-secret-key');
+    });
+
+    it('clears key from localStorage when empty', () => {
+      useSettingsStore.getState().setApiKey('');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('inspector-plus-api-key');
+      expect(useSettingsStore.getState().apiKey).toBe('');
+    });
+
+    it('clears key from localStorage when null-ish', () => {
+      useSettingsStore.getState().setApiKey('' as any);
+      expect(localStorage.removeItem).toHaveBeenCalledWith('inspector-plus-api-key');
+    });
+
+    it('silently ignores localStorage errors', () => {
+      vi.mocked(localStorage.setItem).mockImplementation(() => {
+        throw new Error('Quota exceeded');
+      });
+      // Should not throw
+      expect(() => useSettingsStore.getState().setApiKey('some-key')).not.toThrow();
+      // State still updated
+      expect(useSettingsStore.getState().apiKey).toBe('some-key');
+    });
+  });
+
+  describe('loadApiKey', () => {
+    it('returns stored key on init', () => {
+      vi.mocked(localStorage.getItem).mockReturnValue('loaded-key');
+      useSettingsStore.getState().loadSettings();
+      expect(useSettingsStore.getState().apiKey).toBe('loaded-key');
+    });
+
+    it('returns empty string when no key stored', () => {
+      vi.mocked(localStorage.getItem).mockReturnValue(null);
+      useSettingsStore.getState().loadSettings();
+      expect(useSettingsStore.getState().apiKey).toBe('');
+    });
+
+    it('returns empty string when localStorage throws', () => {
+      vi.mocked(localStorage.getItem).mockImplementation(() => {
+        throw new Error('Storage blocked');
+      });
+      useSettingsStore.getState().loadSettings();
+      expect(useSettingsStore.getState().apiKey).toBe('');
+    });
+  });
+
+  describe('resetSettings clears apiKey', () => {
+    it('removes apiKey from localStorage on reset', () => {
+      useSettingsStore.getState().setApiKey('some-key');
+      useSettingsStore.getState().resetSettings();
+      expect(localStorage.removeItem).toHaveBeenCalledWith('inspector-plus-api-key');
+      expect(useSettingsStore.getState().apiKey).toBe('');
     });
   });
 });

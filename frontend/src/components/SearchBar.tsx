@@ -1,6 +1,6 @@
 import { useState, useCallback, memo, useEffect, useRef } from 'react';
 
-import { searchHierarchy } from '../hooks/useDevice';
+import { searchHierarchy } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useHierarchyStore, SearchFilter } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -101,34 +101,12 @@ export const SearchBar = memo(function SearchBar() {
     }
     setIsSearching(true);
     try {
-      const data = (await searchHierarchy(
-        query,
-        filter,
-        selectedDeviceRef.current ?? undefined
-      )) as {
-        matches: Array<{
-          id: string;
-          text?: string;
-          contentDesc?: string;
-          resourceId?: string;
-          resourceIdFull?: string;
-          className?: string;
-          [key: string]: unknown;
-        }>;
-        count: number;
-      };
-      console.debug('[SearchBar] raw BE response:', JSON.stringify(data));
+      const data = await searchHierarchy(query, filter, selectedDeviceRef.current ?? undefined);
       const results = (data.matches || []).map((m) => ({
-        nodeId: m.id,
-        matchField: m.text
-          ? 'text'
-          : m.contentDesc
-            ? 'content-desc'
-            : m.resourceId
-              ? 'resource-id'
-              : 'class',
-        matchedText: m.text || m.contentDesc || m.resourceId || m.className || '',
-        node: m as Parameters<typeof setSearchResults>[0][number]['node'],
+        nodeId: m.node.id,
+        matchField: m.matchField,
+        matchedText: m.matchedText,
+        node: m.node,
       }));
       setSearchResultsRef.current(results, data.count || 0);
     } catch {

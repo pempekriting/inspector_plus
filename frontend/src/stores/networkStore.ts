@@ -34,9 +34,12 @@ export const useNetworkStore = create<NetworkState>((set) => ({
   lastTimestamp: 0,
 
   addFlow: (flow) =>
-    set((state) => ({
-      trafficFlows: [...state.trafficFlows.slice(-999), flow],
-    })),
+    set((state) => {
+      if (state.trafficFlows.length >= 1000) {
+        return { trafficFlows: [...state.trafficFlows.slice(1), flow] };
+      }
+      return { trafficFlows: [...state.trafficFlows, flow] };
+    }),
   setTrafficFlows: (flows) => set({ trafficFlows: flows }),
   clearTraffic: () =>
     set({ trafficFlows: [], selectedFlowId: null, lastTimestamp: 0, wsDisconnectedAt: null }),

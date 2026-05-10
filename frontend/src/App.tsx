@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { CommandsDrawer } from './components/CommandsDrawer';
 import { DevicePanel } from './components/DevicePanel';
+import { PanelErrorBoundary } from './components/ErrorBoundary';
 import { HierarchyPanel } from './components/HierarchyPanel';
 import { NetworkPanel } from './components/NetworkPanel';
 import { OnboardingModal } from './components/OnboardingModal';
@@ -219,10 +220,14 @@ function App() {
               {/* Sub-tab content */}
               <div className="flex-1 overflow-y-auto">
                 <div style={{ display: activeInspectorTab === 'hierarchy' ? 'block' : 'none' }}>
-                  <HierarchyPanel />
+                  <PanelErrorBoundary>
+                    <HierarchyPanel />
+                  </PanelErrorBoundary>
                 </div>
                 <div style={{ display: activeInspectorTab === 'accessibility' ? 'block' : 'none' }}>
-                  <AccessibilityPanel />
+                  <PanelErrorBoundary>
+                    <AccessibilityPanel />
+                  </PanelErrorBoundary>
                 </div>
                 <div
                   style={{
@@ -230,7 +235,9 @@ function App() {
                     height: '100%',
                   }}
                 >
-                  <RecorderPanel />
+                  <PanelErrorBoundary>
+                    <RecorderPanel />
+                  </PanelErrorBoundary>
                 </div>
                 <div
                   style={{
@@ -238,7 +245,9 @@ function App() {
                     height: '100%',
                   }}
                 >
-                  <NetworkPanel />
+                  <PanelErrorBoundary>
+                    <NetworkPanel />
+                  </PanelErrorBoundary>
                 </div>
               </div>
             </div>
@@ -250,7 +259,9 @@ function App() {
                 display: activeTab === 'commands' ? 'flex' : 'none',
               }}
             >
-              <CommandsDrawer isDark={isDark} />
+              <PanelErrorBoundary>
+                <CommandsDrawer isDark={isDark} />
+              </PanelErrorBoundary>
             </div>
           </div>
 

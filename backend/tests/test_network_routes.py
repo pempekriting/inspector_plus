@@ -22,15 +22,15 @@ def client():
 @pytest.fixture(autouse=True)
 def reset_bridges():
     """Reset bridge singletons between tests to avoid state leakage."""
-    import main
+    import dependencies
 
-    main._android_bridge = None
-    main._android_bridges = {}
-    main._ios_bridges = {}
+    dependencies._android_bridge = None
+    dependencies._android_bridges.clear()
+    dependencies._ios_bridges.clear()
     yield
-    main._android_bridge = None
-    main._android_bridges = {}
-    main._ios_bridges = {}
+    dependencies._android_bridge = None
+    dependencies._android_bridges.clear()
+    dependencies._ios_bridges.clear()
 
 
 class TestProxyEndpoints:

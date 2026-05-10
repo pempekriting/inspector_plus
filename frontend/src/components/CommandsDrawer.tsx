@@ -20,7 +20,7 @@ interface GestureAction {
   y?: number;
   duration?: number;
   pointer?: number;
-  button?: string;
+  button?: 'left' | 'right';
 }
 
 // Quick Action Button Component

@@ -1,7 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, memo } from 'react';
 
 import { getApiUrl } from '../config/apiConfig';
-import { inputDeviceText } from '../hooks/useDevice';
+import { inputDeviceText } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -175,13 +176,12 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
   const platform = selectedDeviceInfo?.platform ?? 'android';
   const isIOS = platform === 'ios';
 
-  const refetchFn = useHierarchyStore((s) => s.refetchFn);
+  const queryClient = useQueryClient();
 
   const triggerRefresh = () => {
-    if (refetchFn.current) {
-      useHierarchyStore.setState({ isRefreshing: true });
-      refetchFn.current();
-    }
+    useHierarchyStore.setState({ isRefreshing: true });
+    queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
+    queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
   };
 
   const displayNode = lockedNode || selectedNode || hoveredNode;

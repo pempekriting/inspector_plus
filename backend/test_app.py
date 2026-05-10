@@ -37,16 +37,17 @@ def client():
 @pytest.fixture(autouse=True)
 def reset_bridges():
     """Reset bridge singletons and rate limiter between tests to avoid state leakage."""
+    import dependencies
     import main
 
-    main._android_bridge = None
-    main._android_bridges = {}
-    main._ios_bridges = {}
+    dependencies._android_bridge = None
+    dependencies._android_bridges.clear()
+    dependencies._ios_bridges.clear()
     main.limiter.reset()
     yield
-    main._android_bridge = None
-    main._android_bridges = {}
-    main._ios_bridges = {}
+    dependencies._android_bridge = None
+    dependencies._android_bridges.clear()
+    dependencies._ios_bridges.clear()
     main.limiter.reset()
 
 
@@ -131,8 +132,8 @@ class TestHealthEndpoints:
         assert data["status"] == "ok"
         assert "version" in data
 
-    @patch("main._get_android_bridge")
-    @patch("main._get_ios_devices")
+    @patch("dependencies._get_android_bridge")
+    @patch("dependencies._get_ios_devices")
     def test_ready_with_device_connected(self, mock_ios, mock_android, client, mock_android_bridge):
         """GET /ready returns ready=True when device is connected."""
         mock_android.return_value = mock_android_bridge
@@ -143,8 +144,8 @@ class TestHealthEndpoints:
         assert data["ready"] is True
         assert data["connected"] is True
 
-    @patch("main._get_android_bridge")
-    @patch("main._get_ios_devices")
+    @patch("dependencies._get_android_bridge")
+    @patch("dependencies._get_ios_devices")
     def test_ready_no_device(self, mock_ios, mock_android, client):
         """GET /ready returns ready=True when bridge initializes successfully but no devices."""
         mock_b = MagicMock()
@@ -164,8 +165,8 @@ class TestHealthEndpoints:
 
 
 class TestDeviceEndpoints:
-    @patch("main._get_android_bridge")
-    @patch("main._get_ios_devices")
+    @patch("dependencies._get_android_bridge")
+    @patch("dependencies._get_ios_devices")
     def test_devices_returns_device_list(self, mock_ios, mock_android, client, mock_android_bridge):
         """GET /devices returns Android + iOS devices."""
         mock_android.return_value = mock_android_bridge
@@ -176,8 +177,8 @@ class TestDeviceEndpoints:
         assert "devices" in data
         assert len(data["devices"]) >= 1
 
-    @patch("main._get_android_bridge")
-    @patch("main._get_ios_devices")
+    @patch("dependencies._get_android_bridge")
+    @patch("dependencies._get_ios_devices")
     def test_device_status_connected(self, mock_ios, mock_android, client, mock_android_bridge):
         """GET /device/status returns connected=True for active device."""
         mock_android.return_value = mock_android_bridge
@@ -189,28 +190,24 @@ class TestDeviceEndpoints:
         assert len(data["devices"]) >= 1
 
     def test_select_device_returns_udid(self, client):
-        """POST /device/select returns platform info."""
+        """POST /device/select was removed (no-op endpoint)."""
         response = client.post("/device/select", json={"udid": None})
-        assert response.status_code == 200
-        data = response.json()
-        assert data["platform"] == "android"
+        assert response.status_code == 404
 
     def test_select_device_ios(self, client):
-        """POST /device/select detects iOS platform from UDID format."""
+        """POST /device/select was removed (no-op endpoint)."""
         response = client.post(
             "/device/select",
             json={"udid": "00001234-0001234567890123"},
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["platform"] == "ios"
+        assert response.status_code == 404
 
 
 # --- Hierarchy Endpoints ---
 
 
 class TestHierarchyEndpoints:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_hierarchy_returns_tree(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy returns parsed UI tree."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -220,7 +217,7 @@ class TestHierarchyEndpoints:
         assert data["id"] == "root"
         assert "children" in data
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_hierarchy_with_udid(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy?udid=X passes UDID to bridge."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -228,7 +225,7 @@ class TestHierarchyEndpoints:
         assert response.status_code == 200
         mock_get_bridge.assert_called_once_with("emulator-5554")
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_hierarchy_bridge_returns_none(self, mock_get_bridge, client):
         """GET /hierarchy returns 404 when bridge is None."""
         mock_get_bridge.return_value = None
@@ -237,7 +234,7 @@ class TestHierarchyEndpoints:
         data = response.json()
         assert data["error"] == "DEVICE_NOT_FOUND"
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_hierarchy_error_from_bridge(self, mock_get_bridge, client):
         """GET /hierarchy returns 404 when bridge reports hierarchy error."""
         bridge = MagicMock()
@@ -248,9 +245,9 @@ class TestHierarchyEndpoints:
         data = response.json()
         assert data["error"] == "HIERARCHY_NOT_FOUND"
 
-    @patch("main._get_first_android_device")
-    @patch("main.AndroidDeviceBridge")
-    @patch("main._get_android_bridge")
+    @patch("dependencies._get_first_android_device")
+    @patch("dependencies.AndroidDeviceBridge")
+    @patch("dependencies._get_android_bridge")
     def test_hierarchy_empty_udid_resolves_to_first_device(
         self, mock_get_android, mock_android_class, mock_first_device, client
     ):
@@ -269,7 +266,7 @@ class TestHierarchyEndpoints:
 
 
 class TestHierarchySearch:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_search_returns_results(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy/search returns filtered results."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -278,7 +275,7 @@ class TestHierarchySearch:
         data = response.json()
         assert "results" in data
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_search_query_too_long(self, mock_get_bridge, client):
         """GET /hierarchy/search returns 400 when query exceeds 500 chars."""
         mock_get_bridge.return_value = MagicMock()
@@ -287,14 +284,14 @@ class TestHierarchySearch:
         assert response.status_code == 400
         assert "500 character limit" in response.json()["detail"]
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_search_xpath(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy/search?filter=xpath works."""
         mock_get_bridge.return_value = mock_android_bridge
         response = client.get("/hierarchy/search?query=//android.widget.Button&filter=xpath")
         assert response.status_code == 200
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_search_bridge_returns_error(self, mock_get_bridge, client):
         """GET /hierarchy/search returns 400 on invalid XPath."""
         bridge = MagicMock()
@@ -308,7 +305,7 @@ class TestHierarchySearch:
 
 
 class TestLocatorGenerator:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_get_locators_success(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy/locators returns locators for found node."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -343,7 +340,7 @@ class TestLocatorGenerator:
         assert "locators" in data
         assert "best" in data
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_get_locators_not_found(self, mock_get_bridge, client, mock_android_bridge):
         """GET /hierarchy/locators returns 404 when node not found."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -351,7 +348,7 @@ class TestLocatorGenerator:
         response = client.get("/hierarchy/locators?nodeId=NonExistent_99")
         assert response.status_code == 404
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_get_locators_bridge_returns_none(self, mock_get_bridge, client):
         """GET /hierarchy/locators returns 404 when no device."""
         mock_get_bridge.return_value = None
@@ -363,7 +360,7 @@ class TestLocatorGenerator:
 
 
 class TestAdbCommand:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_post_adb_command_success(self, mock_get_bridge, client, mock_android_bridge):
         """POST /device/adb returns output + exitCode 0 on success."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -378,7 +375,7 @@ class TestAdbCommand:
         assert data["output"] == "OK"
         assert data["exitCode"] == 0
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_post_adb_command_failure(self, mock_get_bridge, client, mock_android_bridge):
         """POST /device/adb returns error in response on failure."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -391,7 +388,7 @@ class TestAdbCommand:
         response = client.post("/device/adb", json={"command": "foobar"})
         assert response.status_code == 400
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_post_adb_command_bridge_returns_none(self, mock_get_bridge, client):
         """POST /device/adb returns 404 when no device."""
         mock_get_bridge.return_value = None
@@ -401,14 +398,14 @@ class TestAdbCommand:
     def test_post_adb_command_too_long(self, client):
         """POST /device/adb returns 422 for command exceeding 500 chars."""
         response = client.post("/device/adb", json={"command": "x" * 501})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
 
 # --- Tap Endpoint ---
 
 
 class TestTapEndpoint:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_tap_returns_success(self, mock_get_bridge, client, mock_android_bridge):
         """POST /tap returns success when bridge tap succeeds."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -417,14 +414,14 @@ class TestTapEndpoint:
         assert response.json()["success"] is True
         mock_android_bridge.tap.assert_called_once_with(100, 200)
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_tap_bridge_returns_none(self, mock_get_bridge, client):
         """POST /tap returns 404 when no device."""
         mock_get_bridge.return_value = None
         response = client.post("/tap", json={"x": 100, "y": 200})
         assert response.status_code == 404
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_tap_returns_500_on_failure(self, mock_get_bridge, client):
         """POST /tap returns 500 when bridge tap fails."""
         bridge = MagicMock()
@@ -436,19 +433,19 @@ class TestTapEndpoint:
     def test_tap_invalid_coords_negative(self, client):
         """POST /tap returns 422 for negative coordinates."""
         response = client.post("/tap", json={"x": -1, "y": 100})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     def test_tap_invalid_coords_too_large(self, client):
         """POST /tap returns 422 for coordinates > 10000."""
         response = client.post("/tap", json={"x": 100, "y": 10001})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
 
 # --- Screenshot Endpoint ---
 
 
 class TestScreenshotEndpoint:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_screenshot_returns_png(self, mock_get_bridge, client, mock_android_bridge):
         """GET /screenshot returns PNG binary stream."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -457,14 +454,14 @@ class TestScreenshotEndpoint:
         assert response.headers["content-type"] == "image/png"
         assert len(response.content) > 0
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_screenshot_bridge_returns_none(self, mock_get_bridge, client):
         """GET /screenshot returns 404 when no device."""
         mock_get_bridge.return_value = None
         response = client.get("/screenshot")
         assert response.status_code == 404
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_screenshot_returns_404_on_empty(self, mock_get_bridge, client):
         """GET /screenshot returns 404 when bridge returns empty."""
         bridge = MagicMock()
@@ -473,9 +470,9 @@ class TestScreenshotEndpoint:
         response = client.get("/screenshot")
         assert response.status_code == 404
 
-    @patch("main._get_first_android_device")
-    @patch("main.AndroidDeviceBridge")
-    @patch("main._get_android_bridge")
+    @patch("dependencies._get_first_android_device")
+    @patch("dependencies.AndroidDeviceBridge")
+    @patch("dependencies._get_android_bridge")
     def test_screenshot_empty_udid_resolves_to_first_device(
         self, mock_get_android, mock_android_class, mock_first_device, client
     ):
@@ -494,7 +491,7 @@ class TestScreenshotEndpoint:
 
 
 class TestInputTextEndpoint:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_input_text_success(self, mock_get_bridge, client, mock_android_bridge):
         """POST /input/text returns success."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -503,7 +500,7 @@ class TestInputTextEndpoint:
         assert response.json()["success"] is True
         mock_android_bridge.input_text.assert_called_once_with("hello")
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_input_text_bridge_returns_none(self, mock_get_bridge, client):
         """POST /input/text returns 404 when no device."""
         mock_get_bridge.return_value = None
@@ -513,14 +510,14 @@ class TestInputTextEndpoint:
     def test_input_text_too_long(self, client):
         """POST /input/text returns 422 for text > 1000 chars."""
         response = client.post("/input/text", json={"text": "x" * 1001})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
 
 # --- App Error Handler ---
 
 
 class TestAppErrorHandler:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_device_not_found_error(self, mock_get_bridge, client):
         """AppError with DeviceNotFoundError returns 404 with code."""
         mock_get_bridge.side_effect = DeviceNotFoundError("My device is offline")
@@ -531,7 +528,7 @@ class TestAppErrorHandler:
         assert data["detail"] == "My device is offline"
         assert "X-Request-ID" in response.headers
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_hierarchy_not_found_error(self, mock_get_bridge, client):
         """AppError with HierarchyNotFoundError returns 404."""
         bridge = MagicMock()
@@ -541,7 +538,7 @@ class TestAppErrorHandler:
         assert response.status_code == 404
         assert response.json()["error"] == "HIERARCHY_NOT_FOUND"
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_command_execution_error(self, mock_get_bridge, client, mock_android_bridge):
         """AppError with CommandExecutionError returns 500."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -556,7 +553,7 @@ class TestAppErrorHandler:
 
 
 class TestRecorderEndpoints:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_record_step(self, mock_get_bridge, client, mock_android_bridge):
         """POST /recorder/record adds a step and returns step count."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -581,7 +578,7 @@ class TestRecorderEndpoints:
         data = response.json()
         assert "stepCount" in data
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_export_recording(self, mock_get_bridge, client, mock_android_bridge):
         """GET /recorder/export returns Python test script."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -597,7 +594,7 @@ class TestRecorderEndpoints:
         assert "stepCount" in data
         assert data["filename"].endswith(".py")
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_clear_recording(self, mock_get_bridge, client, mock_android_bridge):
         """POST /recorder/clear clears the session steps."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -614,11 +611,11 @@ class TestRecorderEndpoints:
 
 
 class TestCommandExecution:
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_execute_install_app_success(self, mock_get_bridge, client, mock_android_bridge):
         """POST /commands/execute install_app returns success."""
         mock_get_bridge.return_value = mock_android_bridge
-        with patch("main.AppCommands") as MockAppCommands:
+        with patch("routers.commands.AppCommands") as MockAppCommands:
             instance = MagicMock()
             instance.install_app.return_value = (True, "Success")
             MockAppCommands.return_value = instance
@@ -630,7 +627,7 @@ class TestCommandExecution:
             data = response.json()
             assert data["success"] is True
 
-    @patch("main.get_bridge")
+    @patch("dependencies.get_bridge")
     def test_execute_unknown_command(self, mock_get_bridge, client, mock_android_bridge):
         """POST /commands/execute with unknown type returns error."""
         mock_get_bridge.return_value = mock_android_bridge
@@ -684,3 +681,127 @@ class TestRequestID:
         req_id = response.headers["X-Request-ID"]
         # Should not raise ValueError
         uuid.UUID(req_id)
+
+
+# --- API Key Auth Middleware ---
+
+
+class TestApiKeyAuth:
+    """Tests for optional X-API-Key authentication middleware."""
+
+    def test_request_without_api_key_when_required_returns_401(self, client):
+        """Request without X-API-Key header when API_KEY is set returns 401."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices")
+            assert response.status_code == 401
+            data = response.json()
+            assert data["error"] == "unauthorized"
+        finally:
+            settings.API_KEY = None
+
+    def test_request_with_wrong_api_key_returns_401(self, client):
+        """Request with incorrect X-API-Key value returns 401."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices", headers={"X-API-Key": "wrong-key"})
+            assert response.status_code == 401
+            data = response.json()
+            assert data["error"] == "unauthorized"
+        finally:
+            settings.API_KEY = None
+
+    def test_request_with_correct_api_key_passes_through(self, client):
+        """Request with correct X-API-Key value is authenticated."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/devices", headers={"X-API-Key": "test-secret-key"})
+            # Should not be 401 (may be 200 or 500 if no device, but not 401)
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_health_endpoint_bypasses_auth(self, client):
+        """Health endpoint is exempt from API key auth."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/health")
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_ready_endpoint_bypasses_auth(self, client):
+        """Ready endpoint is exempt from API key auth."""
+        from config import settings
+
+        settings.API_KEY = "test-secret-key"
+        try:
+            response = client.get("/ready")
+            assert response.status_code != 401
+        finally:
+            settings.API_KEY = None
+
+    def test_auth_disabled_when_api_key_unset(self, client):
+        """Auth middleware passes through when API_KEY env var is unset."""
+        from config import settings
+
+        settings.API_KEY = None
+        response = client.get("/devices")
+        # Should not be 401 - auth is disabled
+        assert response.status_code != 401
+
+
+# --- Command Injection Prevention ---
+
+
+class TestCommandInjectionPrevention:
+    """Tests verifying dangerous command patterns are rejected."""
+
+    def test_execute_command_with_shell_injection_blocked(self, client):
+        """Shell injection via semicolon is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls; rm -rf /"}},
+        )
+        # Should return validation error
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_pipe_injection_blocked(self, client):
+        """Pipe injection is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls | cat"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_backtick_injection_blocked(self, client):
+        """Backtick command substitution is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "echo `whoami`"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_dollar_substitution_blocked(self, client):
+        """Dollar sign command substitution is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "echo $(whoami)"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])
+
+    def test_execute_command_with_redirect_blocked(self, client):
+        """Output redirect is rejected."""
+        response = client.post(
+            "/commands/execute",
+            json={"type": "shell", "params": {"cmd": "ls > /tmp/out"}},
+        )
+        assert response.status_code == 400 or (response.status_code == 200 and not response.json()["success"])

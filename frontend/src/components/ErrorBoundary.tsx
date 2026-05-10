@@ -70,3 +70,35 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
 export function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   return <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>;
 }
+
+function PanelErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const { theme } = useThemeStore();
+  const isDark = theme === 'dark';
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  return (
+    <div
+      className="flex flex-col items-center justify-center h-full p-4"
+      style={{ background: isDark ? '#0a0a0c' : '#f5f5f5' }}
+    >
+      <p className="text-sm mb-2" style={{ color: isDark ? '#71717a' : '#666666' }}>
+        {errorMessage || 'Panel failed to load'}
+      </p>
+      <button
+        onClick={resetErrorBoundary}
+        className="px-3 py-1 rounded text-xs font-bold"
+        style={{
+          background: isDark ? '#1f1f23' : '#ffffff',
+          border: isDark ? '1px solid #3f3f46' : '1px solid #1a1a1a',
+          color: isDark ? '#e4e4e7' : '#1a1a1a',
+        }}
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+export function PanelErrorBoundary({ children }: { children: React.ReactNode }) {
+  return <ErrorBoundary FallbackComponent={PanelErrorFallback}>{children}</ErrorBoundary>;
+}

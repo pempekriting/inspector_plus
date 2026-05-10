@@ -20,7 +20,19 @@ export default defineConfig({
   build: {
     target: "esnext",
     minify: "esbuild",
-    sourcemap: false,
+    sourcemap: "hidden",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          query: ["@tanstack/react-query"],
+        },
+      },
+    },
+  },
+  esbuild: {
+    drop: ["debugger"],
+    pure: ["console.debug", "console.log"],
   },
   resolve: {
     alias: {

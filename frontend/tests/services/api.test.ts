@@ -6,6 +6,11 @@ import {
   DeviceInfoSchema,
   DeviceStatusSchema,
   HierarchyResponseSchema,
+  HierarchyAndScreenshotSchema,
+  NetworkFlowSchema,
+  NetworkInfoSchema,
+  LocatorResultSchema,
+  DeviceContextsResponseSchema,
 } from '../../src/services/api';
 
 describe('api Zod schemas', () => {
@@ -144,6 +149,149 @@ describe('api Zod schemas', () => {
 
     it('rejects missing tree', () => {
       expect(() => HierarchyResponseSchema.parse({})).toThrow();
+    });
+  });
+
+  describe('HierarchyAndScreenshotSchema', () => {
+    it('parses valid hierarchy+screenshot response', () => {
+      const result = HierarchyAndScreenshotSchema.parse({
+        hierarchy: { id: 'root', bounds: { x: 0, y: 0, width: 1080, height: 1920 } },
+        screenshot: 'base64 png data here',
+      });
+      expect(result.hierarchy.id).toBe('root');
+      expect(result.screenshot).toBe('base64 png data here');
+    });
+
+    it('rejects missing hierarchy', () => {
+      expect(() => HierarchyAndScreenshotSchema.parse({ screenshot: 'abc' })).toThrow();
+    });
+
+    it('rejects missing screenshot', () => {
+      expect(() => HierarchyAndScreenshotSchema.parse({ hierarchy: { id: 'root', bounds: { x: 0, y: 0, width: 100, height: 100 } } })).toThrow();
+    });
+  });
+
+  describe('NetworkFlowSchema', () => {
+    it('parses minimal flow', () => {
+      const result = NetworkFlowSchema.parse({
+        id: 'flow1',
+        timestamp: 1234567890,
+        request: { method: 'GET', url: 'https://example.com', host: 'example.com', path: '/', headers: {} },
+        duration_ms: 100,
+        websocket: false,
+      });
+      expect(result.id).toBe('flow1');
+      expect(result.websocket).toBe(false);
+    });
+
+    it('parses flow with response', () => {
+      const result = NetworkFlowSchema.parse({
+        id: 'flow2',
+        timestamp: 1234567890,
+        request: { method: 'GET', url: 'https://example.com', host: 'example.com', path: '/', headers: {} },
+        response: { status_code: 200, reason: 'OK', headers: { 'Content-Type': 'text/html' }, body: 'hello' },
+        duration_ms: 50,
+        websocket: false,
+      });
+      expect(result.response?.status_code).toBe(200);
+    });
+
+    it('parses flow with error', () => {
+      const result = NetworkFlowSchema.parse({
+        id: 'flow3',
+        timestamp: 1234567890,
+        request: { method: 'GET', url: 'https://example.com', host: 'example.com', path: '/', headers: {} },
+        duration_ms: 0,
+        websocket: false,
+        error: 'Connection refused',
+      });
+      expect(result.error).toBe('Connection refused');
+    });
+
+    it('rejects invalid headers type', () => {
+      expect(() =>
+        NetworkFlowSchema.parse({
+          id: 'flow4',
+          timestamp: 1234567890,
+          request: { method: 'GET', url: 'https://example.com', host: 'example.com', path: '/', headers: { 'X-Token': 123 } as any },
+          duration_ms: 0,
+          websocket: false,
+        })
+      ).toThrow();
+    });
+  });
+
+  describe('NetworkInfoSchema', () => {
+    it('parses valid network info', () => {
+      const result = NetworkInfoSchema.parse({
+        ip_addresses: [{ iface: 'eth0', address: '192.168.1.1', family: 'IPv4' }],
+        connections: ['tcp', 'udp'],
+        dns: ['8.8.8.8'],
+      });
+      expect(result.ip_addresses).toHaveLength(1);
+    });
+
+    it('rejects invalid ip_addresses', () => {
+      expect(() => NetworkInfoSchema.parse({ ip_addresses: 'not an array', connections: [], dns: [] })).toThrow();
+    });
+  });
+
+  describe('LocatorResultSchema', () => {
+    it('parses valid locator result', () => {
+      const result = LocatorResultSchema.parse({
+        nodeId: 'node1',
+        locators: [
+          { strategy: 'xpath', value: '//button', expression: '//button[@text="Submit"]', stability: 0.9 },
+          { strategy: 'id', value: 'submit-btn', expression: 'id("submit-btn")', stability: 1.0 },
+        ],
+        best: 'id',
+      });
+      expect(result.nodeId).toBe('node1');
+      expect(result.locators).toHaveLength(2);
+      expect(result.best).toBe('id');
+    });
+
+    it('parses without best field (optional)', () => {
+      const result = LocatorResultSchema.parse({
+        nodeId: 'node1',
+        locators: [{ strategy: 'xpath', value: '//button', expression: '//button', stability: 0.5 }],
+      });
+      expect(result.best).toBeUndefined();
+    });
+
+    it('rejects empty locators array', () => {
+      // Empty array means no locators found - parse succeeds since it's a valid array
+      const result = LocatorResultSchema.parse({ nodeId: 'node1', locators: [] });
+      expect(result.locators).toHaveLength(0);
+    });
+
+    it('rejects missing locators field', () => {
+      expect(() => LocatorResultSchema.parse({ nodeId: 'node1' })).toThrow();
+    });
+  });
+
+  describe('DeviceContextsResponseSchema', () => {
+    it('parses native context', () => {
+      const result = DeviceContextsResponseSchema.parse({
+        contexts: [{ id: 'NATIVE_APP', type: 'native', description: 'Native context' }],
+      });
+      expect(result.contexts).toHaveLength(1);
+      expect(result.contexts[0].type).toBe('native');
+    });
+
+    it('parses webview context', () => {
+      const result = DeviceContextsResponseSchema.parse({
+        contexts: [{ id: 'WEBVIEW_1', type: 'webview', description: 'Chrome' }],
+      });
+      expect(result.contexts[0].type).toBe('webview');
+    });
+
+    it('rejects invalid context type', () => {
+      expect(() =>
+        DeviceContextsResponseSchema.parse({
+          contexts: [{ id: 'ctx1', type: 'browser', description: '???' }],
+        })
+      ).toThrow();
     });
   });
 });

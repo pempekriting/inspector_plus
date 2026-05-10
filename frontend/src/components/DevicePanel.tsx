@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 
-import { selectDevice } from '../hooks/useDevice';
 import { useDeviceStatus } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -28,19 +27,14 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleDeviceSelect = async (serial: string | null) => {
+  const handleDeviceSelect = (serial: string | null) => {
     if (serial === selectedDevice) {
       setDropdownOpen(false);
       return;
     }
     setDropdownOpen(false);
-    try {
-      await selectDevice(serial);
-      setSelectedDevice(serial);
-      onDeviceChange?.();
-    } catch {
-      // silently fail
-    }
+    setSelectedDevice(serial);
+    onDeviceChange?.();
   };
 
   const currentDevice = devices.find(
