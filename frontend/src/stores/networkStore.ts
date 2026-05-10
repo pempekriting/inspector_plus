@@ -35,13 +35,10 @@ export const useNetworkStore = create<NetworkState>((set) => ({
 
   addFlow: (flow) =>
     set((state) => {
-      const flows = state.trafficFlows;
-      if (flows.length >= 1000) {
-        // Mutate in place to avoid creating a new array every time
-        flows.shift();
+      if (state.trafficFlows.length >= 1000) {
+        return { trafficFlows: [...state.trafficFlows.slice(1), flow] };
       }
-      flows.push(flow);
-      return { trafficFlows: flows };
+      return { trafficFlows: [...state.trafficFlows, flow] };
     }),
   setTrafficFlows: (flows) => set({ trafficFlows: flows }),
   clearTraffic: () =>
