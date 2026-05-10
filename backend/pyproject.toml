@@ -7,7 +7,7 @@ dependencies = [
     "fastapi==0.136.1",
     "uvicorn[standard]==0.30.0",
     "websockets==16.0",
-    "setuptools<82",
+    "setuptools<83",
     "lxml>=5.0.0",
     "slowapi>=0.1.9",
     "mitmproxy>=12.2.2",
