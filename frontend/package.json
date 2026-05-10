@@ -42,7 +42,7 @@
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsx-a11y": "^6.10.0",
-    "eslint-plugin-react": "^4.3.0",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.0.0-beta",
     "eslint-plugin-react-hooks": "^7.1.1",
     "happy-dom": "^20.9.0",
