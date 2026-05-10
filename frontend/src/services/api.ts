@@ -259,7 +259,7 @@ export const LocatorSchema: z.ZodType<Locator> = z.object({
 export interface LocatorResult {
   nodeId: string;
   locators: Locator[];
-  best: string;
+  best?: string;
 }
 
 export const LocatorResultSchema: z.ZodType<LocatorResult> = z.object({

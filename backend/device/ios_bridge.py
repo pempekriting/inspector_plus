@@ -458,7 +458,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
             _retry_with_backoff(do_input, retries=3, base_delay=0.5)
             return True
         except Exception as e:
-            logger.error(f"input_text failed after retries: {e}")
+            logger.error("input_text failed after retries: %s", e)
             return False
 
     def swipe(self, start_x: int, start_y: int, end_x: int, end_y: int, duration: int = 300) -> bool:

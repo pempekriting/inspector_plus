@@ -52,7 +52,8 @@ def _get_first_android_device() -> str | None:
             if parts:
                 return parts[0]
         return None
-    except Exception:
+    except Exception as e:
+        logger.warning("[_get_first_android_device] Failed to get Android devices: %s", e)
         return None
 
 
