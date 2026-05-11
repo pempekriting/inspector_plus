@@ -42,11 +42,11 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
   );
 
   // Helper to check if a device is in a "connected" state
-    const isConnected = (d: typeof devices[number]) =>
-      d.state === 'device' || d.state === 'connected' || d.state === 'unknown';
+  const isConnected = (d: typeof devices[number]) =>
+    d.state === 'device' || d.state === 'connected' || d.state === 'unknown';
 
-    // Sync status data to deviceStore
-    useEffect(() => {
+  // Sync status data to deviceStore
+  useEffect(() => {
       if (!status) return;
       const devices = status.devices || [];
       setDevices(devices);
@@ -151,10 +151,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                   className="w-3 h-3 rounded-sm flex-shrink-0"
                   style={{
                     background:
-                      device.state === 'device' ||
-                      device.state === 'connected' ||
-                      device.state === 'unknown' ||
-                      device.state === 'Booted'
+                      isConnected(device) || device.state === 'Booted'
                         ? 'var(--accent-emerald)'
                         : 'var(--accent-amber)',
                   }}
