@@ -181,7 +181,7 @@ export function useHierarchy(udid?: string) {
 // Combined hierarchy + screenshot (single request, base64 encoded)
 export function useHierarchyAndScreenshot(udid?: string) {
   return useQuery({
-    queryKey: ['hierarchy-and-screenshot', udid],
+    queryKey: udid ? ['hierarchy-and-screenshot', udid] : ['hierarchy-and-screenshot'],
     queryFn: async () => {
       const url = udid
         ? `${getApiUrl()}/hierarchy-and-screenshot?udid=${encodeURIComponent(udid)}`

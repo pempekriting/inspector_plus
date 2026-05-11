@@ -64,7 +64,7 @@ def _resolve_android_udid(udid: str | None) -> str | None:
     return os.environ.get("ANDROID_SERIAL") or _get_first_android_device()
 
 
-def get_bridge(udid: str | None = None) -> DeviceBridgeBase:
+def get_bridge(udid: str | None = None) -> DeviceBridgeBase | None:
     """Get appropriate bridge for device. Returns None if device can't be resolved."""
     global _android_bridge
 
@@ -72,9 +72,16 @@ def get_bridge(udid: str | None = None) -> DeviceBridgeBase:
     if not udid:
         udid = os.environ.get("ANDROID_SERIAL") or _get_first_android_device()
     if udid is None:
-        bridge = _get_android_bridge()
-        logger.info("[get_bridge] udid=None, using global bridge serial=%s", bridge.serial)
-        return bridge
+        # No Android device found — try iOS
+        ios_devices = _get_ios_devices()
+        if ios_devices:
+            udid = ios_devices[0]["udid"]
+            logger.info("[get_bridge] No Android device, falling back to iOS UDID=%s", udid)
+        else:
+            # No devices at all — create Android bridge anyway (it will fail gracefully)
+            bridge = _get_android_bridge()
+            logger.info("[get_bridge] udid=None, no devices found, using global bridge serial=%s", bridge.serial)
+            return bridge
     # iOS UDID
     if _is_ios_udid(udid):
         with _bridge_lock:
