@@ -41,35 +41,35 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
     (d) => d.udid === selectedDevice || d.serial === selectedDevice
   );
 
+  // Helper to check if a device is in a "connected" state
+  const isConnected = (d: typeof devices[number]) =>
+    d.state === 'device' || d.state === 'connected' || d.state === 'unknown';
+
   // Sync status data to deviceStore
   useEffect(() => {
-    if (!status) return;
-    const devices = status.devices || [];
-    setDevices(devices);
+      if (!status) return;
+      const devices = status.devices || [];
+      setDevices(devices);
 
-    const anyConnected = devices.some(
-      (d) => d.state === 'device' || d.state === 'connected' || d.state === 'unknown'
-    );
-    setConnected(anyConnected);
+      const anyConnected = devices.some(isConnected);
+      setConnected(anyConnected);
 
-    // Only auto-select first connected device when no device is selected yet.
-    // Never override user's manual selection - they may be switching between devices.
-    if (selectedDevice) {
-      const stillConnected = devices.some((d) => (d.udid || d.serial) === selectedDevice);
-      // Device disconnected - clear selection so user can pick a new one
-      if (!stillConnected) {
-        setSelectedDevice(null);
+      // Only auto-select first connected device when no device is selected yet.
+      // Never override user's manual selection - they may be switching between devices.
+      if (selectedDevice) {
+        const stillConnected = devices.some((d) => (d.udid || d.serial) === selectedDevice);
+        // Device disconnected - clear selection so user can pick a new one
+        if (!stillConnected) {
+          setSelectedDevice(null);
+        }
+        // Device still connected - keep user's selection (even if it's not "first" connected)
+      } else if (devices.length > 0) {
+        const firstConnected = devices.find(isConnected);
+        if (firstConnected) {
+          setSelectedDevice(firstConnected.udid || firstConnected.serial || null);
+        }
       }
-      // Device still connected - keep user's selection (even if it's not "first" connected)
-    } else if (devices.length > 0) {
-      const firstConnected = devices.find(
-        (d) => d.state === 'device' || d.state === 'connected' || d.state === 'unknown'
-      );
-      if (firstConnected) {
-        setSelectedDevice(firstConnected.udid || firstConnected.serial || null);
-      }
-    }
-  }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
+    }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
 
   return (
     <div className="relative" ref={dropdownRef} style={{ maxWidth: '100%' }}>
@@ -151,10 +151,7 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
                   className="w-3 h-3 rounded-sm flex-shrink-0"
                   style={{
                     background:
-                      device.state === 'device' ||
-                      device.state === 'connected' ||
-                      device.state === 'unknown' ||
-                      device.state === 'Booted'
+                      isConnected(device) || device.state === 'Booted'
                         ? 'var(--accent-emerald)'
                         : 'var(--accent-amber)',
                   }}

@@ -51,8 +51,8 @@ def _get_idb_companion_socket_path(udid: str | None) -> str | None:
                 continue
             if target.get("udid") == udid:
                 return target.get("companion") or target.get("path")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[_get_idb_companion_socket_path] failed: %s", e)
     return None
 
 
@@ -117,7 +117,8 @@ class IOSDeviceBridge(DeviceBridgeBase):
             if self.udid:
                 return self.udid in result.stdout
             return result.returncode == 0
-        except Exception:
+        except Exception as e:
+            logger.warning("[connect] idb check failed for UDID=%s: %s", self.udid, e)
             return False
 
     def get_devices(self) -> list[dict]:

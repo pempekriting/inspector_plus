@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import shutil
 import subprocess
 import threading
 
@@ -110,7 +111,6 @@ def _get_ios_devices() -> list[dict]:
     """Extract iOS devices from idb or xcrun simctl fallback."""
     global _known_ios_udids
     devices = []
-    import shutil
 
     def run_idb(args: list[str], timeout: int = 30):
         # Try system idb_companion first (installed via brew)
@@ -150,8 +150,8 @@ def _get_ios_devices() -> list[dict]:
                         }
                     )
             return devices
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[_get_ios_devices] idb failed: %s", e)
 
     # Fallback: xcrun simctl
     try:
@@ -182,8 +182,8 @@ def _get_ios_devices() -> list[dict]:
                                 "manufacturer": "Apple",
                             }
                         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[_get_ios_devices] xcrun simctl fallback failed: %s", e)
     return devices
 
 
