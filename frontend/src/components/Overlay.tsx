@@ -4,12 +4,33 @@ import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
 import type { UiNode } from '../types/shared';
 
-// Use shared layoutGeometry which correctly calculates img position
-import { getImageLayout } from '../utils/layoutGeometry';
+interface ImageLayout {
+  imgLeft: number;
+  imgTop: number;
+  scale: number;
+}
+
+function getImageLayout(): ImageLayout | null {
+  const img = document.querySelector('.screenshot-img') as HTMLImageElement;
+  if (!img?.naturalWidth) return null;
+
+  const container = img.parentElement;
+  if (!container) return null;
+
+  const imgRect = img.getBoundingClientRect();
+  const displayWidth = imgRect.width;
+  const scale = displayWidth / img.naturalWidth;
+
+  return {
+    imgLeft: imgRect.left,
+    imgTop: imgRect.top,
+    scale,
+  };
+}
 
 interface HighlightBoxProps {
   bounds: { x: number; y: number; width: number; height: number };
-  layout: { imgLeft: number; imgTop: number; scale: number };
+  layout: ImageLayout;
   isDark: boolean;
   locked?: boolean;
 }
@@ -77,7 +98,7 @@ const InfoTooltip = memo(function InfoTooltip({
   isDark,
 }: {
   bounds: { x: number; y: number; width: number; height: number };
-  layout: { imgLeft: number; imgTop: number; scale: number };
+  layout: ImageLayout;
   node: UiNode;
   isDark: boolean;
 }) {
