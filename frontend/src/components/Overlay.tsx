@@ -4,43 +4,12 @@ import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
 import type { UiNode } from '../types/shared';
 
-interface ImageLayout {
-  imgLeft: number;
-  imgTop: number;
-  scale: number;
-  zoom: number;
-  panX: number;
-  panY: number;
-}
-
-function getImageLayout(zoom: number, panX: number, panY: number): ImageLayout | null {
-  const img = document.querySelector('.screenshot-img') as HTMLImageElement;
-  if (!img?.naturalWidth) return null;
-
-  const container = img.parentElement;
-  if (!container) return null;
-
-  const containerRect = container.getBoundingClientRect();
-  const imgRect = img.getBoundingClientRect();
-
-  const imgLeft = imgRect.left;
-  const imgTop = imgRect.top;
-  const displayWidth = imgRect.width;
-  const scale = displayWidth / img.naturalWidth;
-
-  return {
-    imgLeft,
-    imgTop,
-    scale,
-    zoom,
-    panX,
-    panY,
-  };
-}
+// Use shared layoutGeometry which correctly calculates img position
+import { getImageLayout } from '../utils/layoutGeometry';
 
 interface HighlightBoxProps {
   bounds: { x: number; y: number; width: number; height: number };
-  layout: ImageLayout;
+  layout: { imgLeft: number; imgTop: number; scale: number };
   isDark: boolean;
   locked?: boolean;
 }
@@ -51,10 +20,10 @@ const HighlightBox = memo(function HighlightBox({
   isDark,
   locked,
 }: HighlightBoxProps) {
-  const left = (layout.imgLeft + bounds.x * layout.scale) * layout.zoom + layout.panX / layout.zoom;
-  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
-  const width = bounds.width * layout.scale * layout.zoom;
-  const height = bounds.height * layout.scale * layout.zoom;
+  const left = layout.imgLeft + bounds.x * layout.scale;
+  const top = layout.imgTop + bounds.y * layout.scale;
+  const width = bounds.width * layout.scale;
+  const height = bounds.height * layout.scale;
 
   const finalWidth = Math.max(width, 6);
   const finalHeight = Math.max(height, 6);
@@ -108,12 +77,12 @@ const InfoTooltip = memo(function InfoTooltip({
   isDark,
 }: {
   bounds: { x: number; y: number; width: number; height: number };
-  layout: ImageLayout;
+  layout: { imgLeft: number; imgTop: number; scale: number };
   node: UiNode;
   isDark: boolean;
 }) {
-  const left = (layout.imgLeft + (bounds.x + bounds.width) * layout.scale) * layout.zoom + layout.panX / layout.zoom + 12;
-  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
+  const left = layout.imgLeft + (bounds.x + bounds.width) * layout.scale + 12;
+  const top = layout.imgTop + bounds.y * layout.scale;
 
   const accentColor = isDark ? 'var(--accent-cyan)' : '#1a1a2e';
   const bgColor = isDark ? '#1a1a1f' : '#ffffff';
@@ -163,16 +132,16 @@ const InfoTooltip = memo(function InfoTooltip({
 });
 
 export function Overlay() {
-  const { hoveredNode, selectedNode, lockedNode, canvasZoom, canvasPan } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
-  const [layout, setLayout] = useState<ImageLayout | null>(null);
+  const [layout, setLayout] = useState<{ imgLeft: number; imgTop: number; scale: number } | null>(null);
 
   const isDark = theme === 'dark';
 
   const updateLayout = useCallback(() => {
-    const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
+    const newLayout = getImageLayout();
     setLayout(newLayout);
-  }, [canvasZoom, canvasPan]);
+  }, []);
 
   useEffect(() => {
     updateLayout();
