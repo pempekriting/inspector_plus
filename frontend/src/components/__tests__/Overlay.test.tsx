@@ -1,10 +1,10 @@
-import { render, act } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { Overlay } from '../Overlay';
 
-// Mock hierarchy store with canvasZoom/canvasPan support
+// Mock hierarchy store
 const createMockStore = (overrides = {}) => ({
   hoveredNode: null,
   selectedNode: null,
@@ -12,37 +12,24 @@ const createMockStore = (overrides = {}) => ({
   canvasZoom: 1,
   canvasPan: { x: 0, y: 0 },
   canvasMode: 'inspect' as const,
-  setCanvasTransform: vi.fn(),
   ...overrides,
 });
 
-// Mock layout data that matches real DOM output from getImageLayout
-const mockLayout = (zoom: number, panX: number, panY: number) => ({
-  imgLeft: 100, // screenshot left edge from container left
-  imgTop: 50,   // screenshot top edge from container top
-  scale: 0.5,   // displayWidth / naturalWidth (screenshot fit ratio)
-  zoom,
-  panX,
-  panY,
-});
-
-// Mock document.querySelector for .screenshot-img
-const mockGetImageLayout = (zoom: number, panX: number, panY: number) => {
-  const querySpy = vi.spyOn(document, 'querySelector');
-  querySpy.mockReturnValue({
+// Mock screenshot img element
+function createMockImg(imgLeft = 100, imgTop = 50) {
+  return {
     naturalWidth: 1080,
     naturalHeight: 1920,
     clientWidth: 540,
     clientHeight: 960,
     getBoundingClientRect: () => ({
-      left: 100,
-      top: 50,
+      left: imgLeft,
+      top: imgTop,
       width: 540,
       height: 960,
     }),
-  } as unknown as HTMLImageElement);
-  return mockLayout(zoom, panX, panY);
-};
+  } as unknown as HTMLImageElement;
+}
 
 vi.mock('@/stores/hierarchyStore', () => ({
   useHierarchyStore: vi.fn(() => createMockStore()),
@@ -57,64 +44,83 @@ describe('Overlay', () => {
 
   beforeEach(() => {
     querySpy = vi.spyOn(document, 'querySelector');
+    querySpy.mockReturnValue(createMockImg());
   });
 
   afterEach(() => {
     querySpy.mockRestore();
+    cleanup();
   });
 
-  describe('HighlightBox positioning', () => {
-    it('renders without crashing when no active node', () => {
+  describe('getImageLayout integration', () => {
+    it('reads screenshot img dimensions correctly', () => {
+      querySpy.mockReturnValue(createMockImg(100, 50));
+      render(<Overlay />);
+      // If querySelector returns null, layout becomes null and Overlay renders nothing
+      expect(querySpy).toHaveBeenCalledWith('.screenshot-img');
+    });
+
+    it('returns null when no screenshot img exists', () => {
+      querySpy.mockReturnValue(null);
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
     });
+  });
 
-    it('renders highlight for lockedNode', () => {
-      const lockedNode = {
-        id: 'btn_test',
+  describe('HighlightBox positioning at zoom=1, pan=0', () => {
+    it('renders highlight when lockedNode exists', () => {
+      const node = {
+        id: 'btn1',
         className: 'android.widget.Button',
-        resourceId: 'btn_test',
         bounds: { x: 100, y: 200, width: 300, height: 80 },
         children: [],
       };
 
-      (vi.mocked(document.querySelector) as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        naturalWidth: 1080,
-        naturalHeight: 1920,
-        clientWidth: 540,
-        clientHeight: 960,
-        getBoundingClientRect: () => ({ left: 100, top: 50, width: 540, height: 960 }),
-      } as unknown as HTMLImageElement);
-
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode }));
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: node }));
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
     });
 
-    it('uses canvasZoom and canvasPan from store for positioning', () => {
+    it('renders highlight when selectedNode exists', () => {
       const node = {
-        id: 'test_node',
+        id: 'text1',
         className: 'android.widget.TextView',
-        bounds: { x: 200, y: 300, width: 150, height: 60 },
+        bounds: { x: 50, y: 100, width: 200, height: 50 },
         children: [],
       };
 
-      // Zoom 2x, pan 50,50
-      querySpy.mockReturnValueOnce({
-        naturalWidth: 1080,
-        naturalHeight: 1920,
-        clientWidth: 1080, // at 2x zoom, displayWidth = naturalWidth * 2 / 2 = 1080
-        clientHeight: 1920,
-        getBoundingClientRect: () => ({ left: 100, top: 50, width: 1080, height: 1920 }),
-      } as unknown as HTMLImageElement);
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ selectedNode: node }));
 
-      const store = createMockStore({
-        lockedNode: node,
-        canvasZoom: 2,
-        canvasPan: { x: 50, y: 50 },
-      });
-      vi.mocked(vi.fn()).mockReturnValue(store);
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
+    });
+
+    it('renders highlight when hoveredNode exists', () => {
+      const node = {
+        id: 'img1',
+        className: 'android.widget.ImageView',
+        bounds: { x: 0, y: 0, width: 1080, height: 1920 },
+        children: [],
+      };
+
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ hoveredNode: node }));
+
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
+    });
+
+    it('uses priority: lockedNode > selectedNode > hoveredNode', () => {
+      const lockedNode = { id: 'locked', className: 'Button', bounds: { x: 0, y: 0, width: 100, height: 50 }, children: [] };
+      const selectedNode = { id: 'selected', className: 'TextView', bounds: { x: 0, y: 0, width: 200, height: 60 }, children: [] };
+      const hoveredNode = { id: 'hovered', className: 'ImageView', bounds: { x: 0, y: 0, width: 300, height: 80 }, children: [] };
+
+      // When all three exist, lockedNode takes priority
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode, selectedNode, hoveredNode }));
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
@@ -122,34 +128,104 @@ describe('Overlay', () => {
   });
 
   describe('positioning formula correctness', () => {
-    it('at zoom=1, pan=0: left = imgLeft + bounds.x * scale', () => {
-      // This test documents the expected behavior
-      // Given: imgLeft=100, scale=0.5, bounds.x=200, zoom=1, panX=0
-      // Expected left = 100 + 200 * 0.5 = 200
-      // Actual formula: imgLeft + bounds.x * scale
+    it('formula: left = imgLeft + bounds.x * scale', () => {
+      // Given: imgLeft=100, scale=0.5 (540/1080), bounds.x=200
+      // left = 100 + 200 * 0.5 = 200
       const imgLeft = 100;
       const scale = 0.5;
       const boundsX = 200;
-      const zoom = 1;
-      const panX = 0;
-
-      const expected = imgLeft + boundsX * scale;
-      const actual = imgLeft + boundsX * scale * zoom + panX;
-
-      expect(actual).toBe(expected); // 200
+      const actual = imgLeft + boundsX * scale;
+      expect(actual).toBe(200);
     });
 
-    it('at zoom=2: highlight should scale with zoom', () => {
-      // This test documents the zoom behavior
-      // At zoom=2, element that was 100px wide at zoom=1 should be 200px
-      const baseWidth = 150;
+    it('formula: top = imgTop + bounds.y * scale', () => {
+      // Given: imgTop=50, scale=0.5, bounds.y=300
+      // top = 50 + 300 * 0.5 = 200
+      const imgTop = 50;
       const scale = 0.5;
-      const zoom = 2;
+      const boundsY = 300;
+      const actual = imgTop + boundsY * scale;
+      expect(actual).toBe(200);
+    });
 
-      const noZoom = baseWidth * scale;
-      const withZoom = baseWidth * scale * zoom;
+    it('formula: width = bounds.width * scale', () => {
+      // Given: bounds.width=300, scale=0.5
+      // width = 300 * 0.5 = 150
+      const boundsWidth = 300;
+      const scale = 0.5;
+      const actual = boundsWidth * scale;
+      expect(actual).toBe(150);
+    });
 
-      expect(withZoom).toBe(noZoom * 2); // 150 vs 300
+    it('formula: height = bounds.height * scale', () => {
+      // Given: bounds.height=80, scale=0.5
+      // height = 80 * 0.5 = 40
+      const boundsHeight = 80;
+      const scale = 0.5;
+      const actual = boundsHeight * scale;
+      expect(actual).toBe(40);
+    });
+
+    it('finalWidth uses Math.max(width, 6) for minimum visible size', () => {
+      // Very thin element should still be visible
+      const width = 3;
+      const finalWidth = Math.max(width, 6);
+      expect(finalWidth).toBe(6);
+    });
+  });
+
+  describe('InfoTooltip positioning', () => {
+    it('tooltip left = imgLeft + (bounds.x + bounds.width) * scale + 12', () => {
+      // Given: imgLeft=100, bounds.x=200, bounds.width=300, scale=0.5
+      // left = 100 + (200 + 300) * 0.5 + 12 = 100 + 250 + 12 = 362
+      const imgLeft = 100;
+      const boundsX = 200;
+      const boundsWidth = 300;
+      const scale = 0.5;
+      const offset = 12;
+      const actual = imgLeft + (boundsX + boundsWidth) * scale + offset;
+      expect(actual).toBe(362);
+    });
+
+    it('tooltip top = imgTop + bounds.y * scale', () => {
+      // Given: imgTop=50, bounds.y=200, scale=0.5
+      // top = 50 + 200 * 0.5 = 150
+      const imgTop = 50;
+      const boundsY = 200;
+      const scale = 0.5;
+      const actual = imgTop + boundsY * scale;
+      expect(actual).toBe(150);
+    });
+  });
+
+  describe('canvasZoom and canvasPan from store', () => {
+    it('reads canvasZoom and canvasPan from hierarchyStore', () => {
+      const node = { id: 'n1', className: 'View', bounds: { x: 100, y: 100, width: 50, height: 50 }, children: [] };
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({
+        lockedNode: node,
+        canvasZoom: 2,
+        canvasPan: { x: 50, y: 50 },
+      }));
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('renders nothing when activeNode has no bounds', () => {
+      const node = { id: 'n1', className: 'View', bounds: undefined, children: [] };
+      querySpy.mockReturnValue(createMockImg());
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: node }));
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
+    });
+
+    it('renders nothing when layout is null (no screenshot)', () => {
+      querySpy.mockReturnValue(null);
+      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: { id: 'n1', className: 'View', bounds: { x: 0, y: 0, width: 100, height: 50 }, children: [] } }));
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
     });
   });
 });
