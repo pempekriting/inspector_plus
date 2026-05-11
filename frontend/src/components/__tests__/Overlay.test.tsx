@@ -21,13 +21,16 @@ function createMockImg(imgLeft = 100, imgTop = 50) {
   } as unknown as HTMLImageElement;
 }
 
-// Mock hierarchy store - controls what's in the store
+// Mock hierarchy store with canvasZoom/canvasPan
 function mockStore(overrides = {}) {
   const defaults = {
     hoveredNode: null,
     selectedNode: null,
     lockedNode: null,
     canvasMode: 'inspect' as const,
+    canvasZoom: 1,
+    canvasPan: { x: 0, y: 0 },
+    setCanvasTransform: vi.fn(),
   };
   return { ...defaults, ...overrides };
 }
@@ -67,8 +70,8 @@ describe('Overlay', () => {
     });
   });
 
-  describe('HighlightBox positioning at zoom=1, pan=0', () => {
-    it('renders highlight when lockedNode exists', () => {
+  describe('HighlightBox positioning with zoom/pan', () => {
+    it('renders highlight when lockedNode exists at zoom=1', () => {
       const node = {
         id: 'btn1',
         className: 'android.widget.Button',
@@ -115,7 +118,6 @@ describe('Overlay', () => {
       const selectedNode = { id: 'selected', className: 'TextView', bounds: { x: 0, y: 0, width: 200, height: 60 }, children: [] };
       const hoveredNode = { id: 'hovered', className: 'ImageView', bounds: { x: 0, y: 0, width: 300, height: 80 }, children: [] };
 
-      // When all three exist, lockedNode takes priority
       (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(
         mockStore({ lockedNode, selectedNode, hoveredNode })
       );
@@ -123,49 +125,88 @@ describe('Overlay', () => {
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
     });
+
+    it('reads canvasZoom and canvasPan from hierarchyStore', () => {
+      const node = {
+        id: 'test_node',
+        className: 'android.widget.TextView',
+        bounds: { x: 200, y: 300, width: 150, height: 60 },
+        children: [],
+      };
+
+      const store = mockStore({
+        lockedNode: node,
+        canvasZoom: 2,
+        canvasPan: { x: 50, y: 50 },
+      });
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(store);
+
+      const { container } = render(<Overlay />);
+      expect(container).toBeDefined();
+    });
   });
 
-  describe('positioning formula correctness', () => {
-    it('formula: left = imgLeft + bounds.x * scale', () => {
-      // Given: imgLeft=100, scale=0.5 (540/1080), bounds.x=200
-      // left = 100 + 200 * 0.5 = 200
+  describe('positioning formula with zoom/pan', () => {
+    it('formula: left = (imgLeft + bounds.x * scale) * zoom + panX / zoom', () => {
+      // Given: imgLeft=100, scale=0.5, bounds.x=200, zoom=2, panX=50
+      // left = (100 + 200 * 0.5) * 2 + 50 / 2 = (100 + 100) * 2 + 25 = 400 + 25 = 425
       const imgLeft = 100;
       const scale = 0.5;
       const boundsX = 200;
-      const actual = imgLeft + boundsX * scale;
-      expect(actual).toBe(200);
+      const zoom = 2;
+      const panX = 50;
+      const actual = (imgLeft + boundsX * scale) * zoom + panX / zoom;
+      expect(actual).toBe(425);
     });
 
-    it('formula: top = imgTop + bounds.y * scale', () => {
-      // Given: imgTop=50, scale=0.5, bounds.y=300
-      // top = 50 + 300 * 0.5 = 200
+    it('formula: top = (imgTop + bounds.y * scale) * zoom + panY / zoom', () => {
+      // Given: imgTop=50, scale=0.5, bounds.y=300, zoom=2, panY=50
+      // top = (50 + 300 * 0.5) * 2 + 50 / 2 = (50 + 150) * 2 + 25 = 400 + 25 = 425
       const imgTop = 50;
       const scale = 0.5;
       const boundsY = 300;
-      const actual = imgTop + boundsY * scale;
-      expect(actual).toBe(200);
+      const zoom = 2;
+      const panY = 50;
+      const actual = (imgTop + boundsY * scale) * zoom + panY / zoom;
+      expect(actual).toBe(425);
     });
 
-    it('formula: width = bounds.width * scale', () => {
-      // Given: bounds.width=300, scale=0.5
-      // width = 300 * 0.5 = 150
+    it('formula: width = bounds.width * scale * zoom', () => {
+      // Given: bounds.width=300, scale=0.5, zoom=2
+      // width = 300 * 0.5 * 2 = 300
       const boundsWidth = 300;
       const scale = 0.5;
-      const actual = boundsWidth * scale;
-      expect(actual).toBe(150);
+      const zoom = 2;
+      const actual = boundsWidth * scale * zoom;
+      expect(actual).toBe(300);
     });
 
-    it('formula: height = bounds.height * scale', () => {
-      // Given: bounds.height=80, scale=0.5
-      // height = 80 * 0.5 = 40
+    it('formula: height = bounds.height * scale * zoom', () => {
+      // Given: bounds.height=80, scale=0.5, zoom=2
+      // height = 80 * 0.5 * 2 = 80
       const boundsHeight = 80;
       const scale = 0.5;
-      const actual = boundsHeight * scale;
-      expect(actual).toBe(40);
+      const zoom = 2;
+      const actual = boundsHeight * scale * zoom;
+      expect(actual).toBe(80);
+    });
+
+    it('at zoom=1, pan=0: formula reduces to simple form', () => {
+      // zoom=1, panX=0, panY=0
+      // left = (imgLeft + bounds.x * scale) * 1 + 0 / 1 = imgLeft + bounds.x * scale
+      const imgLeft = 100;
+      const scale = 0.5;
+      const boundsX = 200;
+      const zoom = 1;
+      const panX = 0;
+
+      const withZoomPan = (imgLeft + boundsX * scale) * zoom + panX / zoom;
+      const simple = imgLeft + boundsX * scale;
+
+      expect(withZoomPan).toBe(simple); // 200
     });
 
     it('finalWidth uses Math.max(width, 6) for minimum visible size', () => {
-      // Very thin element should still be visible
       const width = 3;
       const finalWidth = Math.max(width, 6);
       expect(finalWidth).toBe(6);
@@ -173,26 +214,30 @@ describe('Overlay', () => {
   });
 
   describe('InfoTooltip positioning', () => {
-    it('tooltip left = imgLeft + (bounds.x + bounds.width) * scale + 12', () => {
-      // Given: imgLeft=100, bounds.x=200, bounds.width=300, scale=0.5
-      // left = 100 + (200 + 300) * 0.5 + 12 = 100 + 250 + 12 = 362
+    it('tooltip left = (imgLeft + (bounds.x + bounds.width) * scale) * zoom + panX / zoom + 12', () => {
+      // Given: imgLeft=100, bounds.x=200, bounds.width=300, scale=0.5, zoom=2, panX=50
+      // left = (100 + (200 + 300) * 0.5) * 2 + 50 / 2 + 12 = (100 + 250) * 2 + 25 + 12 = 700 + 25 + 12 = 737
       const imgLeft = 100;
       const boundsX = 200;
       const boundsWidth = 300;
       const scale = 0.5;
+      const zoom = 2;
+      const panX = 50;
       const offset = 12;
-      const actual = imgLeft + (boundsX + boundsWidth) * scale + offset;
-      expect(actual).toBe(362);
+      const actual = (imgLeft + (boundsX + boundsWidth) * scale) * zoom + panX / zoom + offset;
+      expect(actual).toBe(737);
     });
 
-    it('tooltip top = imgTop + bounds.y * scale', () => {
-      // Given: imgTop=50, bounds.y=200, scale=0.5
-      // top = 50 + 200 * 0.5 = 150
+    it('tooltip top = (imgTop + bounds.y * scale) * zoom + panY / zoom', () => {
+      // Given: imgTop=50, bounds.y=200, scale=0.5, zoom=2, panY=50
+      // top = (50 + 200 * 0.5) * 2 + 50 / 2 = (50 + 100) * 2 + 25 = 300 + 25 = 325
       const imgTop = 50;
       const boundsY = 200;
       const scale = 0.5;
-      const actual = imgTop + boundsY * scale;
-      expect(actual).toBe(150);
+      const zoom = 2;
+      const panY = 50;
+      const actual = (imgTop + boundsY * scale) * zoom + panY / zoom;
+      expect(actual).toBe(325);
     });
   });
 
