@@ -198,7 +198,7 @@ export function Overlay() {
     if (hoveredNode) {
       updateLayout();
     }
-  }, [hoveredNode]);
+  }, [hoveredNode, canvasZoom, canvasPan]);
 
   const updateLayout = () => {
     const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
