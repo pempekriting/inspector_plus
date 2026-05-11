@@ -90,6 +90,29 @@ def mock_android_bridge():
     bridge.tap.return_value = True
     bridge.input_text.return_value = True
     bridge.get_screenshot.return_value = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+    bridge.fetch_hierarchy_and_screenshot.return_value = (
+        {
+            "id": "root",
+            "className": "android.widget.FrameLayout",
+            "bounds": {"x": 0, "y": 0, "width": 1080, "height": 2400},
+            "children": [
+                {
+                    "id": "LinearLayout_0",
+                    "className": "android.widget.LinearLayout",
+                    "bounds": {"x": 0, "y": 100, "width": 1080, "height": 2300},
+                    "children": [
+                        {
+                            "id": "Button_0",
+                            "className": "android.widget.Button",
+                            "text": "Submit",
+                            "bounds": {"x": 100, "y": 200, "width": 200, "height": 80},
+                        }
+                    ],
+                }
+            ],
+        },
+        b"\x89PNG\r\n\x1a\n" + b"\x00" * 100,
+    )
     bridge.search_hierarchy.return_value = {"results": [{"id": "Button_0", "className": "android.widget.Button"}]}
     return bridge
 
@@ -116,6 +139,15 @@ def mock_ios_bridge():
     }
     bridge.tap.return_value = True
     bridge.get_screenshot.return_value = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+    bridge.fetch_hierarchy_and_screenshot.return_value = (
+        {
+            "id": "root",
+            "className": "UIWindow",
+            "bounds": {"x": 0, "y": 0, "width": 393, "height": 852},
+            "children": [],
+        },
+        b"\x89PNG\r\n\x1a\n" + b"\x00" * 100,
+    )
     bridge.search_hierarchy.return_value = {"results": []}
     return bridge
 
@@ -260,6 +292,91 @@ class TestHierarchyEndpoints:
         response = client.get("/hierarchy?udid=")
         assert response.status_code == 200
         mock_first_device.assert_called_once()
+
+
+# --- Hierarchy + Screenshot Combined Endpoint ---
+
+
+class TestHierarchyAndScreenshotEndpoint:
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_returns_both(self, mock_get_bridge, client, mock_android_bridge):
+        """GET /hierarchy-and-screenshot returns hierarchy tree and base64 screenshot."""
+        mock_get_bridge.return_value = mock_android_bridge
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 200
+        data = response.json()
+        assert "hierarchy" in data
+        assert "screenshot" in data
+        # hierarchy should have expected shape from mock
+        assert data["hierarchy"]["id"] == "root"
+        assert "children" in data["hierarchy"]
+        # screenshot should be non-empty base64 string
+        assert isinstance(data["screenshot"], str)
+        assert len(data["screenshot"]) > 0
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_base64_decodes_to_png(self, mock_get_bridge, client, mock_android_bridge):
+        """GET /hierarchy-and-screenshot base64 decodes to valid PNG bytes."""
+        import base64
+
+        mock_get_bridge.return_value = mock_android_bridge
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 200
+        data = response.json()
+        decoded = base64.b64decode(data["screenshot"])
+        assert decoded[:4] == b"\x89PNG"
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_with_udid(self, mock_get_bridge, client, mock_android_bridge):
+        """GET /hierarchy-and-screenshot?udid=X passes UDID to bridge."""
+        mock_get_bridge.return_value = mock_android_bridge
+        response = client.get("/hierarchy-and-screenshot?udid=emulator-5554")
+        assert response.status_code == 200
+        mock_get_bridge.assert_called_once_with("emulator-5554")
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_bridge_returns_none(self, mock_get_bridge, client):
+        """GET /hierarchy-and-screenshot returns 404 when no device."""
+        mock_get_bridge.return_value = None
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 404
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_bridge_timeout(self, mock_get_bridge, client):
+        """GET /hierarchy-and-screenshot returns 504 on timeout."""
+        import subprocess
+
+        bridge = MagicMock()
+        bridge.fetch_hierarchy_and_screenshot.side_effect = subprocess.TimeoutExpired("cmd", 30)
+        mock_get_bridge.return_value = bridge
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 504
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_bridge_raises_exception(self, mock_get_bridge, client):
+        """GET /hierarchy-and-screenshot returns 500 on bridge exception."""
+        bridge = MagicMock()
+        bridge.fetch_hierarchy_and_screenshot.side_effect = RuntimeError("screenshot failed")
+        mock_get_bridge.return_value = bridge
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 500
+
+    @patch("dependencies.get_bridge")
+    def test_hierarchy_and_screenshot_nested_hierarchy_structure(self, mock_get_bridge, client, mock_android_bridge):
+        """GET /hierarchy-and-screenshot hierarchy has proper nested structure."""
+        mock_get_bridge.return_value = mock_android_bridge
+        response = client.get("/hierarchy-and-screenshot")
+        assert response.status_code == 200
+        data = response.json()
+        hierarchy = data["hierarchy"]
+        # Verify nested structure matches mock_android_bridge hierarchy
+        assert hierarchy["className"] == "android.widget.FrameLayout"
+        assert hierarchy["bounds"] == {"x": 0, "y": 0, "width": 1080, "height": 2400}
+        assert len(hierarchy["children"]) == 1
+        child = hierarchy["children"][0]
+        assert child["id"] == "LinearLayout_0"
+        assert len(child["children"]) == 1
+        assert child["children"][0]["text"] == "Submit"
 
 
 # --- Hierarchy Search ---

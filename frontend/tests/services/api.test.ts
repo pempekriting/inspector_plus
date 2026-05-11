@@ -38,6 +38,33 @@ describe('api Zod schemas', () => {
       expect(result.id).toBe('node1');
     });
 
+    it('parses node without bounds (Android root node case)', () => {
+      // Android root node from uiautomator dump has no bounds attribute
+      const result = UiNodeSchema.parse({
+        id: 'root',
+        className: 'android.widget.FrameLayout',
+        children: [
+          {
+            id: 'child1',
+            bounds: { x: 0, y: 0, width: 100, height: 50 },
+            children: [],
+          },
+        ],
+      });
+      expect(result.id).toBe('root');
+      expect(result.bounds).toBeUndefined();
+      expect(result.children).toHaveLength(1);
+    });
+
+    it('safeParse node without bounds returns success', () => {
+      // Verify safeParse also works - important for TanStack Query error handling
+      const result = UiNodeSchema.safeParse({
+        id: 'root',
+        className: 'android.widget.FrameLayout',
+      });
+      expect(result.success).toBe(true);
+    });
+
     it('parses full UiNode with optional fields', () => {
       const result = UiNodeSchema.parse({
         id: 'node1',
