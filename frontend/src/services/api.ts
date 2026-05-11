@@ -24,7 +24,7 @@ export const UiNodeSchema: z.ZodType<UiNode> = z.lazy(() =>
     text: z.string().optional(),
     resourceId: z.string().optional(),
     contentDesc: z.string().optional(),
-    bounds: BoundsSchema,
+    bounds: BoundsSchema.optional(),
     children: z.array(UiNodeSchema).optional(),
   })
 );

@@ -106,8 +106,13 @@ def _get_ios_devices() -> list[dict]:
     import shutil
 
     def run_idb(args: list[str], timeout: int = 30):
+        # Try system idb_companion first (installed via brew)
+        if shutil.which("idb_companion"):
+            return subprocess.run(["idb_companion", *args], capture_output=True, text=True, timeout=timeout)
+        # Try plain idb (pip-installed shim)
         if shutil.which("idb"):
             return subprocess.run(["idb", *args], capture_output=True, text=True, timeout=timeout)
+        # Fallback: try uv run idb
         return subprocess.run(["uv", "run", "idb", *args], capture_output=True, text=True, timeout=timeout)
 
     # Try idb first

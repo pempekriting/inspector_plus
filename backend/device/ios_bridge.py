@@ -29,19 +29,49 @@ def _safe_str(value) -> str:
     return ""
 
 
+def _get_idb_companion_socket_path(udid: str | None) -> str | None:
+    """Return the idb companion socket path for a given UDID from list-targets output."""
+    if not udid:
+        return None
+    try:
+        import json as _json
+
+        result = subprocess.run(
+            ["uv", "run", "idb", "list-targets", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            try:
+                target = _json.loads(line)
+            except _json.JSONDecodeError:
+                continue
+            if target.get("udid") == udid:
+                return target.get("companion") or target.get("path")
+    except Exception:
+        pass
+    return None
+
+
 def _idb_cmd(args: list[str], udid: str | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
-    """Run idb command via uv run with IDB_UDID env var.
+    """Run idb command via uv run idb (Python fb-idb package).
 
-    On this machine, the venv contains a Python idb shim (pip-installed) that requires:
-    - IDB_UDID env var (not --udid before subcommand)
-    - --udid after subcommand
-
-    Always use uv run for consistent behavior regardless of what shutil.which finds.
+    The idb package (fb-idb) communicates with idb companion sockets.
+    Fall back to idb_companion binary if idb is not available in venv.
     """
     env = dict(os.environ)
-    cmd = ["uv", "run", "idb"]
+    # Prefer uv run idb (Python fb-idb package with companion socket)
+    socket_path = _get_idb_companion_socket_path(udid)
+    if socket_path:
+        cmd = ["uv", "run", "idb", "--companion", socket_path]
+        cmd.extend(args)
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+    # Fall back to idb_companion binary
+    cmd = ["idb_companion"]
     if udid:
-        env["IDB_UDID"] = udid
         cmd.extend(args)
         cmd.extend(["--udid", udid])
     else:
@@ -64,14 +94,17 @@ class IOSDeviceBridge(DeviceBridgeBase):
         self._ios_scale: float = 1.0  # iOS uses points in WDA, screenshot is in pixels
 
     def _idb_cmd(self, args: list[str], timeout: int = 30) -> subprocess.CompletedProcess:
-        """Run idb command via uv run with IDB_UDID env var.
-        The pip-installed idb requires IDB_UDID as env var, not --udid flag.
-        Also, --udid must come AFTER the subcommand.
-        """
+        """Run idb command. Uses uv run idb with companion socket, falls back to idb_companion binary."""
         env = dict(os.environ)
-        cmd = ["uv", "run", "idb"]
+        # Prefer uv run idb with companion socket
+        socket_path = _get_idb_companion_socket_path(self.udid)
+        if socket_path:
+            cmd = ["uv", "run", "idb", "--companion", socket_path]
+            cmd.extend(args)
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+        # Fall back to idb_companion binary
+        cmd = ["idb_companion"]
         if self.udid:
-            env["IDB_UDID"] = self.udid
             cmd.extend(args)
             cmd.extend(["--udid", self.udid])
         else:
@@ -529,7 +562,6 @@ class IOSDeviceBridge(DeviceBridgeBase):
             )
             if result.returncode != 0:
                 raise Exception(f"screenshot failed (exit {result.returncode}): {result.stderr or 'unknown error'}")
-            # Verify file exists and has content
             if not os.path.exists(screenshot_path):
                 raise Exception("screenshot file not created")
             file_size = os.path.getsize(screenshot_path)
@@ -539,15 +571,33 @@ class IOSDeviceBridge(DeviceBridgeBase):
             return result
 
         try:
-            _retry_with_backoff(do_screenshot, retries=3, base_delay=1.0)
-        except Exception as e:
-            logger.error(f"Failed to capture screenshot after retries: {e!s}")
-            raise Exception(f"Failed to capture screenshot: {e!s}")
+            _retry_with_backoff(do_screenshot, retries=2, base_delay=0.5)
+        except Exception as idb_err:
+            logger.warning("idb screenshot failed: %s, trying xcrun simctl fallback", idb_err)
+        else:
+            try:
+                with open(screenshot_path, "rb") as f:
+                    return f.read()
+            except FileNotFoundError:
+                raise Exception("screenshot file not found after capture")
+
+        # Fallback: xcrun simctl for simulators (writes to a different path than idb)
+        xcrun_path = os.path.join(tempfile.gettempdir(), "ios_screenshot_xcrun.png")
         try:
-            with open(screenshot_path, "rb") as f:
-                return f.read()
+            result = subprocess.run(
+                ["xcrun", "simctl", "io", "booted", "screenshot", xcrun_path],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if result.returncode == 0 and os.path.exists(xcrun_path):
+                file_size = os.path.getsize(xcrun_path)
+                logger.info(f"xcrun simctl screenshot captured: {file_size} bytes")
+                with open(xcrun_path, "rb") as f:
+                    return f.read()
+            raise Exception(f"xcrun simctl failed (exit {result.returncode}): {result.stderr or 'unknown error'}")
         except FileNotFoundError:
-            raise Exception("screenshot file not found after capture")
+            raise Exception("screenshot file not found after xcrun fallback")
 
     def fetch_hierarchy_and_screenshot(self) -> tuple[dict, bytes]:
         """Fetch hierarchy + screenshot sequentially (no combined command for iOS).

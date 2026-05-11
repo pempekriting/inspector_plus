@@ -553,31 +553,21 @@ class TestIOSDeviceBridge:
 
 class TestIdbCmd:
     @patch("subprocess.run")
-    def test_uses_uv_run(self, mock_run):
-        """Always uses uv run idb for consistent pip-installed idb behavior."""
+    def test_uses_idb_companion(self, mock_run):
+        """Uses idb_companion directly (brew-installed native binary)."""
         mock_run.return_value = mock_proc(returncode=0)
         _idb_cmd(["list-targets"], udid=None, timeout=10)
         call = mock_run.call_args[0][0]
-        assert call[0] == "uv"
-        assert "idb" in call
-
-    @patch("subprocess.run")
-    def test_sets_idb_udid_env_var(self, mock_run):
-        """When udid is provided, IDB_UDID env var is set."""
-        mock_run.return_value = mock_proc(returncode=0)
-        _idb_cmd(["screenshot", "/tmp/out.png"], udid="abc-123", timeout=10)
-        env = mock_run.call_args[1].get("env", {})
-        assert env.get("IDB_UDID") == "abc-123"
+        assert call[0] == "idb_companion"
 
     @patch("subprocess.run")
     def test_passes_udid_after_subcommand(self, mock_run):
-        """--udid flag comes after subcommand for pip-installed idb."""
+        """--udid flag comes after subcommand for idb_companion."""
         mock_run.return_value = mock_proc(returncode=0)
         _idb_cmd(["screenshot", "/tmp/out.png"], udid="abc-123", timeout=10)
         call = mock_run.call_args[0][0]
-        # Format: uv, run, idb, screenshot, /tmp/out.png, --udid, abc-123
         assert call.count("--udid") == 1
         udid_idx = call.index("--udid")
         assert call[udid_idx + 1] == "abc-123"
-        # screenshot should come before --udid
+        # subcommand should come before --udid
         assert call.index("screenshot") < udid_idx
