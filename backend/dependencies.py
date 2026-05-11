@@ -150,8 +150,8 @@ def _get_ios_devices() -> list[dict]:
                         }
                     )
             return devices
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[_get_ios_devices] idb failed: %s", e)
 
     # Fallback: xcrun simctl
     try:
@@ -182,8 +182,8 @@ def _get_ios_devices() -> list[dict]:
                                 "manufacturer": "Apple",
                             }
                         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[_get_ios_devices] xcrun simctl fallback failed: %s", e)
     return devices
 
 
