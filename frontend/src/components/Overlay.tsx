@@ -8,12 +8,9 @@ interface ImageLayout {
   imgLeft: number;
   imgTop: number;
   scale: number;
-  zoom: number;
-  panX: number;
-  panY: number;
 }
 
-function getImageLayout(zoom: number, panX: number, panY: number): ImageLayout | null {
+function getImageLayout(): ImageLayout | null {
   const img = document.querySelector('.screenshot-img') as HTMLImageElement;
   if (!img?.naturalWidth) return null;
 
@@ -32,9 +29,6 @@ function getImageLayout(zoom: number, panX: number, panY: number): ImageLayout |
     imgLeft,
     imgTop,
     scale,
-    zoom,
-    panX,
-    panY,
   };
 }
 
@@ -163,7 +157,7 @@ const InfoTooltip = memo(function InfoTooltip({
 });
 
 export function Overlay() {
-  const { hoveredNode, selectedNode, lockedNode, canvasZoom, canvasPan } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [layout, setLayout] = useState<ImageLayout | null>(null);
 
@@ -171,7 +165,7 @@ export function Overlay() {
 
   useEffect(() => {
     const updateLayout = () => {
-      const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
+      const newLayout = getImageLayout();
       setLayout(newLayout);
     };
 
@@ -192,18 +186,14 @@ export function Overlay() {
       window.removeEventListener('scroll', updateLayout);
       if (observer) observer.disconnect();
     };
-  }, [canvasZoom, canvasPan]);
+  }, []);
 
   useEffect(() => {
     if (hoveredNode) {
-      updateLayout();
+      const newLayout = getImageLayout();
+      setLayout(newLayout);
     }
-  }, [hoveredNode, canvasZoom, canvasPan]);
-
-  const updateLayout = () => {
-    const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
-    setLayout(newLayout);
-  };
+  }, [hoveredNode]);
 
   // Priority: lockedNode (persistent) > selectedNode (click-locked) > hoveredNode (hover preview)
   const activeNode = lockedNode || selectedNode || hoveredNode;

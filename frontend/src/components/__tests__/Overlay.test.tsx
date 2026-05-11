@@ -2,18 +2,8 @@ import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+import { useHierarchyStore } from '@/stores/hierarchyStore';
 import { Overlay } from '../Overlay';
-
-// Mock hierarchy store
-const createMockStore = (overrides = {}) => ({
-  hoveredNode: null,
-  selectedNode: null,
-  lockedNode: null,
-  canvasZoom: 1,
-  canvasPan: { x: 0, y: 0 },
-  canvasMode: 'inspect' as const,
-  ...overrides,
-});
 
 // Mock screenshot img element
 function createMockImg(imgLeft = 100, imgTop = 50) {
@@ -31,8 +21,19 @@ function createMockImg(imgLeft = 100, imgTop = 50) {
   } as unknown as HTMLImageElement;
 }
 
+// Mock hierarchy store - controls what's in the store
+function mockStore(overrides = {}) {
+  const defaults = {
+    hoveredNode: null,
+    selectedNode: null,
+    lockedNode: null,
+    canvasMode: 'inspect' as const,
+  };
+  return { ...defaults, ...overrides };
+}
+
 vi.mock('@/stores/hierarchyStore', () => ({
-  useHierarchyStore: vi.fn(() => createMockStore()),
+  useHierarchyStore: vi.fn(() => mockStore()),
 }));
 
 vi.mock('@/stores/themeStore', () => ({
@@ -45,6 +46,7 @@ describe('Overlay', () => {
   beforeEach(() => {
     querySpy = vi.spyOn(document, 'querySelector');
     querySpy.mockReturnValue(createMockImg());
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -54,9 +56,7 @@ describe('Overlay', () => {
 
   describe('getImageLayout integration', () => {
     it('reads screenshot img dimensions correctly', () => {
-      querySpy.mockReturnValue(createMockImg(100, 50));
       render(<Overlay />);
-      // If querySelector returns null, layout becomes null and Overlay renders nothing
       expect(querySpy).toHaveBeenCalledWith('.screenshot-img');
     });
 
@@ -76,8 +76,7 @@ describe('Overlay', () => {
         children: [],
       };
 
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: node }));
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(mockStore({ lockedNode: node }));
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
@@ -91,8 +90,7 @@ describe('Overlay', () => {
         children: [],
       };
 
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ selectedNode: node }));
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(mockStore({ selectedNode: node }));
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
@@ -106,8 +104,7 @@ describe('Overlay', () => {
         children: [],
       };
 
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ hoveredNode: node }));
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(mockStore({ hoveredNode: node }));
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
@@ -119,8 +116,9 @@ describe('Overlay', () => {
       const hoveredNode = { id: 'hovered', className: 'ImageView', bounds: { x: 0, y: 0, width: 300, height: 80 }, children: [] };
 
       // When all three exist, lockedNode takes priority
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode, selectedNode, hoveredNode }));
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(
+        mockStore({ lockedNode, selectedNode, hoveredNode })
+      );
 
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
@@ -198,32 +196,20 @@ describe('Overlay', () => {
     });
   });
 
-  describe('canvasZoom and canvasPan from store', () => {
-    it('reads canvasZoom and canvasPan from hierarchyStore', () => {
-      const node = { id: 'n1', className: 'View', bounds: { x: 100, y: 100, width: 50, height: 50 }, children: [] };
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({
-        lockedNode: node,
-        canvasZoom: 2,
-        canvasPan: { x: 50, y: 50 },
-      }));
-      const { container } = render(<Overlay />);
-      expect(container).toBeDefined();
-    });
-  });
-
   describe('edge cases', () => {
     it('renders nothing when activeNode has no bounds', () => {
       const node = { id: 'n1', className: 'View', bounds: undefined, children: [] };
-      querySpy.mockReturnValue(createMockImg());
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: node }));
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(mockStore({ lockedNode: node }));
+
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
     });
 
     it('renders nothing when layout is null (no screenshot)', () => {
       querySpy.mockReturnValue(null);
-      vi.mocked(vi.fn()).mockReturnValue(createMockStore({ lockedNode: { id: 'n1', className: 'View', bounds: { x: 0, y: 0, width: 100, height: 50 }, children: [] } }));
+      const node = { id: 'n1', className: 'View', bounds: { x: 0, y: 0, width: 100, height: 50 }, children: [] };
+      (useHierarchyStore as ReturnType<typeof vi.fn>).mockReturnValue(mockStore({ lockedNode: node }));
+
       const { container } = render(<Overlay />);
       expect(container).toBeDefined();
     });

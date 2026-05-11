@@ -40,10 +40,6 @@ interface HierarchyState {
   combinedScreenshotUrl: string | null;
   // Refreshing state for refresh button
   isRefreshing: boolean;
-  // Canvas zoom/pan for Overlay positioning
-  canvasZoom: number;
-  canvasPan: { x: number; y: number };
-  setCanvasTransform: (zoom: number, pan: { x: number; y: number }) => void;
   setUiTree: (tree: UiNode | null) => void;
   setHoveredNode: (node: UiNode | null, canvasPos?: { x: number; y: number }) => void;
   setSelectedNode: (node: UiNode | null) => void;
@@ -79,10 +75,6 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   screenshotRefreshCounter: 0,
   combinedScreenshotUrl: null,
   isRefreshing: false,
-  canvasZoom: 1,
-  canvasPan: { x: 0, y: 0 },
-  setCanvasTransform: (zoom: number, pan: { x: number; y: number }) =>
-    set({ canvasZoom: zoom, canvasPan: pan }),
   searchQuery: '',
   searchFilter: 'xpath',
   canvasMode: 'inspect',
