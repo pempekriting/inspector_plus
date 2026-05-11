@@ -95,6 +95,7 @@ export function ScreenshotCanvas() {
     lockedNode,
     canvasMode,
     setCanvasMode,
+    setCanvasTransform,
   } = useHierarchyStore();
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
@@ -137,6 +138,11 @@ export function ScreenshotCanvas() {
     };
     img.src = combinedScreenshotUrl;
   }, [combinedScreenshotUrl, setDeviceResolution, setLoadingScreenshot]);
+
+  // Sync zoom/pan to hierarchyStore so Overlay can access them
+  useEffect(() => {
+    setCanvasTransform(zoom, pan);
+  }, [zoom, pan, setCanvasTransform]);
 
   // L key → toggle layout boundless mode
   useEffect(() => {

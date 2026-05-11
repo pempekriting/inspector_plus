@@ -8,9 +8,12 @@ interface ImageLayout {
   imgLeft: number;
   imgTop: number;
   scale: number;
+  zoom: number;
+  panX: number;
+  panY: number;
 }
 
-function getImageLayout(): ImageLayout | null {
+function getImageLayout(zoom: number, panX: number, panY: number): ImageLayout | null {
   const img = document.querySelector('.screenshot-img') as HTMLImageElement;
   if (!img?.naturalWidth) return null;
 
@@ -29,6 +32,9 @@ function getImageLayout(): ImageLayout | null {
     imgLeft,
     imgTop,
     scale,
+    zoom,
+    panX,
+    panY,
   };
 }
 
@@ -45,10 +51,10 @@ const HighlightBox = memo(function HighlightBox({
   isDark,
   locked,
 }: HighlightBoxProps) {
-  const left = layout.imgLeft + bounds.x * layout.scale;
-  const top = layout.imgTop + bounds.y * layout.scale;
-  const width = bounds.width * layout.scale;
-  const height = bounds.height * layout.scale;
+  const left = (layout.imgLeft + bounds.x * layout.scale) * layout.zoom + layout.panX / layout.zoom;
+  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
+  const width = bounds.width * layout.scale * layout.zoom;
+  const height = bounds.height * layout.scale * layout.zoom;
 
   const finalWidth = Math.max(width, 6);
   const finalHeight = Math.max(height, 6);
@@ -106,8 +112,8 @@ const InfoTooltip = memo(function InfoTooltip({
   node: UiNode;
   isDark: boolean;
 }) {
-  const left = layout.imgLeft + (bounds.x + bounds.width) * layout.scale + 12;
-  const top = layout.imgTop + bounds.y * layout.scale;
+  const left = (layout.imgLeft + (bounds.x + bounds.width) * layout.scale) * layout.zoom + layout.panX / layout.zoom + 12;
+  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
 
   const accentColor = isDark ? 'var(--accent-cyan)' : '#1a1a2e';
   const bgColor = isDark ? '#1a1a1f' : '#ffffff';
@@ -157,16 +163,16 @@ const InfoTooltip = memo(function InfoTooltip({
 });
 
 export function Overlay() {
-  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode, canvasZoom, canvasPan } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [layout, setLayout] = useState<ImageLayout | null>(null);
 
   const isDark = theme === 'dark';
 
   const updateLayout = useCallback(() => {
-    const newLayout = getImageLayout();
+    const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
     setLayout(newLayout);
-  }, []);
+  }, [canvasZoom, canvasPan]);
 
   useEffect(() => {
     updateLayout();
