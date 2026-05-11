@@ -1,4 +1,4 @@
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -163,12 +163,12 @@ export function Overlay() {
 
   const isDark = theme === 'dark';
 
-  useEffect(() => {
-    const updateLayout = () => {
-      const newLayout = getImageLayout();
-      setLayout(newLayout);
-    };
+  const updateLayout = useCallback(() => {
+    const newLayout = getImageLayout();
+    setLayout(newLayout);
+  }, []);
 
+  useEffect(() => {
     updateLayout();
 
     window.addEventListener('resize', updateLayout);
@@ -186,14 +186,11 @@ export function Overlay() {
       window.removeEventListener('scroll', updateLayout);
       if (observer) observer.disconnect();
     };
-  }, []);
+  }, [updateLayout]);
 
   useEffect(() => {
-    if (hoveredNode) {
-      const newLayout = getImageLayout();
-      setLayout(newLayout);
-    }
-  }, [hoveredNode]);
+    updateLayout();
+  }, [hoveredNode, updateLayout]);
 
   // Priority: lockedNode (persistent) > selectedNode (click-locked) > hoveredNode (hover preview)
   const activeNode = lockedNode || selectedNode || hoveredNode;
