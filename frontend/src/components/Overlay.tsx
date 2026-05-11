@@ -153,7 +153,7 @@ const InfoTooltip = memo(function InfoTooltip({
 });
 
 export function Overlay() {
-  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode, canvasZoom, canvasPan } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [layout, setLayout] = useState<{ imgLeft: number; imgTop: number; scale: number } | null>(null);
 
@@ -186,7 +186,7 @@ export function Overlay() {
 
   useEffect(() => {
     updateLayout();
-  }, [hoveredNode, updateLayout]);
+  }, [hoveredNode, canvasZoom, canvasPan, updateLayout]);
 
   // Priority: lockedNode (persistent) > selectedNode (click-locked) > hoveredNode (hover preview)
   const activeNode = lockedNode || selectedNode || hoveredNode;
