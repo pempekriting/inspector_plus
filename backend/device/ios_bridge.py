@@ -118,7 +118,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
                 return self.udid in result.stdout
             return result.returncode == 0
         except Exception as e:
-            logger.warning("[is_device_available] idb check failed for UDID=%s: %s", self.udid, e)
+            logger.warning("[connect] idb check failed for UDID=%s: %s", self.udid, e)
             return False
 
     def get_devices(self) -> list[dict]:

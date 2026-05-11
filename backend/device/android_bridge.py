@@ -323,7 +323,8 @@ class AndroidDeviceBridge(DeviceBridgeBase):
                 timeout=5,
             )
             return result.stdout.strip()
-        except Exception:
+        except Exception as e:
+            logger.warning("[_get_prop] getprop %s failed for %s: %s", prop, serial, e)
             return ""
 
     def get_hierarchy(self) -> dict:
