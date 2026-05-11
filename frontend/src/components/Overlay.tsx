@@ -5,16 +5,15 @@ import { useThemeStore } from '../stores/themeStore';
 import type { UiNode } from '../types/shared';
 
 interface ImageLayout {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  scale: number;
   imgLeft: number;
   imgTop: number;
+  scale: number;
+  zoom: number;
+  panX: number;
+  panY: number;
 }
 
-function getImageLayout(): ImageLayout | null {
+function getImageLayout(zoom: number, panX: number, panY: number): ImageLayout | null {
   const img = document.querySelector('.screenshot-img') as HTMLImageElement;
   if (!img?.naturalWidth) return null;
 
@@ -30,17 +29,16 @@ function getImageLayout(): ImageLayout | null {
   const scale = displayWidth / img.naturalWidth;
 
   return {
-    left: containerRect.left,
-    top: containerRect.top,
-    width: containerRect.width,
-    height: containerRect.height,
-    scale,
     imgLeft,
     imgTop,
+    scale,
+    zoom,
+    panX,
+    panY,
   };
 }
 
-interface HighlightProps {
+interface HighlightBoxProps {
   bounds: { x: number; y: number; width: number; height: number };
   layout: ImageLayout;
   isDark: boolean;
@@ -52,11 +50,11 @@ const HighlightBox = memo(function HighlightBox({
   layout,
   isDark,
   locked,
-}: HighlightProps) {
-  const left = layout.imgLeft + bounds.x * layout.scale;
-  const top = layout.imgTop + bounds.y * layout.scale;
-  const width = bounds.width * layout.scale;
-  const height = bounds.height * layout.scale;
+}: HighlightBoxProps) {
+  const left = (layout.imgLeft + bounds.x * layout.scale) * layout.zoom + layout.panX / layout.zoom;
+  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
+  const width = bounds.width * layout.scale * layout.zoom;
+  const height = bounds.height * layout.scale * layout.zoom;
 
   const finalWidth = Math.max(width, 6);
   const finalHeight = Math.max(height, 6);
@@ -114,8 +112,8 @@ const InfoTooltip = memo(function InfoTooltip({
   node: UiNode;
   isDark: boolean;
 }) {
-  const left = layout.imgLeft + (bounds.x + bounds.width) * layout.scale + 12;
-  const top = layout.imgTop + bounds.y * layout.scale;
+  const left = (layout.imgLeft + (bounds.x + bounds.width) * layout.scale) * layout.zoom + layout.panX / layout.zoom + 12;
+  const top = (layout.imgTop + bounds.y * layout.scale) * layout.zoom + layout.panY / layout.zoom;
 
   const accentColor = isDark ? 'var(--accent-cyan)' : '#1a1a2e';
   const bgColor = isDark ? '#1a1a1f' : '#ffffff';
@@ -165,7 +163,7 @@ const InfoTooltip = memo(function InfoTooltip({
 });
 
 export function Overlay() {
-  const { hoveredNode, selectedNode, lockedNode } = useHierarchyStore();
+  const { hoveredNode, selectedNode, lockedNode, canvasZoom, canvasPan } = useHierarchyStore();
   const { theme } = useThemeStore();
   const [layout, setLayout] = useState<ImageLayout | null>(null);
 
@@ -173,7 +171,7 @@ export function Overlay() {
 
   useEffect(() => {
     const updateLayout = () => {
-      const newLayout = getImageLayout();
+      const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
       setLayout(newLayout);
     };
 
@@ -182,7 +180,6 @@ export function Overlay() {
     window.addEventListener('resize', updateLayout);
     window.addEventListener('scroll', updateLayout);
 
-    // Use ResizeObserver for event-driven layout updates instead of polling
     const img = document.querySelector('.screenshot-img');
     let observer: ResizeObserver | null = null;
     if (img) {
@@ -195,7 +192,7 @@ export function Overlay() {
       window.removeEventListener('scroll', updateLayout);
       if (observer) observer.disconnect();
     };
-  }, []);
+  }, [canvasZoom, canvasPan]);
 
   useEffect(() => {
     if (hoveredNode) {
@@ -204,7 +201,7 @@ export function Overlay() {
   }, [hoveredNode]);
 
   const updateLayout = () => {
-    const newLayout = getImageLayout();
+    const newLayout = getImageLayout(canvasZoom, canvasPan.x, canvasPan.y);
     setLayout(newLayout);
   };
 
