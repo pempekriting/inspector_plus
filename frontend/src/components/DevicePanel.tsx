@@ -52,19 +52,21 @@ export function DevicePanel({ onDeviceChange }: DevicePanelProps) {
     );
     setConnected(anyConnected);
 
-    if (devices.length === 0 || !anyConnected) {
-      setSelectedDevice(null);
-    } else if (!selectedDevice) {
+    // Only auto-select first connected device when no device is selected yet.
+    // Never override user's manual selection - they may be switching between devices.
+    if (selectedDevice) {
+      const stillConnected = devices.some((d) => (d.udid || d.serial) === selectedDevice);
+      // Device disconnected - clear selection so user can pick a new one
+      if (!stillConnected) {
+        setSelectedDevice(null);
+      }
+      // Device still connected - keep user's selection (even if it's not "first" connected)
+    } else if (devices.length > 0) {
       const firstConnected = devices.find(
         (d) => d.state === 'device' || d.state === 'connected' || d.state === 'unknown'
       );
       if (firstConnected) {
         setSelectedDevice(firstConnected.udid || firstConnected.serial || null);
-      }
-    } else {
-      const stillConnected = devices.some((d) => (d.udid || d.serial) === selectedDevice);
-      if (!stillConnected) {
-        setSelectedDevice(null);
       }
     }
   }, [status, setDevices, setSelectedDevice, setConnected, selectedDevice]);
