@@ -45,14 +45,15 @@ class TestStart:
 
         with patch("shutil.which", return_value="/usr/local/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                result = mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    result = mgr.start(8080)
 
-                assert result["success"] is True
-                assert result["running"] is True
-                assert result["port"] == 8080
-                assert result["pid"] == 12345
+                    assert result["success"] is True
+                    assert result["running"] is True
+                    assert result["port"] == 8080
+                    assert result["pid"] == 12345
 
     def test_already_running_returns_running_true(self):
         mock_process = MagicMock()
@@ -61,15 +62,16 @@ class TestStart:
 
         with patch("shutil.which", return_value="/usr/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                mgr.start(8080)
-                # Start again
-                result = mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(8080)
+                    # Start again
+                    result = mgr.start(8080)
 
-                assert result["success"] is True
-                assert result["running"] is True
-                assert result["port"] == 8080
+                    assert result["success"] is True
+                    assert result["running"] is True
+                    assert result["port"] == 8080
 
     def test_port_auto_fallback_on_port_in_use(self):
         """First port attempt fails (poll returns exit code), second succeeds."""
@@ -87,12 +89,13 @@ class TestStart:
                 ]
             )
             with patch("subprocess.Popen", mock_popen):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                result = mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    result = mgr.start(8080)
 
-                assert result["success"] is True
-                assert result["port"] == 8081  # Second port tried
+                    assert result["success"] is True
+                    assert result["port"] == 8081  # Second port tried
 
 
 class TestStop:
@@ -102,15 +105,16 @@ class TestStop:
 
         with patch("shutil.which", return_value="/usr/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(8080)
 
-                with patch("subprocess.run"):
-                    result = mgr.stop()
+                    with patch("subprocess.run"):
+                        result = mgr.stop()
 
-                assert result["success"] is True
-                assert result["running"] is False
+                    assert result["success"] is True
+                    assert result["running"] is False
 
     def test_stop_cleans_up_pid_file(self, tmp_path):
         pid_dir = tmp_path / "mitm"
@@ -125,12 +129,15 @@ class TestStop:
             with patch("network.mitm_manager._CAPTURE_DIR", str(pid_dir)):
                 with patch("shutil.which", return_value="/usr/bin/mitmdump"):
                     with patch("subprocess.Popen", return_value=mock_process):
-                        MitmproxyManager.reset_instance()
-                        mgr = MitmproxyManager.get_instance()
-                        mgr.start(8080)
-                        mgr.stop()
+                        with patch("network.mitm_manager.socket") as mock_socket:
+                            mock_socket.create_connection.return_value.__enter__ = MagicMock()
+                            mock_socket.create_connection.return_value.__exit__ = MagicMock()
+                            MitmproxyManager.reset_instance()
+                            mgr = MitmproxyManager.get_instance()
+                            mgr.start(8080)
+                            mgr.stop()
 
-                        assert not pid_file.exists()
+                            assert not pid_file.exists()
 
 
 class TestIsRunning:
@@ -140,11 +147,12 @@ class TestIsRunning:
 
         with patch("shutil.which", return_value="/usr/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(8080)
 
-                assert mgr.is_running() is True
+                    assert mgr.is_running() is True
 
     def test_false_when_process_dead(self):
         mock_process = MagicMock()
@@ -152,11 +160,12 @@ class TestIsRunning:
 
         with patch("shutil.which", return_value="/usr/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                mgr.start(8080)
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(8080)
 
-                assert mgr.is_running() is False
+                    assert mgr.is_running() is False
 
 
 class TestGetStatus:
@@ -177,14 +186,15 @@ class TestGetStatus:
 
         with patch("shutil.which", return_value="/usr/bin/mitmdump"):
             with patch("subprocess.Popen", return_value=mock_process):
-                MitmproxyManager.reset_instance()
-                mgr = MitmproxyManager.get_instance()
-                mgr.start(9090)
-                status = mgr.get_status()
+                with patch("network.mitm_manager.socket.create_connection"):
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(9090)
+                    status = mgr.get_status()
 
-                assert status["running"] is True
-                assert status["port"] == 9090
-                assert status["flow_file"] is not None
+                    assert status["running"] is True
+                    assert status["port"] == 9090
+                    assert status["flow_file"] is not None
 
 
 class TestGetFlows:

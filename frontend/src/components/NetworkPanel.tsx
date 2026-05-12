@@ -167,7 +167,14 @@ export function NetworkPanel() {
     setStartVpnPending(true);
     startVpn
       .mutateAsync({ port, udid: selectedDevice ?? undefined })
-      .then(() => setStartVpnPending(false))
+      .then((result) => {
+        // Only clear pending if backend confirmed success
+        if ((result as { success?: boolean }).success !== true) {
+          console.error('Start VPN backend returned failure:', result);
+          return; // keep pending so user can retry
+        }
+        setStartVpnPending(false);
+      })
       .catch((err) => {
         setStartVpnPending(false);
         console.error('Start VPN failed:', err);
