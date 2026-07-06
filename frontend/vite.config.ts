@@ -23,11 +23,15 @@ export default defineConfig({
     sourcemap: "hidden",
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          query: ["@tanstack/react-query"],
+          manualChunks(id: string) {
+            if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+              return "vendor";
+            }
+            if (id.includes("node_modules/@tanstack/react-query")) {
+              return "query";
+            }
+          },
         },
-      },
     },
   },
   esbuild: {
