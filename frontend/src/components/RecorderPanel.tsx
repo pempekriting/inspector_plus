@@ -12,6 +12,7 @@ export function RecorderPanel() {
   const { isRecording, sessionId, steps, toggleRecording, clearAllSteps } =
     useRecording(langFromStore);
   const [frameworkOpen, setFrameworkOpen] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const frameworkRef = useRef<HTMLDivElement>(null);
   const { exportRecording } = useRecorder();
   const { theme } = useThemeStore();
@@ -24,14 +25,19 @@ export function RecorderPanel() {
   const platform = selectedDeviceInfo?.platform === 'ios' ? 'ios' : 'android';
 
   const handleExport = async () => {
-    const result = await exportRecording({ sessionId, lang: langFromStore, platform });
-    const blob = new Blob([result.script], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = result.filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      setExportError(null);
+      const result = await exportRecording({ sessionId, lang: langFromStore, platform });
+      const blob = new Blob([result.script], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed. Is the backend running?');
+    }
   };
 
   useEffect(() => {
@@ -253,6 +259,18 @@ export function RecorderPanel() {
             <span>EXPORT</span>
           </button>
         </div>
+        {exportError && (
+          <div
+            className="px-3 py-1.5 mt-2 text-[10px] font-medium rounded"
+            style={{
+              background: 'rgba(244,63,94,0.12)',
+              color: 'var(--accent-rose)',
+              border: '1px solid rgba(244,63,94,0.3)',
+            }}
+          >
+            {exportError}
+          </div>
+        )}
       </div>
 
       <style>{`

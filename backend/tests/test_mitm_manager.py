@@ -139,6 +139,42 @@ class TestStop:
 
                             assert not pid_file.exists()
 
+    def test_stop_skips_non_mitmdump_process_on_port(self):
+        """Process identity verification: non-mitmdump processes on the port are NOT killed."""
+        mock_process = MagicMock()
+        mock_process.poll.return_value = None
+        mock_process.pid = 88888
+
+        with patch("shutil.which", return_value="/usr/bin/mitmdump"):
+            with patch("subprocess.Popen", return_value=mock_process):
+                with patch("network.mitm_manager.socket") as mock_socket:
+                    mock_socket.create_connection.return_value.__enter__ = MagicMock()
+                    mock_socket.create_connection.return_value.__exit__ = MagicMock()
+                    MitmproxyManager.reset_instance()
+                    mgr = MitmproxyManager.get_instance()
+                    mgr.start(8080)
+
+                    def run_side_effect(*args, **kwargs):
+                        cmd = args[0]
+                        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+                        mock_result = MagicMock(returncode=0)
+                        if "lsof" in cmd_str:
+                            # Two PIDs on the port: 12345 (mitmdump) and 67890 (node)
+                            mock_result.stdout = "12345\n67890"
+                        elif "ps" in cmd_str and "comm" in cmd_str:
+                            pid = cmd[2]
+                            mock_result.stdout = "mitmdump" if pid == "12345" else "node"
+                        elif "kill" in cmd_str:
+                            pid = cmd[2]
+                            if pid == "67890":
+                                pytest.fail(f"kill -9 called on non-mitmdump PID {pid}")
+                            mock_result.stdout = ""
+                        return mock_result
+
+                    with patch("subprocess.run", side_effect=run_side_effect):
+                        result = mgr.stop()
+                        assert result["success"] is True
+
 
 class TestIsRunning:
     def test_true_when_process_alive(self):

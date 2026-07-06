@@ -137,7 +137,9 @@ export function NetworkPanel() {
       try {
         const msg = JSON.parse(e.data);
         if (msg.type === 'flow') addFlowRef.current(msg.data as NetworkFlow);
-      } catch {}
+      } catch (err) {
+        console.error('[NetworkPanel] WebSocket message parse error:', err);
+      }
     };
     ws.onclose = () => {
       if (wsCleanedUp) return;

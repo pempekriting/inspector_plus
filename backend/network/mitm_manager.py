@@ -124,7 +124,7 @@ class MitmproxyManager:
     def stop(self) -> dict:
         """Stop mitmdump process and kill anything listening on its port."""
 
-        # Kill by port to handle forked processes
+        # Kill by port to handle forked processes — only kill mitmdump processes
         for attempt_port in range(self._port, self._port - 5, -1):
             try:
                 result = subprocess.run(
@@ -137,8 +137,22 @@ class MitmproxyManager:
                     pids = result.stdout.strip().split("\n")
                     for pid in pids:
                         try:
-                            subprocess.run(["kill", "-9", pid], timeout=5)
-                            logger.info(f"[MitmproxyManager] killed PID {pid} on port {attempt_port}")
+                            # Verify this is actually a mitmdump process before killing
+                            comm_result = subprocess.run(
+                                ["ps", "-p", pid, "-o", "comm="],
+                                capture_output=True,
+                                text=True,
+                                timeout=5,
+                            )
+                            comm = comm_result.stdout.strip()
+                            if comm and ("mitm" in comm or "python" in comm):
+                                subprocess.run(["kill", "-9", pid], timeout=5)
+                                logger.info(f"[MitmproxyManager] killed PID {pid} ({comm}) on port {attempt_port}")
+                            else:
+                                logger.warning(
+                                    f"[MitmproxyManager] refusing to kill PID {pid} ({comm}) on port "
+                                    f"{attempt_port} — not a mitmdump process"
+                                )
                         except Exception:
                             pass
             except Exception:

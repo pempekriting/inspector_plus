@@ -87,6 +87,20 @@ class TestValidateCommandDangerousExecutables:
         ok, _reason = validate_command("  reboot  ")
         assert not ok
 
+    def test_cat_command_rejected(self):
+        ok, _reason = validate_command("cat /sdcard/test.txt")
+        assert not ok
+
+    def test_mount_su_variant_rejected(self):
+        """su with mount via different spacing patterns should be caught."""
+        ok, _reason = validate_command("su root mount /system")
+        assert not ok
+
+    def test_su_with_quoted_args_rejected(self):
+        """su with quoted arguments containing dangerous exec should be caught."""
+        ok, _reason = validate_command('su -c "reboot"')
+        assert not ok
+
 
 class TestValidateCommandAllowedPrefixes:
     @pytest.mark.parametrize(
@@ -139,7 +153,6 @@ class TestValidateCommandAllowedPrefixes:
             "date",
             "pwd",
             "echo hello",
-            "cat /sdcard/test.txt",
         ],
     )
     def test_allowed_commands_accepted(self, cmd):
@@ -149,9 +162,7 @@ class TestValidateCommandAllowedPrefixes:
 
 
 class TestValidateCommandSafeShortCommands:
-    @pytest.mark.parametrize(
-        "cmd", ["ls", "ps", "pwd", "date", "echo", "id", "uname", "whoami", "getconf", "uptime", "cat"]
-    )
+    @pytest.mark.parametrize("cmd", ["ls", "ps", "pwd", "date", "echo", "id", "uname", "whoami", "getconf", "uptime"])
     def test_safe_short_commands_accepted(self, cmd):
         ok, reason = validate_command(cmd)
         assert ok
