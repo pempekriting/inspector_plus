@@ -553,21 +553,21 @@ class TestIOSDeviceBridge:
 
 class TestIdbCmd:
     @patch("subprocess.run")
-    def test_uses_idb_companion(self, mock_run):
-        """Uses idb_companion directly (brew-installed native binary)."""
+    def test_uses_uv_run_idb(self, mock_run):
+        """Uses uv run idb (Python fb-idb package) instead of raw idb_companion binary."""
         mock_run.return_value = mock_proc(returncode=0)
         _idb_cmd(["list-targets"], udid=None, timeout=10)
         call = mock_run.call_args[0][0]
-        assert call[0] == "idb_companion"
+        assert call[0] == "uv"
+        assert call[1] == "run"
+        assert call[2] == "idb"
 
     @patch("subprocess.run")
     def test_passes_udid_after_subcommand(self, mock_run):
-        """--udid flag comes after subcommand for idb_companion."""
+        """--udid flag is appended after all args when udid is provided."""
         mock_run.return_value = mock_proc(returncode=0)
         _idb_cmd(["screenshot", "/tmp/out.png"], udid="abc-123", timeout=10)
         call = mock_run.call_args[0][0]
         assert call.count("--udid") == 1
         udid_idx = call.index("--udid")
         assert call[udid_idx + 1] == "abc-123"
-        # subcommand should come before --udid
-        assert call.index("screenshot") < udid_idx

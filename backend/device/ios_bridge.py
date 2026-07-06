@@ -30,53 +30,26 @@ def _safe_str(value) -> str:
 
 
 def _get_idb_companion_socket_path(udid: str | None) -> str | None:
-    """Return the idb companion socket path for a given UDID from list-targets output."""
-    if not udid:
-        return None
-    try:
-        import json as _json
+    """Deprecated: kept for backward compatibility, always returns None.
 
-        result = subprocess.run(
-            ["uv", "run", "idb", "list-targets", "--json"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        for line in result.stdout.strip().split("\n"):
-            if not line.strip():
-                continue
-            try:
-                target = _json.loads(line)
-            except _json.JSONDecodeError:
-                continue
-            if target.get("udid") == udid:
-                return target.get("companion") or target.get("path")
-    except Exception as e:
-        logger.warning("[_get_idb_companion_socket_path] failed: %s", e)
+    The fb-idb Python package auto-manages companion lifecycles via --udid.
+    """
     return None
 
 
 def _idb_cmd(args: list[str], udid: str | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
     """Run idb command via uv run idb (Python fb-idb package).
 
-    The idb package (fb-idb) communicates with idb companion sockets.
-    Fall back to idb_companion binary if idb is not available in venv.
+    The fb-idb Python package provides the `idb` CLI which auto-manages
+    companion lifecycle — no manual socket path plumbing needed.
+    Commands that target a specific device should pass udid; it will be
+    appended as --udid <udid> to the subcommand.
     """
-    env = dict(os.environ)
-    # Prefer uv run idb (Python fb-idb package with companion socket)
-    socket_path = _get_idb_companion_socket_path(udid)
-    if socket_path:
-        cmd = ["uv", "run", "idb", "--companion", socket_path]
-        cmd.extend(args)
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
-    # Fall back to idb_companion binary
-    cmd = ["idb_companion"]
+    cmd = ["uv", "run", "idb"]
+    cmd.extend(args)
     if udid:
-        cmd.extend(args)
         cmd.extend(["--udid", udid])
-    else:
-        cmd.extend(args)
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
 class IOSDeviceBridge(DeviceBridgeBase):
@@ -94,26 +67,12 @@ class IOSDeviceBridge(DeviceBridgeBase):
         self._ios_scale: float = 1.0  # iOS uses points in WDA, screenshot is in pixels
 
     def _idb_cmd(self, args: list[str], timeout: int = 30) -> subprocess.CompletedProcess:
-        """Run idb command. Uses uv run idb with companion socket, falls back to idb_companion binary."""
-        env = dict(os.environ)
-        # Prefer uv run idb with companion socket
-        socket_path = _get_idb_companion_socket_path(self.udid)
-        if socket_path:
-            cmd = ["uv", "run", "idb", "--companion", socket_path]
-            cmd.extend(args)
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
-        # Fall back to idb_companion binary
-        cmd = ["idb_companion"]
-        if self.udid:
-            cmd.extend(args)
-            cmd.extend(["--udid", self.udid])
-        else:
-            cmd.extend(args)
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+        """Run idb command targeting this bridge's device via uv run idb."""
+        return _idb_cmd(args, udid=self.udid, timeout=timeout)
 
     def connect(self) -> bool:
         try:
-            result = _idb_cmd(["list-targets"], udid=self.udid, timeout=10)
+            result = _idb_cmd(["list-targets"], timeout=10)
             if self.udid:
                 return self.udid in result.stdout
             return result.returncode == 0
@@ -177,10 +136,14 @@ class IOSDeviceBridge(DeviceBridgeBase):
         return self._get_wda_source()
 
     def _get_wda_source(self) -> dict:
-        """Fallback to direct WebDriverAgent source."""
-        # This would require the WDA server running
-        # idb handles this automatically, so uiperf should work
-        return {"error": "Could not retrieve iOS hierarchy. Is idb-companion installed?"}
+        """Fallback to direct WebDriverAgent source - not available without idb."""
+        logger.warning("[_get_wda_source] idb hierarchy fetch failed, returning empty tree")
+        return {
+            "id": "ios_root",
+            "className": "iOSApp",
+            "contentDesc": "Hierarchy unavailable - idb ui describe-all failed",
+            "children": [],
+        }
 
     def _convert_wda_to_tree(self, source: dict) -> dict:
         """Convert WDA source JSON to tree format matching Android.
