@@ -33,7 +33,7 @@ Real-time Android/iOS device UI inspection tool with live screenshot streaming, 
 
 ### Device & Interaction
 
-- iOS device support via idb-companion
+- iOS device support via fb-idb + idb_companion
 - ADB Command Panel — execute allowlisted shell commands
 - Locator Generation — Appium strategies (id, xpath, text, etc.)
 - APK Info Panel — version, SDK, permissions, install type
@@ -85,7 +85,7 @@ npm install
 - Node.js 18+
 - ADB in PATH
 - For Network Debug: `pip install mitmproxy`
-- For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
+- For iOS: idb_companion (`brew install idb-companion`) + fb-idb (auto-installed via `uv sync`)
 
 ---
 

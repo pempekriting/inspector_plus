@@ -52,7 +52,7 @@ Thank you for contributing to InspectorPlus! This guide covers everything you ne
 - Node.js 18+
 - npm or pnpm
 - ADB in PATH
-- For iOS: idb-companion (`brew install facebook/fb/idb-companion`)
+- For iOS: idb_companion (`brew install idb-companion`) + fb-idb (auto-installed via `uv sync`)
 - For Network Debug: `pip install mitmproxy`
 
 ### Backend

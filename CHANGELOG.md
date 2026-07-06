@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub issue and pull request templates
 - MIT LICENSE file
 
+### Fixed
+- iOS hierarchy unavailable due to missing `fb-idb` Python package — replaced broken `idb_companion` fallback with direct `uv run idb --udid <udid>` integration ([#76](https://github.com/pempekriting/inspector_plus/pull/76))
+
 ## [0.0.1] - 2026-05-10
 
 ### Added
@@ -31,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network Debug panel with D7 mitmproxy App Proxy and VPN Full Intercept
 
 #### Device & Interaction
-- iOS device support via idb-companion
+- iOS device support via fb-idb + idb_companion
 - ADB Command Panel for allowlisted shell commands
 - Locator Generation with Appium strategies (id, xpath, text, etc.)
 - APK Info Panel (version, SDK, permissions, install type)
