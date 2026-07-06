@@ -64,11 +64,11 @@ class TestValidateAdbCommand:
         ok, _reason = _validate_adb_command("ps")
         assert ok is True
 
-    def test_valid_short_safe_command_cat(self):
+    def test_cat_short_command_rejected(self):
         from main import _validate_adb_command
 
         ok, _reason = _validate_adb_command("cat /sdcard/test.txt")
-        assert ok is True
+        assert ok is False
 
     def test_reject_empty_command(self):
         from main import _validate_adb_command

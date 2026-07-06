@@ -129,9 +129,9 @@ class TestValidateAdbCommand:
         ok, _reason = _validate_adb_command("ps")
         assert ok
 
-    def test_cat_short_command_allowed(self):
+    def test_cat_short_command_rejected(self):
         ok, _reason = _validate_adb_command("cat /data/local/tmp/foo.txt")
-        assert ok
+        assert not ok
 
     # --- Blocked dangerous commands ---
 

@@ -215,7 +215,14 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         return self._recorder[session_id]
 
     def get_contexts(self) -> list[dict]:
-        """List all available contexts (NATIVE_APP + WebViews)."""
+        """List all available contexts (NATIVE_APP + WebViews).
+
+        NOTE: Requires an Appium/WebDriver driver instance to detect WebViews.
+        When no driver is available (ADB-only mode), only NATIVE_APP is returned.
+        """
+        if not hasattr(self, "_driver") or self._driver is None:
+            logger.info("get_contexts: no Appium driver available, returning NATIVE_APP only")
+            return [{"id": "NATIVE_APP", "type": "native", "description": "Native Android"}]
         try:
             result = self._driver.execute_script("mobile: getContexts")
             contexts = []
@@ -233,7 +240,14 @@ class AndroidDeviceBridge(DeviceBridgeBase):
             return [{"id": "NATIVE_APP", "type": "native", "description": "Native Android"}]
 
     def switch_context(self, context_id: str) -> bool:
-        """Switch to a different context (native or webview)."""
+        """Switch to a different context (native or webview).
+
+        NOTE: Requires an Appium/WebDriver driver instance.
+        Returns False when no driver is available.
+        """
+        if not hasattr(self, "_driver") or self._driver is None:
+            logger.warning("switch_context: no Appium driver available")
+            return False
         try:
             self._driver.execute_script("mobile: switchToContext", {"name": context_id})
             self._current_context = context_id

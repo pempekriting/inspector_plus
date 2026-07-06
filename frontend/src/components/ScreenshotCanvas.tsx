@@ -82,6 +82,7 @@ export function ScreenshotCanvas() {
     screenX: number;
     screenY: number;
   } | null>(null);
+  const [screenshotError, setScreenshotError] = useState(false);
 
   const { selectedDevice, setDeviceResolution } = useDeviceStore();
   const {
@@ -96,6 +97,7 @@ export function ScreenshotCanvas() {
     canvasMode,
     setCanvasMode,
     setCanvasTransform,
+    triggerScreenshotRefresh,
   } = useHierarchyStore();
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
@@ -132,9 +134,12 @@ export function ScreenshotCanvas() {
       setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
       setDeviceResolution(img.naturalWidth, img.naturalHeight);
       setLoadingScreenshot(false);
+      setScreenshotError(false);
     };
     img.onerror = () => {
+      setImageUrl(null);
       setLoadingScreenshot(false);
+      setScreenshotError(true);
     };
     img.src = combinedScreenshotUrl;
   }, [combinedScreenshotUrl, setDeviceResolution, setLoadingScreenshot]);
@@ -706,10 +711,35 @@ export function ScreenshotCanvas() {
       )}
 
       {!imageUrl && !isLoadingScreenshot && (
-        <SkeletonCanvas
-          aspectRatio={imageSize.height > 0 ? imageSize.width / imageSize.height : 9 / 16}
-          isDark={isDark}
-        />
+        screenshotError ? (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10"
+            style={{ background: isDark ? 'rgba(15, 15, 18, 0.95)' : 'rgba(250, 249, 247, 0.95)' }}
+          >
+            <p className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Failed to load screenshot
+            </p>
+            <button
+              onClick={() => {
+                setScreenshotError(false);
+                setLoadingScreenshot(true);
+                triggerScreenshotRefresh();
+              }}
+              className="px-4 py-2 text-xs font-bold rounded-lg transition-colors"
+              style={{
+                background: 'var(--accent-blue)',
+                color: '#fff',
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <SkeletonCanvas
+            aspectRatio={imageSize.height > 0 ? imageSize.width / imageSize.height : 9 / 16}
+            isDark={isDark}
+          />
+        )
       )}
 
       {coordPopup && (

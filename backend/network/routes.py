@@ -63,9 +63,14 @@ async def stop_proxy():
 
     manager = MitmproxyManager.get_instance()
     result = manager.stop()
-    # Clean up adb reverse entries
-    with contextlib.suppress(Exception):
-        subprocess.run(["adb", "reverse", "--remove-all"], capture_output=True, timeout=5)
+    # Clean up adb reverse entries — target only InspectorPlus ports
+    for proxy_port in [8080, 8081, 8082, 8083, 8084]:
+        with contextlib.suppress(Exception):
+            subprocess.run(
+                ["adb", "reverse", "--remove", f"tcp:{proxy_port}"],
+                capture_output=True,
+                timeout=5,
+            )
     return result
 
 

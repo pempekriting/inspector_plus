@@ -61,7 +61,6 @@ _ALLOWED_ADB_PREFIXES = [
     "date",
     "pwd",
     "echo",
-    "cat",
 ]
 
 _SAFE_SHORT_COMMANDS = {
@@ -75,7 +74,6 @@ _SAFE_SHORT_COMMANDS = {
     "whoami",
     "getconf",
     "uptime",
-    "cat",
 }
 
 _DANGEROUS_EXECS = {
@@ -118,7 +116,7 @@ def validate_command(command: str) -> tuple[bool, str]:
     for exe in _DANGEROUS_EXECS:
         if re.match(rf"^\s*{re.escape(exe)}(\s|$)", cmd_lower):
             return False, f"Command '{exe}' is not allowed"
-        if re.search(rf"su\s+.{0, 50}\s+{re.escape(exe)}(\s|$)", cmd_lower):
+        if re.search(rf"su\s+.{{0,50}}\s+{re.escape(exe)}(\s|$)", cmd_lower):
             return False, f"Command '{exe}' is not allowed"
     # Allow known safe prefixes
     for prefix in sorted(_ALLOWED_ADB_PREFIXES, key=len, reverse=True):
