@@ -73,7 +73,7 @@ InspectorPlus is a real-time Android/iOS device UI inspection tool built with:
 - **Backend:** Python 3.13 + FastAPI + uvicorn (port 8001)
 - **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Zustand
 - **Android:** ADB + uiautomator
-- **iOS:** idb-companion + xcrun simctl
+- **iOS:** fb-idb (Python) + idb_companion (brew) + xcrun simctl
 
 **Key functionality:** Live screenshot streaming, hierarchical UI element tree view, tap-to-inspect, hover-to-highlight, click-to-tap on device.
 
@@ -296,8 +296,10 @@ Copy the skill's conventions (component patterns, naming rules, state patterns, 
 ### Before Running Backend
 ```bash
 cd backend
-uv sync --python python3.13   # Creates .venv/
+uv sync --python python3.13   # Creates .venv/, installs fb-idb
 adb start-server               # Ensure ADB is running
+# For iOS: idb_companion must be installed via brew
+brew install idb-companion     # Companion server for fb-idb to connect to
 ```
 
 ### Before Running Frontend
@@ -436,8 +438,10 @@ ADB commands must be validated against an allowlist before execution:
 - `adb reverse` needed for proxy tunnel from device to host
 
 **iOS:**
-- Uses `idb-companion` for device communication (not ADB)
+- Uses `fb-idb` Python package (in pyproject.toml) which communicates with `idb_companion` (brew binary)
+- `idb_companion` must be installed separately via brew: `brew install idb-companion`
 - WebDriver Agent (WDA) for UI inspection
+- `xcrun simctl` as screenshot fallback when idb screenshot fails
 - No VPN interception — proxy mode only
 - Different hierarchy structure from Android
 
