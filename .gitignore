@@ -64,3 +64,6 @@ uv.lock
 Thumbs.db
 *.iml
 *.suo
+
+# Playwright MCP (local test artifacts, never commit)
+.playwright-mcp/
