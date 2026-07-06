@@ -38,8 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - F3 WebView Contexts switching between native and webview
 - Multi-pointer gesture execution (drag, pinch, swipe, custom)
 
-#### Desktop & Runtime
-- Tauri 2 desktop app (Rust shell)
+#### Runtime
 - Runtime port switching for BE/MCP ports via Settings panel
 - Dark/light Neo-Brutalism theme with runtime switching
 - Onboarding modal for first-run setup

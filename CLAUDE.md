@@ -72,7 +72,6 @@ Default to surfacing uncertainty, not hiding it.
 InspectorPlus is a real-time Android/iOS device UI inspection tool built with:
 - **Backend:** Python 3.13 + FastAPI + uvicorn (port 8001)
 - **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + Zustand
-- **Desktop:** Tauri 2 (Rust)
 - **Android:** ADB + uiautomator
 - **iOS:** idb-companion + xcrun simctl
 
@@ -305,7 +304,7 @@ adb start-server               # Ensure ADB is running
 ```bash
 cd frontend
 npm install
-npm run dev                    # or npm run tauri dev for desktop
+npm run dev                    # Browser mode
 ```
 
 ### Coding Rules
@@ -460,23 +459,6 @@ ADB commands must be validated against an allowlist before execution:
 ---
 
 ## Architecture Notes
-
-### Runtime Port Switching (Tauri Desktop)
-
-Both backend (port 8001) and MCP (port 8002) can be restarted on different ports via Settings panel in the Tauri desktop app.
-
-**Tauri-managed server lifecycle:**
-- `BackendManager` — spawns/manages Python/FastAPI process
-- `McpManager` — spawns/manages Node.js MCP server process
-- `restart_backend(port?)` / `restart_mcp(port?)` — Tauri IPC commands
-
-**SettingsPanel flow:**
-1. User changes port in Settings → clicks "Apply"
-2. Frontend calls `invoke("restart_backend", { port })` + `invoke("restart_mcp", { port })`
-3. Rust managers stop old processes, start new ones on new ports
-4. Frontend saves URLs to localStorage via `settingsStore`
-
-**Browser dev mode limitation:** Cannot spawn processes from browser. Apply button only saves URLs — servers must be started manually via terminal.
 
 ### Refresh Mechanism
 - Screenshot uses combined `/hierarchy-and-screenshot` endpoint with TanStack Query (staleTime 2000ms)

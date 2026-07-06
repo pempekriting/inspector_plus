@@ -54,17 +54,16 @@ MCP Server (TypeScript - port 8002)
 ├── Transport: Streamable HTTP (JSON-RPC 2.0)
 └── SSE: /subscribe/:deviceId for real-time tree updates
 
-SettingsPanel (Tauri desktop)
+SettingsPanel
 ├── Backend URL: text input + Verify + Scan buttons
 ├── MCP URL: text input + Verify + Scan buttons
-├── Apply: restart servers on new ports via Tauri IPC
+├── Apply: save updated URLs
 └── Reset Defaults
 ```
 
-**Runtime Port Switching (Tauri only):**
-- Backend (port 8001) and MCP (port 8002) can be restarted on different ports via Settings panel
-- Tauri manages child processes via `BackendManager` and `McpManager` Rust structs
-- Browser dev mode: Apply only saves URLs, cannot spawn processes
+**Runtime Port Switching:**
+- Backend (port 8001) and MCP (port 8002) URLs can be configured via Settings panel
+- Apply saves URLs to localStorage and invalidates query cache
 
 ---
 
@@ -79,7 +78,7 @@ SettingsPanel (Tauri desktop)
 | SubTabBar | `components/SubTabBar.tsx` | Hierarchy / Accessibility / Recorder / Network sub-tab navigation |
 | PropertiesPanel | `components/PropertiesPanel.tsx` | Node props (read-only): Identity, State, Geometry, Locators |
 | DevicePanel | `components/DevicePanel.tsx` | Device selector dropdown, auto-selects first device on reconnect |
-| SettingsPanel | `components/SettingsPanel.tsx` | Runtime port config: BE/MCP URL fields, Verify/Scan, Apply to restart servers |
+| SettingsPanel | `components/SettingsPanel.tsx` | URL configuration: BE/MCP URL fields, Verify/Scan, Apply to save |
 | TabBar | `components/TabBar.tsx` | inspector / commands tabs |
 | RecorderPanel | `components/RecorderPanel.tsx` | Record test steps and export |
 | AccessibilityPanel | `components/AccessibilityPanel.tsx` | WCAG accessibility audit |

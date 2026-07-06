@@ -83,13 +83,6 @@ inspector_plus/
 │   │   │   └── api.ts           # TanStack Query + Zod
 │   │   └── config/
 │   │       └── apiConfig.ts
-│   └── src-tauri/              # Tauri desktop (Rust)
-│       ├── src/
-│       │   ├── main.rs
-│       │   ├── backend_manager.rs
-│       │   ├── mcp_manager.rs
-│       │   └── commands.rs
-│       └── Cargo.toml
 │
 ├── docs/
 │   ├── ARCHITECTURE.md
@@ -124,7 +117,6 @@ npm install
 Start:
 ```bash
 npm run dev      # Browser mode (http://localhost:5173)
-npm run tauri dev  # Desktop app
 ```
 
 ## MCP Server Setup
@@ -229,7 +221,6 @@ pip install mitmproxy
 ```bash
 lsof -i :8001
 kill -9 <PID>
-# Or use Settings panel in Tauri app to restart on different port
 ```
 
 ### Port 8002 in use (MCP server)
@@ -243,13 +234,6 @@ kill -9 <PID>
 ```bash
 python3 --version  # Should be 3.13.x
 # Use pyenv or conda to install 3.13 if needed
-```
-
-### Tauri build fails
-```bash
-cd frontend/src-tauri
-cargo clean
-npm run tauri build
 ```
 
 ### MCP server won't start

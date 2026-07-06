@@ -23,8 +23,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   }>({ be: 'idle', mcp: 'idle' });
   const [detectedPort, setDetectedPort] = useState<number | null>(null);
   const [scanProgress, setScanProgress] = useState(0);
-  const [isRestarting, setIsRestarting] = useState(false);
-  const [restartError, setRestartError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<{ be: number | null; mcp: number | null } | null>(
     null
   );
@@ -50,70 +48,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       setVerifyStatus({ be: 'idle', mcp: 'idle' });
       setDetectedPort(null);
       setScanProgress(0);
-      setIsRestarting(false);
-      setRestartError(null);
       setScanResult(null);
     }
   }, [isOpen, backendUrl, mcpUrl]);
 
-  const extractPort = (url: string): number => {
-    const match = url.match(/:(\d+)/);
-    return match ? parseInt(match[1], 10) : 8001;
-  };
-
-  const isTauriAvailable = () => typeof window !== 'undefined' && !!window.__TAURI__;
-
   const handleSave = async () => {
-    const backendPort = extractPort(editedBackend);
-    const mcpPort = extractPort(editedMcp);
-
-    if (!isTauriAvailable()) {
-      setBackendUrl(editedBackend);
-      setMcpUrl(editedMcp);
-      queryClient.invalidateQueries();
-      onClose();
-      return;
-    }
-
-    const tauri = window.__TAURI__!;
-    setIsRestarting(true);
-    setRestartError(null);
-
-    try {
-      let backendRunning = false;
-      let mcpRunning = false;
-
-      try {
-        const backendStatus = await tauri.core.invoke<{ status: string }>('get_backend_status');
-        backendRunning = backendStatus.status === 'running';
-      } catch {}
-
-      try {
-        const mcpStatus = await tauri.core.invoke<{ status: string }>('get_mcp_status');
-        mcpRunning = mcpStatus.status === 'running';
-      } catch {}
-
-      if (backendRunning) {
-        await tauri.core.invoke('restart_backend', { port: backendPort });
-      } else {
-        await tauri.core.invoke('start_backend', { port: backendPort });
-      }
-
-      if (mcpRunning) {
-        await tauri.core.invoke('restart_mcp', { port: mcpPort });
-      } else {
-        await tauri.core.invoke('start_mcp', { port: mcpPort });
-      }
-
-      setBackendUrl(editedBackend);
-      setMcpUrl(editedMcp);
-      queryClient.invalidateQueries();
-      onClose();
-    } catch (error) {
-      setRestartError(String(error));
-    } finally {
-      setIsRestarting(false);
-    }
+    setBackendUrl(editedBackend);
+    setMcpUrl(editedMcp);
+    queryClient.invalidateQueries();
+    onClose();
   };
 
   const handleReset = () => {
@@ -569,30 +512,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <span>Backend + MCP servers are running and reachable</span>
             </div>
           )}
-
-          {restartError && (
-            <div
-              className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-[10px] font-medium"
-              style={{
-                background: isDark ? 'rgba(248,113,113,0.12)' : '#fef2f2',
-                color: dangerColor,
-                border: `2px solid ${dangerColor}`,
-              }}
-            >
-              <svg
-                className="w-4 h-4 flex-shrink-0 mt-0.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-              </svg>
-              <span>Restart failed: {restartError}</span>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
@@ -617,8 +536,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              disabled={isRestarting}
-              className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-60"
+              className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95"
               style={{
                 background: isDark ? '#27272a' : '#e5e5e5',
                 color: textMuted,
@@ -630,31 +548,15 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </button>
             <button
               onClick={handleSave}
-              disabled={isRestarting}
-              className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-60"
+              className="px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95"
               style={{
-                background: isRestarting ? (isDark ? '#52525b' : '#999999') : accentColor,
+                background: accentColor,
                 color: '#0a0a0c',
-                border: `2px solid ${isRestarting ? 'transparent' : accentColor}`,
+                border: `2px solid ${accentColor}`,
                 boxShadow: `3px 3px 0 ${isDark ? '#000' : '#1a1a1a'}`,
               }}
             >
-              {isRestarting ? (
-                <span className="flex items-center gap-1">
-                  <svg
-                    className="w-3 h-3 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                  >
-                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Restarting...
-                </span>
-              ) : (
-                'Apply'
-              )}
+              Apply
             </button>
           </div>
         </div>

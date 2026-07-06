@@ -16,7 +16,7 @@ export default defineConfig({
       },
     },
   },
-  envPrefix: ["VITE_", "TAURI_"],
+  envPrefix: ["VITE_"],
   build: {
     target: "esnext",
     minify: "esbuild",

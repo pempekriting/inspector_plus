@@ -11,9 +11,7 @@ class Settings:
     APP_VERSION: str = os.environ.get("APP_VERSION", "0.0.1")
     ANDROID_HOME: str = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT", "")
     ANDROID_SERIAL: str | None = os.environ.get("ANDROID_SERIAL")
-    CORS_ORIGINS: str = os.environ.get(
-        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,app://localhost,tauri://localhost"
-    )
+    CORS_ORIGINS: str = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
     API_KEY: str | None = os.environ.get("API_KEY")
     LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
 
