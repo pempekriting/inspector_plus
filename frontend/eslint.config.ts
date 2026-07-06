@@ -109,6 +109,6 @@ export default tsPlugin.config(
     },
   },
   {
-    ignores: ['node_modules/', 'dist/', '.git/', '*.config.*', 'src-tauri/', 'vitest.setup.ts'],
+    ignores: ['node_modules/', 'dist/', '.git/', '*.config.*', 'vitest.setup.ts'],
   },
 );

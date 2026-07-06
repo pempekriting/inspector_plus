@@ -28,7 +28,3 @@ npm-debug.log*
 
 # Testing
 coverage/
-
-# Tauri
-src-tauri/target/
-src-tauri/.cargo/

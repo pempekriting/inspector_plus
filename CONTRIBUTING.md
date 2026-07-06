@@ -71,13 +71,6 @@ npm install
 npm run dev
 ```
 
-### Desktop (Tauri)
-
-```bash
-cd frontend
-npm run tauri dev
-```
-
 ### Running Tests
 
 **Backend:**

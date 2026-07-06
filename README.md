@@ -1,6 +1,6 @@
 # InspectorPlus
 
-Real-time Android/iOS device UI inspection tool with live screenshot streaming, hierarchical view exploration, tap-to-inspect, and desktop GUI.
+Real-time Android/iOS device UI inspection tool with live screenshot streaming, hierarchical view exploration, and tap-to-inspect.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.13](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/downloads/)
@@ -40,10 +40,9 @@ Real-time Android/iOS device UI inspection tool with live screenshot streaming, 
 - F3 WebView Contexts — switch between native and webview contexts
 - Multi-pointer gesture execution (drag, pinch, swipe, custom)
 
-### Desktop & Runtime
+### Runtime
 
-- Tauri 2 desktop app (Rust shell)
-- Runtime port switching — configure BE/MCP ports via Settings panel
+- Runtime port switching — configure BE/MCP URLs via Settings panel
 - Dark/light Neo-Brutalism theme with runtime switching
 - Onboarding modal for first-run setup
 
@@ -108,15 +107,6 @@ npm run dev
 
 Open `http://localhost:5173`
 
-### Tauri Desktop App
-
-```bash
-cd frontend
-npm run tauri dev
-```
-
----
-
 ## Configuration
 
 ### Environment Variables
@@ -137,7 +127,6 @@ npm run tauri dev
 
 | Layer | Technology |
 |-------|------------|
-| Desktop Shell | Tauri 2 (Rust) |
 | Frontend | React 18.3 + TypeScript + Vite 6.0 |
 | State | Zustand 5.0 + TanStack Query 5.100 |
 | Backend | FastAPI 0.115 (Python 3.13) |

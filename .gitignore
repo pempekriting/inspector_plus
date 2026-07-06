@@ -49,10 +49,6 @@ venv/
 ENV/
 env/
 
-# Tauri (desktop app)
-src-tauri/target/
-src-tauri/.cargo/
-
 # Android VPN app (inspector_vpn)
 backend/inspector_vpn/.gradle/
 backend/inspector_vpn/app/build/

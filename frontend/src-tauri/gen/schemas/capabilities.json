@@ -1,1 +1,0 @@
-{"default":{"identifier":"default","description":"Default capabilities for InspectorPlus","local":true,"windows":["main"],"permissions":["core:default","shell:allow-open","shell:allow-execute","process:allow-exit"]}}
