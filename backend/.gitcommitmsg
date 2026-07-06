@@ -1,0 +1,22 @@
+fix: iterate all proxy ports for reverse tunnel in full intercept mode
+
+Previously, the VPN service could bind to any of 8081-8084 depending on
+port availability, but the backend always set up reverse tunnel for 8081
+regardless. This meant traffic from devices where the VPN bound to 8082/8083/8084
+had no tunnel to mitmdump.
+
+Changes:
+- android_bridge: setup_vpn_proxy() now iterates all proxy ports and uses
+  whichever succeeds for the reverse tunnel
+- android_bridge: stop_vpn_proxy() cleans up all proxy port reverse tunnels
+- android_bridge: is_vpn_running() checks tun0 interface first, dumpsys fallback
+- android_bridge: _cleanup_vpn_port() added for clean VPN restart
+- mitm_manager: verify mitmdump is actually listening before returning success
+- mitm_manager: import socket at module level for health check
+- test_mitm_manager: mock socket.create_connection in all tests affected by health check
+- NetworkPanel: check result.success before clearing start-vpn pending state
+- InspectorVpnService: return bool from startVpn/startLocalProxy, abort VPN if proxy fails
+- InspectorVpnService: PROXY_PORTS array with fallback to 8082/8083/8084
+- MainActivity: add STOP action intent filter and handler
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>

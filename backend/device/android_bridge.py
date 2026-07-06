@@ -1291,6 +1291,9 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         from network.mitm_manager import MitmproxyManager
 
         try:
+            # Step 0: Clean up any previous VPN instance first
+            self._cleanup_vpn_port()
+
             # Step 1: Determine APK path relative to backend
             backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             apk_path = os.path.join(
@@ -1321,24 +1324,43 @@ class AndroidDeviceBridge(DeviceBridgeBase):
 
             actual_port = manager.get_status()["port"]
 
+            # Step 3b: Verify mitmdump is actually reachable
+            import socket
+
+            try:
+                with socket.create_connection(("127.0.0.1", actual_port), timeout=2):
+                    pass
+            except Exception:
+                return {
+                    "success": False,
+                    "error": f"mitmdump not reachable on port {actual_port} after start",
+                }
+
             # Step 4: Configure adb reverse tunnel for VPN → mitmdump
-            # VPN app connects to device localhost:8081, we reverse that to host:mitmdump
-            reverse_result = subprocess.run(
-                self._adb_cmd(["reverse", "tcp:8081", f"tcp:{actual_port}"]),
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if reverse_result.returncode != 0:
-                # Fallback to forward if reverse fails
+            # VPN app connects to device localhost:PROXY_PORT (8081-8084), reverse to host:mitmdump
+            # Set up reverse for all proxy ports so traffic works regardless of which port app bound to
+            tunnel = None
+            for proxy_port in [8081, 8082, 8083, 8084]:
+                reverse_result = subprocess.run(
+                    self._adb_cmd(["reverse", f"tcp:{proxy_port}", f"tcp:{actual_port}"]),
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if reverse_result.returncode == 0:
+                    tunnel = f"adb-reverse-{proxy_port}"
+                    logger.info(f"[setup_vpn_proxy] reverse tunnel: device:{proxy_port} -> host:{actual_port}")
+                    break
+
+            if tunnel is None:
+                # Fallback: use forward
                 subprocess.run(
                     self._adb_cmd(["forward", "tcp:8081", f"tcp:{actual_port}"]),
                     capture_output=True,
+                    text=True,
                     timeout=10,
                 )
                 tunnel = "adb-forward"
-            else:
-                tunnel = "adb-reverse"
 
             # Step 5: Start VPN via MainActivity auto_start action
             # MainActivity auto-starts VPN when launched with auto_start action, then closes
@@ -1380,21 +1402,77 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def _cleanup_vpn_port(self) -> None:
+        """Clean up any previous VPN instance and free ports on device."""
+        # Send stop intent first for graceful shutdown
+        subprocess.run(
+            self._adb_cmd(
+                [
+                    "shell",
+                    "am",
+                    "start",
+                    "-n",
+                    "com.inspectorplus.vpn/.MainActivity",
+                    "-a",
+                    "com.inspectorplus.vpn.STOP",
+                ]
+            ),
+            capture_output=True,
+            timeout=5,
+        )
+        # Give it a moment to release the port
+        import time
+
+        time.sleep(0.5)
+        # Force stop as fallback
+        subprocess.run(
+            self._adb_cmd(["shell", "am", "force-stop", "com.inspectorplus.vpn"]),
+            capture_output=True,
+            timeout=5,
+        )
+        # Remove adb reverse to clean up tunnel state for all proxy ports
+        for port in [8081, 8082, 8083, 8084]:
+            subprocess.run(
+                self._adb_cmd(["reverse", "--remove", f"tcp:{port}"]),
+                capture_output=True,
+                timeout=5,
+            )
+
     def stop_vpn_proxy(self) -> dict:
         """Stop VPN interception and clean up tunnel."""
         try:
-            # Stop VPN service
+            # Stop VPN service using stop intent for graceful shutdown
+            subprocess.run(
+                self._adb_cmd(
+                    [
+                        "shell",
+                        "am",
+                        "start",
+                        "-n",
+                        "com.inspectorplus.vpn/.MainActivity",
+                        "-a",
+                        "com.inspectorplus.vpn.STOP",
+                    ]
+                ),
+                capture_output=True,
+                timeout=5,
+            )
+            import time
+
+            time.sleep(0.5)
+            # Force stop as fallback
             subprocess.run(
                 self._adb_cmd(["shell", "am", "force-stop", "com.inspectorplus.vpn"]),
                 capture_output=True,
                 timeout=10,
             )
-            # Remove adb reverse entry
-            subprocess.run(
-                self._adb_cmd(["reverse", "--remove", "tcp:8081"]),
-                capture_output=True,
-                timeout=5,
-            )
+            # Remove adb reverse entries for all proxy ports
+            for port in [8081, 8082, 8083, 8084]:
+                subprocess.run(
+                    self._adb_cmd(["reverse", "--remove", f"tcp:{port}"]),
+                    capture_output=True,
+                    timeout=5,
+                )
             # Also stop mitmdump - VPN and mitmdump share lifecycle
             from network.mitm_manager import MitmproxyManager
 
@@ -1407,8 +1485,21 @@ class AndroidDeviceBridge(DeviceBridgeBase):
             return {"success": False, "error": str(e)}
 
     def is_vpn_running(self) -> bool:
-        """Check if InspectorVPN service is active via dumpsys."""
+        """Check if InspectorVPN tun0 interface is up."""
         try:
+            # Primary check: use ifconfig to see if tun0 interface is UP
+            result = subprocess.run(
+                self._adb_cmd(["shell", "ifconfig", "tun0"]),
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            output = result.stdout
+            is_up = "UP" in output and "10.0.0.2" in output
+            if is_up:
+                return True
+
+            # Fallback: check dumpsys vpn output for our package
             result = subprocess.run(
                 self._adb_cmd(["shell", "dumpsys", "vpn"]),
                 capture_output=True,
@@ -1416,11 +1507,9 @@ class AndroidDeviceBridge(DeviceBridgeBase):
                 timeout=10,
             )
             output = result.stdout
-            logger.info(f"[is_vpn_running] dumpsys vpn output: {output[:500]}")
-            # Check for our package in VPN service status — be lenient about format
             has_pkg = "com.inspectorplus.vpn" in output
             has_iface = "tun0" in output or "10.0.0" in output
-            logger.info(f"[is_vpn_running] has_pkg={has_pkg}, has_iface={has_iface}")
+            logger.info(f"[is_vpn_running] tun0 check: {is_up}, dumpsys: pkg={has_pkg}, iface={has_iface}")
             return has_pkg or has_iface
         except Exception as e:
             logger.warning(f"[is_vpn_running] error: {e}")

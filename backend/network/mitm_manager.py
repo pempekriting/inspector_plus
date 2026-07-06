@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import os
+import socket
 import subprocess
 import tempfile
 import threading
@@ -90,6 +91,21 @@ class MitmproxyManager:
                 self._running = True
                 with open(self._pid_file, "w") as f:
                     f.write(str(self._process.pid))
+
+                # Verify mitmdump is actually listening before declaring success
+                try:
+                    with socket.create_connection(("127.0.0.1", attempt_port), timeout=2):
+                        pass
+                except Exception:
+                    # Not listening — process may have forked and died
+                    self._process.terminate()
+                    with contextlib.suppress(Exception):
+                        self._process.wait(timeout=1)
+                    self._process = None
+                    self._running = False
+                    logger.warning(f"[MitmproxyManager] mitmdump not listening on port {attempt_port}, trying next")
+                    continue
+
                 logger.info(f"[MitmproxyManager] started mitmdump on port {attempt_port}, PID={self._process.pid}")
                 return {
                     "success": True,

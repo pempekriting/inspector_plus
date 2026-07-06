@@ -24,8 +24,10 @@ public class InspectorVpnService extends VpnService {
     private static final String CHANNEL_ID = "vpn_channel";
     private static final int NOTIFICATION_ID = 1;
     private static final int DEVICE_PROXY_PORT = 8081;
+    private static final int[] PROXY_PORTS = {8081, 8082, 8083, 8084};
 
     private volatile boolean running = false;
+    private volatile boolean proxyReady = false;
     private ServerSocket serverSocket = null;
     private Thread proxyThread = null;
 
@@ -50,7 +52,12 @@ public class InspectorVpnService extends VpnService {
                 try { mitmPort = Integer.parseInt(portStr); } catch (Exception e) {}
             }
         }
-        startVpn();
+        boolean started = startVpn();
+        if (!started) {
+            Log.e(TAG, "startVpn failed — stopping service");
+            stopVpn();
+            return START_NOT_STICKY;
+        }
         return START_STICKY;
     }
 
@@ -88,8 +95,8 @@ public class InspectorVpnService extends VpnService {
         startForeground(NOTIFICATION_ID, notification);
     }
 
-    private void startVpn() {
-        if (running) return;
+    private boolean startVpn() {
+        if (running) return true;
 
         try {
             startForegroundNotification();
@@ -107,43 +114,89 @@ public class InspectorVpnService extends VpnService {
             ParcelFileDescriptor pfd = builder.establish();
             if (pfd == null) {
                 Log.e(TAG, "VPN interface establish returned null");
-                stopVpn();
-                return;
+                return false;
             }
             running = true;
             Log.i(TAG, "VPN interface established");
 
             // Start local TCP proxy that forwards to mitmdump
-            startLocalProxy();
+            boolean proxyStarted = startLocalProxy();
+            if (!proxyStarted) {
+                Log.e(TAG, "Local proxy failed to start — aborting VPN");
+                cleanupVpn();
+                return false;
+            }
 
             Log.i(TAG, "VPN started: " + mitmHost + ":" + mitmPort);
+            return true;
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to start VPN", e);
-            stopVpn();
+            cleanupVpn();
+            return false;
         }
     }
 
-    private void startLocalProxy() {
-        proxyThread = new Thread(() -> {
-            try {
-                serverSocket = new ServerSocket(DEVICE_PROXY_PORT);
-                Log.i(TAG, "Local proxy listening on port " + DEVICE_PROXY_PORT);
+    private boolean startLocalProxy() {
+        int boundPort = -1;
+        serverSocket = null;
 
-                while (running) {
-                    try {
-                        Socket client = serverSocket.accept();
-                        new Thread(() -> handleProxyConnection(client)).start();
-                    } catch (IOException e) {
-                        if (running) Log.e(TAG, "Proxy accept error", e);
-                        break;
-                    }
-                }
+        // Try each port in order — find first one that binds successfully
+        for (int port : PROXY_PORTS) {
+            try {
+                serverSocket = new ServerSocket(port);
+                serverSocket.setReuseAddress(true);
+                boundPort = port;
+                Log.i(TAG, "Local proxy listening on port " + boundPort);
+                break;
             } catch (IOException e) {
-                Log.e(TAG, "Local proxy error", e);
+                Log.w(TAG, "Port " + port + " in use, trying next: " + e.getMessage());
+                serverSocket = null;
+            }
+        }
+
+        if (serverSocket == null || boundPort == -1) {
+            Log.e(TAG, "All proxy ports " + java.util.Arrays.toString(PROXY_PORTS) + " failed to bind");
+            return false;
+        }
+
+        proxyThread = new Thread(() -> {
+            while (running && serverSocket != null && !serverSocket.isClosed()) {
+                try {
+                    Socket client = serverSocket.accept();
+                    new Thread(() -> handleProxyConnection(client)).start();
+                } catch (IOException e) {
+                    if (running) Log.e(TAG, "Proxy accept error", e);
+                    break;
+                }
             }
         });
         proxyThread.start();
+        proxyReady = true;
+        return true;
+    }
+
+    private boolean isPortInUse(int port) {
+        try (ServerSocket test = new ServerSocket(port)) {
+            test.setReuseAddress(true);
+            return false;
+        } catch (IOException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private void cleanupVpn() {
+        running = false;
+        if (proxyThread != null) {
+            proxyThread.interrupt();
+            proxyThread = null;
+        }
+        try {
+            if (serverSocket != null) serverSocket.close();
+        } catch (Exception e) { }
+        serverSocket = null;
     }
 
     private void handleProxyConnection(Socket clientSocket) {
@@ -212,6 +265,7 @@ public class InspectorVpnService extends VpnService {
 
     private void stopVpn() {
         running = false;
+        proxyReady = false;
 
         if (proxyThread != null) {
             proxyThread.interrupt();
@@ -221,6 +275,7 @@ public class InspectorVpnService extends VpnService {
         try {
             if (serverSocket != null) serverSocket.close();
         } catch (Exception e) { }
+        serverSocket = null;
 
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
