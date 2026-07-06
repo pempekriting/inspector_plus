@@ -21,31 +21,25 @@ def _safe_bundle_id(bundle_id: str) -> bool:
 
 
 def _idb_cmd(args: list[str], udid: str | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
-    """Run an idb command via uv run with IDB_UDID env var.
+    """Run an idb command via uv run idb (Python fb-idb package).
 
-    On this machine, the venv contains a Python idb shim (pip-installed) that requires:
-    - IDB_UDID env var (not --udid before subcommand)
-    - --udid after subcommand
-
-    Always use uv run for consistent behavior regardless of what shutil.which finds.
+    The fb-idb package auto-manages companion lifecycle. Commands that
+    target a specific device should pass udid; it will be appended as
+    --udid <udid> to the subcommand.
 
     Args:
-        args: Arguments to pass to idb (after 'idb' or 'uv run idb').
+        args: Arguments to pass to idb.
         udid: Optional device UDID.
         timeout: Command timeout in seconds.
 
     Returns:
         CompletedProcess result.
     """
-    env = dict(os.environ)
     cmd = ["uv", "run", "idb"]
+    cmd.extend(args)
     if udid:
-        env["IDB_UDID"] = udid
-        cmd.extend(args)
         cmd.extend(["--udid", udid])
-    else:
-        cmd.extend(args)
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
 def _read_info_plist(udid: str | None, bundle_id: str) -> dict | None:
