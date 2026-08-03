@@ -6,6 +6,8 @@ import re
 import subprocess
 import tempfile
 
+from commands.command_runner import run_and_report
+
 _BUNDLE_ID_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$")
 """Regex for valid iOS bundle IDs (e.g. com.apple.mobilesafari)"""
 
@@ -137,15 +139,10 @@ class IOSAppCommands:
         """
         if not ipa_path.lower().endswith(".ipa"):
             return (False, "Invalid IPA path: must end with .ipa")
-        try:
-            result = _idb_cmd(["install", ipa_path], self.udid, timeout=120)
-            if result.returncode == 0:
-                return (True, result.stdout.strip())
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Install command timed out")
-        except Exception as e:
-            return (False, f"Install failed: {e!s}")
+        return run_and_report(
+            lambda: _idb_cmd(["install", ipa_path], self.udid, timeout=120),
+            "Install",
+        )
 
     def is_app_installed(self, bundle_id: str) -> tuple[bool, str]:
         """Check if an app is installed on the device.
@@ -183,15 +180,10 @@ class IOSAppCommands:
         """
         if not _safe_bundle_id(bundle_id):
             return (False, "Invalid bundle ID format")
-        try:
-            result = _idb_cmd(["uninstall", bundle_id], self.udid, timeout=30)
-            if result.returncode == 0:
-                return (True, result.stdout.strip())
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Uninstall command timed out")
-        except Exception as e:
-            return (False, f"Uninstall failed: {e!s}")
+        return run_and_report(
+            lambda: _idb_cmd(["uninstall", bundle_id], self.udid, timeout=30),
+            "Uninstall",
+        )
 
     def launch_app(self, bundle_id: str) -> tuple[bool, str]:
         """Launch an app on the device.
@@ -204,15 +196,11 @@ class IOSAppCommands:
         """
         if not _safe_bundle_id(bundle_id):
             return (False, "Invalid bundle ID format")
-        try:
-            result = _idb_cmd(["launch", bundle_id], self.udid, timeout=10)
-            if result.returncode == 0:
-                return (True, f"Launched app: {bundle_id}")
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Launch command timed out")
-        except Exception as e:
-            return (False, f"Launch failed: {e!s}")
+        return run_and_report(
+            lambda: _idb_cmd(["launch", bundle_id], self.udid, timeout=10),
+            "Launch",
+            success_message=f"Launched app: {bundle_id}",
+        )
 
     def list_installed_apps(self) -> tuple[bool, str]:
         """Get list of all installed bundle IDs on the device.
@@ -224,25 +212,24 @@ class IOSAppCommands:
         Returns:
             Tuple of (success, newline-separated bundle IDs or error message)
         """
-        try:
-            result = _idb_cmd(["list-apps"], self.udid, timeout=30)
-            if result.returncode == 0:
-                lines = result.stdout.strip().split("\n")
-                bundle_ids = []
-                for line in lines:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    # First column is bundle_id (contains dots)
-                    parts = line.split()
-                    if parts and "." in parts[0]:
-                        bundle_ids.append(parts[0])
-                return (True, "\n".join(bundle_ids))
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "List apps command timed out")
-        except Exception as e:
-            return (False, f"List apps failed: {e!s}")
+
+        def _format_bundle_ids(result: subprocess.CompletedProcess) -> str:
+            bundle_ids = []
+            for line in result.stdout.strip().split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                # First column is bundle_id (contains dots)
+                parts = line.split()
+                if parts and "." in parts[0]:
+                    bundle_ids.append(parts[0])
+            return "\n".join(bundle_ids)
+
+        return run_and_report(
+            lambda: _idb_cmd(["list-apps"], self.udid, timeout=30),
+            "List apps",
+            success_message=_format_bundle_ids,
+        )
 
     def get_app_info(self, bundle_id: str) -> tuple[bool, dict]:
         """Get detailed info about a specific installed app.

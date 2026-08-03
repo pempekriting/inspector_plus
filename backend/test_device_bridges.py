@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -184,19 +185,18 @@ class TestAndroidDeviceBridge:
         ]
 
         bridge = AndroidDeviceBridge()
-        with (
-            patch(
-                "builtins.open",
-                MagicMock(
-                    __enter__=MagicMock(return_value=open).__enter__,
-                    return_value=__import__("io").StringIO(xml),
-                ),
+        with patch(
+            "builtins.open",
+            MagicMock(
+                __enter__=MagicMock(return_value=open).__enter__,
+                return_value=__import__("io").StringIO(xml),
             ),
-            patch("device.android_bridge.ET") as mock_et,
         ):
-            mock_et.fromstring.return_value = MagicMock()
+            # lxml is a hard dependency (no ElementTree fallback) — parses the real XML string.
+            # Root element is the <hierarchy> tag; the actual node is its first child.
             result = bridge.get_hierarchy()
             assert "error" not in result or result.get("error") is None
+            assert result["children"][0]["className"] == "android.widget.FrameLayout"
 
     @patch("subprocess.run")
     def test_get_hierarchy_raises_on_adb_not_found(self, mock_run):
@@ -215,26 +215,24 @@ class TestAndroidDeviceBridge:
                 "bounds": {"x": 0, "y": 0, "width": 100, "height": 100},
                 "children": [],
             }
-            with patch("device.android_bridge.HAS_LXML", True):
-                with patch("device.android_bridge.lxml_etree") as mock_lxml:
-                    mock_root = MagicMock()
-                    mock_root.xpath.return_value = []
-                    mock_lxml.fromstring.return_value = mock_root
-                    result = bridge.search_hierarchy("//Button", "xpath")
-                    assert "matches" in result
-                    assert "count" in result
+            with patch("device.android_bridge.lxml_etree") as mock_lxml:
+                mock_root = MagicMock()
+                mock_root.xpath.return_value = []
+                mock_lxml.fromstring.return_value = mock_root
+                result = bridge.search_hierarchy("//Button", "xpath")
+                assert "matches" in result
+                assert "count" in result
 
     @patch("subprocess.run")
     def test_search_hierarchy_resource_id_filter(self, mock_run):
         bridge = AndroidDeviceBridge()
         with patch.object(bridge, "get_hierarchy"):
-            with patch("device.android_bridge.HAS_LXML", True):
-                with patch("device.android_bridge.lxml_etree") as mock_lxml:
-                    mock_root = MagicMock()
-                    mock_root.xpath.return_value = []
-                    mock_lxml.fromstring.return_value = mock_root
-                    result = bridge.search_hierarchy("btn_login", "resource-id")
-                    assert result.get("count", -1) >= 0
+            with patch("device.android_bridge.lxml_etree") as mock_lxml:
+                mock_root = MagicMock()
+                mock_root.xpath.return_value = []
+                mock_lxml.fromstring.return_value = mock_root
+                result = bridge.search_hierarchy("btn_login", "resource-id")
+                assert result.get("count", -1) >= 0
 
     def test_generate_locators_resource_id(self):
         """Node with resourceId → id locator is best (stability 5)."""
@@ -502,6 +500,18 @@ class TestIOSDeviceBridge:
         assert result.get("type") == "Window"
 
     @patch("device.ios_bridge._idb_cmd")
+    @patch("device.ios_bridge._retry_with_backoff")
+    def test_get_hierarchy_failure_returns_error_key(self, mock_retry, mock_idb):
+        """When idb fails after retries, the fallback tree must carry an "error" key
+        so callers (search_hierarchy, /hierarchy route) can detect the failure instead
+        of treating an empty tree as a valid, successful hierarchy."""
+        mock_retry.side_effect = Exception("idb ui describe-all failed or returned no hierarchy")
+        bridge = IOSDeviceBridge()
+        result = bridge.get_hierarchy()
+        assert result.get("error")
+        assert result.get("children") == []
+
+    @patch("device.ios_bridge._idb_cmd")
     def test_tap_returns_true_on_success(self, mock_idb):
         mock_idb.return_value = mock_proc(returncode=0)
         bridge = IOSDeviceBridge()
@@ -546,6 +556,120 @@ class TestIOSDeviceBridge:
             result = bridge.search_hierarchy("Button", "text")
             assert "matches" in result
             assert "count" in result
+
+    @patch("device.ios_bridge._idb_cmd")
+    @patch("device.ios_bridge._retry_with_backoff")
+    def test_get_hierarchy_uses_cache_within_ttl(self, mock_retry, mock_idb):
+        """A second get_hierarchy() call within the TTL window must not re-shell
+        to idb — otherwise iOS never actually benefits from caching, unlike
+        AndroidDeviceBridge which does."""
+        mock_retry.return_value = {"type": "Window", "label": "", "children": []}
+        bridge = IOSDeviceBridge()
+        bridge.get_hierarchy()
+        bridge.get_hierarchy()
+        assert mock_retry.call_count == 1
+
+    @patch("builtins.open")
+    @patch("device.ios_bridge._idb_cmd")
+    @patch("device.ios_bridge._retry_with_backoff")
+    def test_get_screenshot_uses_cache_within_ttl(self, mock_retry, mock_idb, mock_open):
+        mock_retry.return_value = None
+        mock_idb.return_value = mock_proc(returncode=0)
+        mock_file = MagicMock()
+        mock_file.read.return_value = b"\x89PNG\x00" * 10
+        mock_open.return_value.__enter__.return_value = mock_file
+        bridge = IOSDeviceBridge()
+        bridge.get_screenshot()
+        bridge.get_screenshot()
+        assert mock_retry.call_count == 1
+
+    def test_search_hierarchy_does_not_double_scale_cached_bounds(self):
+        """search_hierarchy() used to mutate matched nodes' bounds in place. With
+        get_hierarchy() now caching the tree, that mutation would corrupt the shared
+        cached object and double-scale bounds on a second search."""
+        bridge = IOSDeviceBridge()
+        tree = {
+            "id": "root",
+            "className": "Window",
+            "children": [
+                {
+                    "id": "btn1",
+                    "className": "XCUIElementTypeButton",
+                    "bounds": {"x": 10, "y": 20, "width": 30, "height": 40},
+                }
+            ],
+        }
+        bridge._cached_hierarchy = tree
+        bridge._cached_hierarchy_time = time.time()
+        bridge._ios_scale = 3.0  # pretend scale was already computed
+
+        result1 = bridge.search_hierarchy("Button", "class")
+        result2 = bridge.search_hierarchy("Button", "class")
+
+        assert result1["matches"][0]["bounds"] == {"x": 30, "y": 60, "width": 90, "height": 120}
+        assert result2["matches"][0]["bounds"] == {"x": 30, "y": 60, "width": 90, "height": 120}
+        # The cached tree's own node must remain untouched (still in points, not scaled).
+        assert tree["children"][0]["bounds"] == {"x": 10, "y": 20, "width": 30, "height": 40}
+
+    def test_fetch_hierarchy_and_screenshot_does_not_mutate_cached_tree(self):
+        """fetch_hierarchy_and_screenshot() used to call _apply_scale_to_tree() directly
+        on the object returned by get_hierarchy(), mutating it in place. Since that tree
+        is now cached, a second call would re-scale already-scaled bounds."""
+        bridge = IOSDeviceBridge()
+        # Minimal PNG header: 8-byte signature + 4-byte IHDR chunk length + "IHDR" +
+        # 4-byte width + 4-byte height (bytes 16-24, matching the real parsing code).
+        png_header = (
+            b"\x89PNG\r\n\x1a\n"
+            + (13).to_bytes(4, "big")
+            + b"IHDR"
+            + (300).to_bytes(4, "big")
+            + (400).to_bytes(4, "big")
+        )
+        fake_png = png_header + b"\x00" * 100
+        tree = {
+            "id": "root",
+            "className": "Window",
+            "bounds": {"x": 0, "y": 0, "width": 100, "height": 100},
+            "children": [],
+        }
+        bridge._cached_hierarchy = tree
+        bridge._cached_hierarchy_time = time.time()
+        bridge._cached_screenshot = fake_png
+        bridge._cached_screenshot_time = time.time()
+
+        hierarchy1, _ = bridge.fetch_hierarchy_and_screenshot()
+        hierarchy2, _ = bridge.fetch_hierarchy_and_screenshot()
+
+        # scale = max(png_w/root_w, png_h/root_h) = max(300/100, 400/100) = 4,
+        # applied uniformly to both dimensions by _apply_scale_to_tree().
+        assert hierarchy1["bounds"] == {"x": 0, "y": 0, "width": 400, "height": 400}
+        assert hierarchy2["bounds"] == {"x": 0, "y": 0, "width": 400, "height": 400}
+        # The cached tree itself must remain in raw points, not scaled.
+        assert tree["bounds"] == {"x": 0, "y": 0, "width": 100, "height": 100}
+
+    def test_audit_accessibility_uses_shared_checks(self):
+        """audit_accessibility delegates to accessibility_utils.walk_and_audit via
+        IOSMapper, so it must operate on the real field names produced by
+        _wda_node_to_tree (contentDesc/value/help), not a "label" field that
+        the tree never actually contains."""
+        bridge = IOSDeviceBridge()
+        tree = {
+            "id": "root",
+            "className": "XCUIElementTypeButton",
+            "bounds": {"x": 0, "y": 0, "width": 20, "height": 20},
+            "children": [],
+        }
+        result = bridge.audit_accessibility(tree)
+        assert result["totalNodes"] == 1
+        touch_issues = [i for i in result["issues"] if i["check"] == "touch_target"]
+        missing_label_issues = [i for i in result["issues"] if i["check"] == "missing_label"]
+        assert len(touch_issues) == 1
+        assert len(missing_label_issues) == 1
+
+        # contentDesc satisfies the label requirement (matches real iOS tree shape).
+        tree_with_desc = {**tree, "contentDesc": "Submit"}
+        result2 = bridge.audit_accessibility(tree_with_desc)
+        assert not [i for i in result2["issues"] if i["check"] == "missing_label"]
 
 
 # --- _idb_cmd ---

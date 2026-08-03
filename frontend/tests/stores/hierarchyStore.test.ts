@@ -200,22 +200,6 @@ describe('hierarchyStore', () => {
     });
   });
 
-  describe('getDemoTree', () => {
-    it('returns a valid demo tree structure', () => {
-      const demo = useHierarchyStore.getState().getDemoTree();
-
-      expect(demo).toHaveProperty('id');
-      expect(demo).toHaveProperty('className');
-      expect(demo).toHaveProperty('bounds');
-      expect(demo.bounds).toHaveProperty('x');
-      expect(demo.bounds).toHaveProperty('y');
-      expect(demo.bounds).toHaveProperty('width');
-      expect(demo.bounds).toHaveProperty('height');
-      expect(demo).toHaveProperty('children');
-      expect(Array.isArray(demo.children)).toBe(true);
-    });
-  });
-
   describe('expandAll / collapseAll / toggleExpanded', () => {
     const treeWithChildren: UiNode = {
       id: 'root',

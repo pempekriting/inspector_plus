@@ -65,7 +65,6 @@ interface HierarchyState {
   expandToDepth: (node: UiNode, depth: number) => void;
   collapseAll: () => void;
   setContext: (contextId: string) => void;
-  getDemoTree: () => UiNode;
 }
 
 export const useHierarchyStore = create<HierarchyState>((set, get) => ({
@@ -155,83 +154,4 @@ export const useHierarchyStore = create<HierarchyState>((set, get) => ({
   setContext: (contextId) => set({ currentContext: contextId }),
   lockedNode: null,
   lockSelection: (node) => set({ lockedNode: node }),
-  getDemoTree: () => {
-    const demoTree: UiNode = {
-      id: 'decor_content',
-      className: 'android.widget.FrameLayout',
-      package: 'com.example.settings',
-      resourceId: 'decor_content',
-      bounds: { x: 0, y: 0, width: 1080, height: 1920 },
-      children: [
-        {
-          id: 'toolbar',
-          className: 'android.widget.Toolbar',
-          package: 'com.example.settings',
-          resourceId: 'toolbar',
-          bounds: { x: 0, y: 0, width: 1080, height: 200 },
-          children: [
-            {
-              id: 'title',
-              className: 'android.widget.TextView',
-              package: 'com.example.settings',
-              resourceId: 'title',
-              text: 'Settings',
-              bounds: { x: 40, y: 80, width: 200, height: 60 },
-            },
-            {
-              id: 'menu_btn',
-              className: 'android.widget.ImageButton',
-              package: 'com.example.settings',
-              resourceId: 'menu',
-              contentDesc: 'Open menu',
-              bounds: { x: 1000, y: 60, width: 80, height: 80 },
-            },
-          ],
-        },
-        {
-          id: 'content',
-          className: 'android.widget.FrameLayout',
-          package: 'com.example.settings',
-          resourceId: 'content',
-          bounds: { x: 0, y: 200, width: 1080, height: 1720 },
-          children: [
-            {
-              id: 'list',
-              className: 'android.widget.ListView',
-              package: 'com.example.settings',
-              resourceId: 'list',
-              bounds: { x: 0, y: 0, width: 1080, height: 1720 },
-              children: [
-                {
-                  id: 'item_1',
-                  className: 'android.widget.LinearLayout',
-                  package: 'com.example.settings',
-                  resourceId: 'item1',
-                  text: 'Account Settings',
-                  bounds: { x: 40, y: 40, width: 1000, height: 120 },
-                },
-                {
-                  id: 'item_2',
-                  className: 'android.widget.LinearLayout',
-                  package: 'com.example.settings',
-                  resourceId: 'item2',
-                  text: 'Notifications',
-                  bounds: { x: 40, y: 180, width: 1000, height: 120 },
-                },
-                {
-                  id: 'item_3',
-                  className: 'android.widget.LinearLayout',
-                  package: 'com.example.settings',
-                  resourceId: 'item3',
-                  text: 'Privacy & Security',
-                  bounds: { x: 40, y: 320, width: 1000, height: 120 },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-    return demoTree;
-  },
 }));

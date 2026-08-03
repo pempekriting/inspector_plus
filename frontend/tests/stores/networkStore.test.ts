@@ -28,8 +28,6 @@ describe('networkStore', () => {
     useNetworkStore.setState({
       trafficFlows: [],
       proxyStatus: { running: false, port: 8080, flow_count: 0 },
-      isCapturing: false,
-      captureDuration: 0,
       wsConnected: false,
       wsDisconnectedAt: null,
       selectedFlowId: null,
@@ -47,10 +45,6 @@ describe('networkStore', () => {
       expect(proxyStatus.running).toBe(false);
       expect(proxyStatus.port).toBe(8080);
       expect(proxyStatus.flow_count).toBe(0);
-    });
-
-    it('defaults to not capturing', () => {
-      expect(useNetworkStore.getState().isCapturing).toBe(false);
     });
 
     it('defaults to ws disconnected with null disconnectedAt', () => {
@@ -128,19 +122,6 @@ describe('networkStore', () => {
     it('updates flow_count', () => {
       useNetworkStore.getState().setProxyStatus({ flow_count: 42 });
       expect(useNetworkStore.getState().proxyStatus.flow_count).toBe(42);
-    });
-  });
-
-  describe('setIsCapturing', () => {
-    it('sets isCapturing to true', () => {
-      useNetworkStore.getState().setIsCapturing(true);
-      expect(useNetworkStore.getState().isCapturing).toBe(true);
-    });
-
-    it('sets isCapturing to false', () => {
-      useNetworkStore.setState({ isCapturing: true });
-      useNetworkStore.getState().setIsCapturing(false);
-      expect(useNetworkStore.getState().isCapturing).toBe(false);
     });
   });
 

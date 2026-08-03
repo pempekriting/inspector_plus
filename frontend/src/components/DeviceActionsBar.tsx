@@ -2,23 +2,25 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, memo } from 'react';
 
 import { getApiUrl } from '../config/apiConfig';
-import { inputDeviceText } from '../services/api';
+import { apiFetch, inputDeviceText } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
 
 import { LayoutChips } from './StylePanel';
 
+// NOTE: these use apiFetch (not raw fetch) so the X-API-Key header configured in
+// Settings is attached — a bare `fetch()` here would silently fail auth when a key
+// is set, while every other request in the app keeps working.
 async function pressKey(key: string, udid?: string): Promise<void> {
   const url = udid
     ? `${getApiUrl()}/device/press-key?udid=${encodeURIComponent(udid)}`
     : `${getApiUrl()}/device/press-key`;
-  const res = await fetch(url, {
+  await apiFetch<void>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key }),
   });
-  if (!res.ok) throw new Error(`Failed to press ${key}`);
 }
 
 async function swipeDevice(
@@ -32,12 +34,11 @@ async function swipeDevice(
   const url = udid
     ? `${getApiUrl()}/device/swipe?udid=${encodeURIComponent(udid)}`
     : `${getApiUrl()}/device/swipe`;
-  const res = await fetch(url, {
+  await apiFetch<void>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ startX, startY, endX, endY, duration: duration ?? 300 }),
   });
-  if (!res.ok) throw new Error('Failed to swipe');
 }
 
 async function dragDevice(
@@ -51,34 +52,31 @@ async function dragDevice(
   const url = udid
     ? `${getApiUrl()}/device/drag?udid=${encodeURIComponent(udid)}`
     : `${getApiUrl()}/device/drag`;
-  const res = await fetch(url, {
+  await apiFetch<void>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ startX, startY, endX, endY, duration: duration ?? 500 }),
   });
-  if (!res.ok) throw new Error('Failed to drag');
 }
 
 async function pinchDevice(x: number, y: number, scale: number, udid?: string): Promise<void> {
   const url = udid
     ? `${getApiUrl()}/device/pinch?udid=${encodeURIComponent(udid)}`
     : `${getApiUrl()}/device/pinch`;
-  const res = await fetch(url, {
+  await apiFetch<void>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ x, y, scale }),
   });
-  if (!res.ok) throw new Error('Failed to pinch');
 }
 
 async function tapDevice(x: number, y: number, udid?: string): Promise<void> {
   const url = udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`;
-  const res = await fetch(url, {
+  await apiFetch<void>(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ x, y }),
   });
-  if (!res.ok) throw new Error('Failed to tap');
 }
 
 interface ActionPillProps {
@@ -211,140 +209,72 @@ export const DeviceActionsBar = memo(function DeviceActionsBar() {
     }
   };
 
-  const handleTap = async () => {
+  // Shared shape for the tap/swipe/drag/pinch/press-key action pills below:
+  // optionally require node bounds, clear the error, run the device call,
+  // reset the current selection, refresh the hierarchy, and surface failures.
+  const runDeviceAction = async (
+    action: () => Promise<void>,
+    fallbackMessage: string,
+    { requireBounds = false }: { requireBounds?: boolean } = {}
+  ) => {
+    if (requireBounds && !nodeBounds) return;
     setErrorMsg(null);
     try {
-      await tapDevice(centerX, centerY, selectedDevice ?? undefined);
+      await action();
       const store = useHierarchyStore.getState();
       store.lockSelection(null);
       store.setSelectedNode(null);
       store.setHoveredNode(null, undefined);
       triggerRefresh();
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Failed to tap');
+      setErrorMsg(e instanceof Error ? e.message : fallbackMessage);
     }
   };
-  const handleLongPress = async () => {
-    if (!nodeBounds) return;
-    setErrorMsg(null);
-    try {
-      await dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Long press failed');
-    }
-  };
-  const handleSwipe = async () => {
-    if (!nodeBounds) return;
-    setErrorMsg(null);
-    try {
-      await swipeDevice(
-        centerX,
-        centerY,
-        centerX,
-        Math.max(0, centerY - 300),
-        undefined,
-        selectedDevice ?? undefined
-      );
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Failed to swipe');
-    }
-  };
-  const handleDrag = async () => {
-    if (!nodeBounds) return;
-    setErrorMsg(null);
-    try {
-      await dragDevice(
-        centerX,
-        centerY,
-        centerX,
-        centerY + 200,
-        undefined,
-        selectedDevice ?? undefined
-      );
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Drag not supported on iOS');
-    }
-  };
-  const handleZoom = async () => {
-    setErrorMsg(null);
-    try {
-      await pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Zoom not supported on iOS');
-    }
-  };
-  const handlePinch = async () => {
-    setErrorMsg(null);
-    try {
-      await pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Pinch not supported on iOS');
-    }
-  };
-  const handleHome = async () => {
-    setErrorMsg(null);
-    try {
-      await pressKey('home', selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Failed to press home');
-    }
-  };
-  const handleBack = async () => {
-    setErrorMsg(null);
-    try {
-      await pressKey('back', selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Back not supported on iOS');
-    }
-  };
-  const handleRecent = async () => {
-    setErrorMsg(null);
-    try {
-      await pressKey('recent', selectedDevice ?? undefined);
-      const store = useHierarchyStore.getState();
-      store.lockSelection(null);
-      store.setSelectedNode(null);
-      store.setHoveredNode(null, undefined);
-      triggerRefresh();
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Recent not supported on iOS');
-    }
-  };
+
+  const handleTap = () =>
+    runDeviceAction(() => tapDevice(centerX, centerY, selectedDevice ?? undefined), 'Failed to tap');
+  const handleLongPress = () =>
+    runDeviceAction(
+      () => dragDevice(centerX, centerY, centerX, centerY, 1000, selectedDevice ?? undefined),
+      'Long press failed',
+      { requireBounds: true }
+    );
+  const handleSwipe = () =>
+    runDeviceAction(
+      () =>
+        swipeDevice(
+          centerX,
+          centerY,
+          centerX,
+          Math.max(0, centerY - 300),
+          undefined,
+          selectedDevice ?? undefined
+        ),
+      'Failed to swipe',
+      { requireBounds: true }
+    );
+  const handleDrag = () =>
+    runDeviceAction(
+      () => dragDevice(centerX, centerY, centerX, centerY + 200, undefined, selectedDevice ?? undefined),
+      'Drag not supported on iOS',
+      { requireBounds: true }
+    );
+  const handleZoom = () =>
+    runDeviceAction(
+      () => pinchDevice(centerX, centerY, 1.5, selectedDevice ?? undefined),
+      'Zoom not supported on iOS'
+    );
+  const handlePinch = () =>
+    runDeviceAction(
+      () => pinchDevice(centerX, centerY, 0.6, selectedDevice ?? undefined),
+      'Pinch not supported on iOS'
+    );
+  const handleHome = () =>
+    runDeviceAction(() => pressKey('home', selectedDevice ?? undefined), 'Failed to press home');
+  const handleBack = () =>
+    runDeviceAction(() => pressKey('back', selectedDevice ?? undefined), 'Back not supported on iOS');
+  const handleRecent = () =>
+    runDeviceAction(() => pressKey('recent', selectedDevice ?? undefined), 'Recent not supported on iOS');
 
   const styles = displayNode?.styles;
 

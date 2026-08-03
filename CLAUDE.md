@@ -88,23 +88,29 @@ InspectorPlus is a real-time Android/iOS device UI inspection tool built with:
 
 ### Error Handling Pattern
 
-Use the typed error hierarchy in `main.py`:
+Use the typed error hierarchy in `errors.py`:
 ```python
-from main import AppError, DeviceNotFoundError, HierarchyNotFoundError
+from errors import AppError, DeviceNotFoundError, HierarchyNotFoundError
 
 class DeviceNotFoundError(AppError):
     def __init__(self, detail: str = "No device connected"):
         super().__init__(detail, "DEVICE_NOT_FOUND", 404)
 ```
 
-Register in FastAPI:
+Registered in FastAPI once, in `main.py`:
 ```python
 app.add_exception_handler(AppError, app_error_handler)
 ```
 
-When `get_bridge(udid)` returns `None`, always guard with:
+`main.py` still re-exports these (and the `dependencies.py` bridge helpers) for
+backward compatibility with older tests that `import from main` — new code
+should import directly from `errors`/`dependencies`.
+
+When resolving a bridge, prefer `dependencies.get_bridge_or_raise(udid)` (raises
+`DeviceNotFoundError` automatically) over the lower-level `get_bridge(udid)`,
+which returns `None` and requires an explicit guard:
 ```python
-bridge = get_bridge(udid)
+bridge = dependencies.get_bridge(udid)
 if bridge is None:
     raise DeviceNotFoundError()
 ```
@@ -147,7 +153,18 @@ Stores in `frontend/src/stores/`:
 inspector_plus/
 ├── .pre-commit-config.yaml     # Ruff format/check hooks
 ├── backend/
-│   ├── main.py                  # FastAPI entry + typed errors + routes
+│   ├── main.py                  # FastAPI app assembly: middleware, error handlers, router registration
+│   ├── config.py                 # Settings (env vars, CORS origins, app version)
+│   ├── dependencies.py           # Bridge singleton cache: get_bridge()/get_bridge_or_raise()
+│   ├── errors.py                  # Typed AppError hierarchy + app_error_handler
+│   ├── models.py                  # Pydantic request models (with @field_validator)
+│   ├── validation.py              # ADB command allowlist validation
+│   ├── routers/                   # FastAPI routers (mounted in main.py)
+│   │   ├── health.py               # /health, /ready
+│   │   ├── hierarchy.py            # /hierarchy, /hierarchy/search, /hierarchy/find, /hierarchy/locators
+│   │   ├── device.py                # /device/* (tap, swipe, gesture, execute, etc.)
+│   │   ├── recorder.py              # /recorder/* endpoints
+│   │   └── commands.py              # /commands/* (app install/uninstall/launch)
 │   ├── test_app.py              # FastAPI endpoint tests
 │   ├── test_device_bridges.py   # Android/iOS bridge tests
 │   ├── test_app_commands.py     # AppCommands tests
@@ -164,14 +181,15 @@ inspector_plus/
 │   │   ├── ios_bridge.py        # iOS idb + WDA implementation
 │   │   ├── recorder.py         # Recording session per device
 │   │   ├── accessibility_utils.py
-│   │   └── utils.py
+│   │   └── utils.py             # Shared generate_id/safe_str/find_node_by_id/retry_with_backoff
 │   ├── network/
 │   │   ├── routes.py            # Network debug endpoints (/network/*)
 │   │   ├── mitm_manager.py     # mitmdump process singleton
 │   │   └── flow_parser.py       # .mitm flow file parser
 │   ├── commands/
 │   │   ├── app_commands.py     # Android app commands
-│   │   └── ios_app_commands.py  # iOS app commands
+│   │   ├── ios_app_commands.py  # iOS app commands
+│   │   └── command_runner.py    # Shared run_and_report() subprocess helper
 │   ├── tests/
 │   │   ├── test_flow_parser.py     # Flow file parsing tests
 │   │   ├── test_mitm_manager.py    # MitmproxyManager singleton tests
@@ -180,7 +198,9 @@ inspector_plus/
 │   │   ├── test_ios_app_commands.py
 │   │   ├── test_recorder_session.py
 │   │   ├── test_ios_recorder_session.py
-│   │   └── test_main_helpers.py
+│   │   ├── test_main_helpers.py
+│   │   ├── test_command_runner.py  # run_and_report() tests
+│   │   └── test_models.py          # Pydantic field_validator tests
 │   ├── inspector_vpn/           # Android VPN app (Gradle/Kotlin)
 │   │   └── app/src/main/java/com/inspectorplus/vpn/
 │   │       ├── InspectorVpnService.java
@@ -188,23 +208,20 @@ inspector_plus/
 │   │       └── AndroidManifest.xml
 │   └── mcp/                     # MCP server for AI tool consumption
 │       ├── src/
-│       │   ├── server.ts         # Express + StreamableHTTP MCP server
+│       │   ├── server.ts         # Express + StreamableHTTP MCP server (tools registered inline)
 │       │   ├── types/mcp-types.ts
-│       │   ├── services/tree-service.ts
-│       │   ├── cache/tree-cache.ts
-│       │   └── tools/           # hierarchy, traversal, search tools
+│       │   ├── services/tree-service.ts  # id→node index, hierarchy/search FastAPI bridging
+│       │   └── cache/tree-cache.ts        # Bounded TTL cache (FIFO eviction)
 │       ├── package.json
 │       └── tsconfig.json
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx              # Main layout, TabBar, SubTabBar
-│   │   ├── components/           # 30+ React components
+│   │   ├── components/           # ~28 React components
 │   │   │   ├── AccessibilityPanel.tsx
 │   │   │   ├── AdbPanel.tsx
-│   │   │   ├── ApkInfoPanel.tsx
 │   │   │   ├── BottomDrawer.tsx
 │   │   │   ├── CommandsDrawer.tsx
-│   │   │   ├── CommandsPanel.tsx
 │   │   │   ├── DeviceActionsBar.tsx
 │   │   │   ├── DevicePanel.tsx
 │   │   │   ├── EmptyState.tsx
@@ -256,18 +273,22 @@ inspector_plus/
 └── CLAUDE.md
 ```
 
+Note: `CommandsPanel.tsx`/`ApkInfoPanel.tsx` (dead, superseded by `CommandsDrawer.tsx`)
+and the unused `backend/mcp/src/tools/` files have been removed — see git history.
+
 ## Testing
 
-- **Frontend:** `cd frontend && npm test` (vitest) — 36 test files, 238 tests
+- **Frontend:** `cd frontend && npm test` (vitest) — 35 test files, 250+ tests
   - `tests/hooks/` — useDevice, useCommands, useRecording
   - `tests/services/` — api
   - `tests/stores/` — hierarchyStore, deviceStore, themeStore, recorderStore, networkStore, settingsStore
   - `tests/utils/` — coordinates, locators, layoutGeometry
   - `src/components/__tests__/` — component tests
-- **Backend:** `cd backend && uv run pytest` — 366 tests across 14 test files
+- **Backend:** `cd backend && uv run pytest` — 500+ tests across 18 test files
   - `test_app.py`, `test_device_bridges.py`, `test_app_commands.py`, `test_validate.py`
   - `test_base.py`, `test_ws*.py`
-  - `tests/` subdirectory — android_helpers, ios_app_commands, recorder_session, ios_recorder_session, main_helpers, **test_flow_parser, test_mitm_manager, test_network_routes**
+  - `tests/` subdirectory — android_helpers, ios_app_commands, recorder_session, ios_recorder_session, main_helpers, command_runner, models, test_flow_parser, test_mitm_manager, test_network_routes
+- **MCP server:** `cd backend/mcp && npx vitest run` — `src/__tests__/` (tree-service, tree-cache, types)
 
 ## Coding Agent Workflow
 
@@ -317,7 +338,7 @@ npm run dev                    # Browser mode
 4. **For Vite TypeScript projects** — add `/// <reference types="vite/client" />` to a `.d.ts` file to fix `import.meta.env` TypeScript errors
 5. **API base URL** — always use `import.meta.env.VITE_API_URL` not hardcoded strings
 6. **Mock Zustand stores in tests** — use `vi.mocked(useHierarchyStore).mockReturnValue(...)` not `require()` inside test bodies
-7. **Always check `get_bridge()` for `None`** before calling methods on the returned bridge
+7. **Prefer `dependencies.get_bridge_or_raise(udid)`** over `get_bridge()`; if you do use `get_bridge()`, always check it for `None` before calling methods on the returned bridge
 
 ---
 
@@ -325,16 +346,18 @@ npm run dev                    # Browser mode
 
 ### Adding a New Backend Endpoint
 
-1. **Define request/response models** using Pydantic `BaseModel` in the routes file
+1. **Define request/response models** using Pydantic `BaseModel` (with `@field_validator` for any custom validation) in `models.py`
 2. **Use `Query()` not `Field()`** for query parameters
-3. **Guard bridge lookups**: always check `get_bridge(udid)` for `None`
+3. **Resolve bridges**: use `dependencies.get_bridge_or_raise(udid)`
 4. **Use async for I/O-bound operations** (ADB calls, file I/O)
-5. **Register the route** on the `router` and include it in `main.py` via `app.include_router()`
+5. **Register the route** on a router in `backend/routers/` (or a new file there) and include it in `main.py` via `app.include_router()`
 6. **Add tests**: follow the pattern in `tests/test_network_routes.py`
 
 ```python
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
+
+import dependencies
 
 router = APIRouter()
 
@@ -343,10 +366,7 @@ class NewEndpointRequest(BaseModel):
 
 @router.post("/new-endpoint")
 async def new_endpoint(req: NewEndpointRequest):
-    if req.udid:
-        bridge = get_bridge(req.udid)
-        if bridge is None:
-            raise DeviceNotFoundError()
+    bridge = dependencies.get_bridge_or_raise(req.udid)
     # ...
 ```
 
@@ -424,8 +444,8 @@ logger.error(f"[myoperation] failed: {e}")
 ### Security: ADB Command Validation
 
 ADB commands must be validated against an allowlist before execution:
-- **`_validate_adb_command()`** in `main.py` checks for dangerous characters and patterns
-- **Blocked patterns**: `rm -rf`, `mv` to system dirs, pipes, redirects, semicolons
+- **`validate_command()`** in `validation.py` checks for dangerous characters and patterns (`main.py` re-exports it as `_validate_adb_command` for older tests/imports)
+- **Blocked patterns**: `rm -rf`, `mv` to system dirs, pipes, redirects, semicolons, newlines/carriage returns/NUL bytes
 - **Never execute raw user input** as ADB commands — always go through the validator
 - **For iOS**: commands go through `idb` which has its own permission model
 
@@ -501,7 +521,7 @@ npm install
 **Endpoints:** `POST /mcp` (tools), `GET /health`, `GET /subscribe/:deviceId` (SSE)
 **Tools:** `get_hierarchy`, `get_node`, `get_children`, `get_path`, `get_ancestors`, `search_nodes`
 
-**CORS:** Enabled for all origins to allow browser-based health checks.
+**CORS:** Restricted to `localhost`/`127.0.0.1` (any port) by default — this endpoint serves full on-device UI hierarchy data. Override with the `MCP_CORS_ORIGIN` env var (comma-separated origins) for non-default setups.
 
 **Troubleshooting:**
 - If curl returns type placeholders instead of values, use `rtk proxy curl` instead

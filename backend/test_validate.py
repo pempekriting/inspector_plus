@@ -198,6 +198,14 @@ class TestValidateAdbCommand:
         ok, _reason = _validate_adb_command("cat < /data/local/tmp/in.txt")
         assert not ok
 
+    def test_newline_injection_blocked(self):
+        ok, _reason = _validate_adb_command("input tap 0 0\nrm -rf /sdcard/foo")
+        assert not ok
+
+    def test_carriage_return_injection_blocked(self):
+        ok, _reason = _validate_adb_command("input tap 0 0\rrm -rf /sdcard/foo")
+        assert not ok
+
     # --- Case sensitivity ---
 
     def test_uppercase_command_blocked(self):

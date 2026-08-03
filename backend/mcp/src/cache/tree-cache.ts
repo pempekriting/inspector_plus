@@ -8,8 +8,18 @@ export interface CacheEntry<T> {
   expiry: number;
 }
 
+// Cap the number of entries so a distinct search query per call (unbounded
+// in practice — deviceId:matchType:query combinations) can't grow the cache
+// forever; entries are cheap AI-friendly node lists, not raw device trees.
+const DEFAULT_MAX_ENTRIES = 200;
+
 export class TreeCache<T> {
   private cache = new Map<string, CacheEntry<T>>();
+  private readonly maxEntries: number;
+
+  constructor(maxEntries: number = DEFAULT_MAX_ENTRIES) {
+    this.maxEntries = maxEntries;
+  }
 
   /**
    * Get cached value if exists and not expired.
@@ -27,9 +37,15 @@ export class TreeCache<T> {
   }
 
   /**
-   * Set cache with TTL (default 30 seconds).
+   * Set cache with TTL (default 30 seconds). Evicts the oldest entry (FIFO,
+   * relying on Map's insertion-order iteration) once at capacity.
    */
   set(key: string, data: T, ttlMs: number = 30000): void {
+    this.cache.delete(key); // re-insert at the end so updates count as "freshest"
+    if (this.cache.size >= this.maxEntries) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) this.cache.delete(oldestKey);
+    }
     this.cache.set(key, {
       data,
       expiry: Date.now() + ttlMs,

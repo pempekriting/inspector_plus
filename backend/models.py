@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from validation import validate_command
 
@@ -72,6 +72,7 @@ class CommandResponse(BaseModel):
 class AdbCommandRequest(BaseModel):
     command: str = Field(..., min_length=1, max_length=500)
 
+    @field_validator("command")
     @classmethod
     def validate_command_field(cls, v: str) -> str:
         ok, reason = validate_command(v)
@@ -83,6 +84,7 @@ class AdbCommandRequest(BaseModel):
 class SwitchContextRequest(BaseModel):
     contextId: str
 
+    @field_validator("contextId")
     @classmethod
     def validate_context_id(cls, v: str) -> str:
         if not v or len(v) > 255:

@@ -1,26 +1,23 @@
-import itertools
 import logging
 import os
 import subprocess
 import tempfile
 import threading
 import time
-import xml.etree.ElementTree as ET
+
+from lxml import etree as lxml_etree
 
 logger = logging.getLogger(__name__)
 # Module-level temp dir (set once from env or default to system temp)
 _TMP_BASE = os.environ.get("TMP_BASE_DIR", tempfile.gettempdir())
 _INSPECTOR_TMP = os.path.join(_TMP_BASE, "inspectorplus")
 os.makedirs(_INSPECTOR_TMP, exist_ok=True)
-try:
-    from lxml import etree as lxml_etree
-
-    HAS_LXML = True
-except ImportError:
-    HAS_LXML = False
 from device.base import DeviceBridgeBase
 from device.recorder import AndroidRecorderSession as RecorderSession
+from device.utils import find_node_by_id as _find_node_by_id_util
+from device.utils import generate_id as _generate_id
 from device.utils import retry_with_backoff as _retry_with_backoff
+from device.utils import safe_str as _safe_str
 
 
 # Resolve adb path once at module load
@@ -42,21 +39,6 @@ def _get_adb_path() -> str:
 
 
 _ADB_PATH = _get_adb_path()
-_node_counter = itertools.count(start=1)
-_node_lock = threading.Lock()
-
-
-def _generate_id(prefix: str) -> str:
-    with _node_lock:
-        n = next(_node_counter)
-    return f"{prefix}_{n}"
-
-
-def _safe_str(value) -> str:
-    """Coerce a value to string, handling MagicMock and other non-string types."""
-    if isinstance(value, str):
-        return value
-    return ""
 
 
 # Capability detection helpers
@@ -173,41 +155,15 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         self.serial = serial
         self._recorder: dict[str, RecorderSession] = {}
         self._current_context = "NATIVE_APP"
-        # Cache for XML dump - force fresh on next fetch to ensure parser consistency
+        # Cache for the raw uiautomator XML dump (used by search_hierarchy to
+        # avoid a fresh device dump on every search)
         self._cached_hierarchy_xml: str | None = None
-        self._cached_hierarchy_xml_time: float = 0.0
-        self._xml_cache_ttl: float = 5.0  # seconds
-        self._xml_cache_version: int = 1  # increment to force fresh dump
         # TTL cache for expensive ADB results
         self._screenshot_cache: dict[str, tuple[bytes, float]] = {}  # serial -> (bytes, timestamp)
         self._hierarchy_cache: dict[str, tuple[dict, float]] = {}  # serial -> (tree, timestamp)
         self._screenshot_ttl = 3.0  # seconds
         self._hierarchy_ttl = 5.0  # seconds
         self._shutdown = False  # shutdown flag for background threads
-
-    def _get_hierarchy_xml(self) -> str:
-        """Get hierarchy XML, from cache if fresh or fresh dump if stale."""
-        current_time = time.time()
-        if self._cached_hierarchy_xml and (current_time - self._cached_hierarchy_xml_time) < self._xml_cache_ttl:
-            return self._cached_hierarchy_xml
-        # Fresh dump
-        subprocess.run(
-            self._adb_cmd(["shell", "uiautomator", "dump"]),
-            capture_output=True,
-            timeout=10,
-        )
-        subprocess.run(
-            self._adb_cmd(["pull", "/sdcard/window_dump.xml", f"{_INSPECTOR_TMP}/window_dump.xml"]),
-            capture_output=True,
-            timeout=10,
-        )
-        with open(f"{_INSPECTOR_TMP}/window_dump.xml") as f:
-            xml_content = f.read()
-        if not xml_content:
-            raise Exception("Empty hierarchy dump")
-        self._cached_hierarchy_xml = xml_content
-        self._cached_hierarchy_xml_time = current_time
-        return xml_content
 
     def get_recorder_session(self, session_id: str) -> RecorderSession:
         if session_id not in self._recorder:
@@ -380,24 +336,18 @@ class AndroidDeviceBridge(DeviceBridgeBase):
                 return {"error": "Empty hierarchy dump"}
             self._cached_hierarchy_xml = xml_content
             logger.info(f"[get_hierarchy] Fresh dump (~{len(xml_content)} bytes)")
-            if not HAS_LXML:
-                root = ET.fromstring(xml_content)
-                result = self._node_to_json(root)
-            else:
-                root = lxml_etree.fromstring(
-                    xml_content.encode("utf-8") if isinstance(xml_content, str) else xml_content
-                )
-                all_xml_elements = root.xpath(".//*")
-                logger.info(f"[get_hierarchy] XML raw node count (from xpath '//*'): {len(all_xml_elements)}")
-                result = self._lxml_node_to_json(root)
+            root = lxml_etree.fromstring(xml_content.encode("utf-8") if isinstance(xml_content, str) else xml_content)
+            all_xml_elements = root.xpath(".//*")
+            logger.info(f"[get_hierarchy] XML raw node count (from xpath '//*'): {len(all_xml_elements)}")
+            result = self._lxml_node_to_json(root)
 
-                def count_json_nodes(node: dict) -> int:
-                    count = 1
-                    for child in node.get("children", []):
-                        count += count_json_nodes(child)
-                    return count
+            def count_json_nodes(node: dict) -> int:
+                count = 1
+                for child in node.get("children", []):
+                    count += count_json_nodes(child)
+                return count
 
-                logger.info(f"[get_hierarchy] JSON tree node count: {count_json_nodes(result)}")
+            logger.info(f"[get_hierarchy] JSON tree node count: {count_json_nodes(result)}")
             self._hierarchy_cache[key] = (result, now)
             return result
         except FileNotFoundError:
@@ -441,8 +391,6 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         # Debug: show first 500 chars of cached XML to verify content
         logger.info(f"[search_hierarchy] Cached XML preview: {xml_content[:500]}")
         try:
-            if not HAS_LXML:
-                return {"error": "lxml not installed. Install with: uv pip install lxml"}
             root = lxml_etree.fromstring(xml_content.encode("utf-8") if isinstance(xml_content, str) else xml_content)
             xpath = self._build_search_xpath(query, filter_type)
             if xpath.get("error"):
@@ -772,79 +720,6 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         logger.info("[fetch_hierarchy_and_screenshot] Done, hierarchy cached")
         return tree, screenshot_bytes
 
-    def _parse_xml_to_json(self, xml_content: str) -> dict:
-        root = ET.fromstring(xml_content)
-        return self._node_to_json(root)
-
-    def _node_to_json(self, node) -> dict:
-        """Convert XML node to JSON dict with capabilities and styles."""
-        attrib = node.attrib
-        class_name = attrib.get("class", "")
-        if not isinstance(class_name, str):
-            class_name = ""
-        package = attrib.get("package", "")
-        if not isinstance(package, str):
-            package = ""
-        resource_id = attrib.get("resource-id", "")
-        if not isinstance(resource_id, str):
-            resource_id = ""
-        text = attrib.get("text", "")
-        if not isinstance(text, str):
-            text = ""
-        content_desc = attrib.get("content-desc", "")
-        if not isinstance(content_desc, str):
-            content_desc = ""
-        bounds = attrib.get("bounds", "")
-        if not isinstance(bounds, str):
-            bounds = ""
-        node_id = _generate_id(class_name.split(".")[-1] if class_name else "node")
-        result = {
-            "id": node_id,
-            "className": class_name,
-            "package": package,
-        }
-        if resource_id:
-            result["resourceId"] = resource_id.split("/")[-1]
-            result["resourceIdFull"] = resource_id
-        if text:
-            result["text"] = text
-        if content_desc:
-            result["contentDesc"] = content_desc
-        if bounds:
-            result["bounds"] = self._parse_bounds(bounds)
-        # Boolean attributes from uiautomator XML
-        if attrib.get("checkable"):
-            result["checkable"] = attrib.get("checkable") == "true"
-        if attrib.get("checked"):
-            result["checked"] = attrib.get("checked") == "true"
-        if attrib.get("clickable"):
-            result["clickable"] = attrib.get("clickable") == "true"
-        if attrib.get("enabled"):
-            result["enabled"] = attrib.get("enabled") == "true"
-        if attrib.get("focusable"):
-            result["focusable"] = attrib.get("focusable") == "true"
-        if attrib.get("focused"):
-            result["focused"] = attrib.get("focused") == "true"
-        if attrib.get("long-clickable"):
-            result["longClickable"] = attrib.get("long-clickable") == "true"
-        if attrib.get("scrollable"):
-            result["scrollable"] = attrib.get("scrollable") == "true"
-        if attrib.get("selected"):
-            result["selected"] = attrib.get("selected") == "true"
-        if attrib.get("password"):
-            result["password"] = attrib.get("password") == "true"
-        if attrib.get("visible-to-user"):
-            result["visibleToUser"] = attrib.get("visible-to-user") == "true"
-        # Enrich with capabilities + styles
-        result["capabilities"] = _detect_capabilities(attrib, class_name)
-        styles = _extract_styles(attrib)
-        if styles:
-            result["styles"] = styles
-        children = list(node)
-        if children:
-            result["children"] = [self._node_to_json(child) for child in children]
-        return result
-
     def _parse_bounds(self, bounds_str: str) -> dict:
         if not bounds_str or not isinstance(bounds_str, str):
             return {"x": 0, "y": 0, "width": 0, "height": 0}
@@ -990,15 +865,7 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         Returns:
             The matching node dict, or None if not found.
         """
-        if not isinstance(tree, dict):
-            return None
-        if tree.get("id") == node_id:
-            return tree
-        for child in tree.get("children", []):
-            found = self._find_node_by_id(child, node_id)
-            if found:
-                return found
-        return None
+        return _find_node_by_id_util(tree, node_id)
 
     def audit_accessibility(self, tree: dict) -> dict:
         """Run WCAG accessibility checks against the Android hierarchy tree.
@@ -1536,7 +1403,6 @@ class AndroidDeviceBridge(DeviceBridgeBase):
         """
         self._shutdown = True
         self._cached_hierarchy_xml = None
-        self._cached_hierarchy_xml_time = 0.0
         self._screenshot_cache.clear()
         self._hierarchy_cache.clear()
         logger.info("[AndroidDeviceBridge] shutdown complete")

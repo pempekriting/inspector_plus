@@ -1,40 +1,20 @@
-import itertools
+import copy
 import json
 import logging
 import os
 import subprocess
 import tempfile
 import threading
-from datetime import UTC
+import time
 
 from device.base import DeviceBridgeBase
 from device.recorder import IOSRecorderSession as RecorderSession
+from device.utils import find_node_by_id as _find_node_by_id_util
+from device.utils import generate_id as _generate_id
 from device.utils import retry_with_backoff as _retry_with_backoff
+from device.utils import safe_str as _safe_str
 
 logger = logging.getLogger(__name__)
-_node_counter = itertools.count(start=1)
-_node_lock = threading.Lock()
-
-
-def _generate_id(prefix: str) -> str:
-    with _node_lock:
-        n = next(_node_counter)
-    return f"{prefix}_{n}"
-
-
-def _safe_str(value) -> str:
-    """Coerce a value to string, handling MagicMock and other non-string types."""
-    if isinstance(value, str):
-        return value
-    return ""
-
-
-def _get_idb_companion_socket_path(udid: str | None) -> str | None:
-    """Deprecated: kept for backward compatibility, always returns None.
-
-    The fb-idb Python package auto-manages companion lifecycles via --udid.
-    """
-    return None
 
 
 def _idb_cmd(args: list[str], udid: str | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
@@ -60,8 +40,14 @@ class IOSDeviceBridge(DeviceBridgeBase):
         self.udid = udid
         self._recorder: dict[str, RecorderSession] = {}
         self._current_context = "NATIVE_APP"
+        # TTL cache (stale-while-revalidate), matching AndroidDeviceBridge's
+        # get_hierarchy()/get_screenshot() — idb calls are slow subprocess
+        # round-trips, so re-shelling on every request is wasteful when the
+        # UI polls repeatedly without an explicit refresh.
         self._cached_hierarchy: dict | None = None
+        self._cached_hierarchy_time: float = 0.0
         self._cached_screenshot: bytes | None = None
+        self._cached_screenshot_time: float = 0.0
         self._screenshot_ttl = 3.0
         self._hierarchy_ttl = 5.0
         self._ios_scale: float = 1.0  # iOS uses points in WDA, screenshot is in pixels
@@ -116,7 +102,26 @@ class IOSDeviceBridge(DeviceBridgeBase):
             return []
 
     def get_hierarchy(self) -> dict:
-        """Get UI hierarchy using idb ui describe-all or WDA source."""
+        """Get UI hierarchy using idb ui describe-all or WDA source.
+
+        Uses a TTL cache with stale-while-revalidate, matching
+        AndroidDeviceBridge.get_hierarchy(): fresh cache returns immediately,
+        moderately stale cache returns immediately while refreshing in the
+        background, and only a cold/very-stale cache blocks on a fetch.
+        Failures are never cached, so the next call always retries cleanly.
+        """
+        now = time.time()
+        if self._cached_hierarchy is not None:
+            age = now - self._cached_hierarchy_time
+            if age < self._hierarchy_ttl:
+                return self._cached_hierarchy
+            if age < self._hierarchy_ttl * 3:
+                threading.Thread(target=self._refresh_hierarchy_async, daemon=True).start()
+                return self._cached_hierarchy
+        return self._fetch_hierarchy_sync()
+
+    def _fetch_hierarchy_sync(self) -> dict:
+        """Synchronous idb hierarchy fetch. Caches the raw (unscaled) tree on success."""
 
         def do_ui():
             result = _idb_cmd(["ui", "describe-all", "--json", "--nested"], udid=self.udid, timeout=15)
@@ -129,19 +134,36 @@ class IOSDeviceBridge(DeviceBridgeBase):
             raise Exception("ui describe-all failed or returned no hierarchy")
 
         try:
-            return _retry_with_backoff(do_ui, retries=3, base_delay=1.0)
+            tree = _retry_with_backoff(do_ui, retries=3, base_delay=1.0)
         except Exception as e:
             logger.warning("idb ui describe-all failed after retries: %s", e)
-        # Fallback: try direct WDA source
-        return self._get_wda_source()
+            # Fallback: try direct WDA source — not cached, so the next call retries.
+            return self._get_wda_source(str(e))
+        self._cached_hierarchy = tree
+        self._cached_hierarchy_time = time.time()
+        return tree
 
-    def _get_wda_source(self) -> dict:
+    def _refresh_hierarchy_async(self):
+        """Background refresh after a stale cache hit."""
+        try:
+            time.sleep(0.2)  # debounce concurrent requests
+            self._fetch_hierarchy_sync()
+        except Exception as e:
+            logger.warning("[get_hierarchy] Background refresh failed: %s", e)
+
+    def _get_wda_source(self, error: str | None = None) -> dict:
         """Fallback to direct WebDriverAgent source - not available without idb."""
         logger.warning("[_get_wda_source] idb hierarchy fetch failed, returning empty tree")
+        message = (
+            f"Hierarchy unavailable - idb ui describe-all failed: {error}"
+            if error
+            else ("Hierarchy unavailable - idb ui describe-all failed")
+        )
         return {
             "id": "ios_root",
             "className": "iOSApp",
-            "contentDesc": "Hierarchy unavailable - idb ui describe-all failed",
+            "contentDesc": message,
+            "error": message,
             "children": [],
         }
 
@@ -325,18 +347,27 @@ class IOSDeviceBridge(DeviceBridgeBase):
             return hierarchy
         # Pattern-based search
         matches = self._search_nodes(hierarchy, query, filter_type)
-        # Apply iOS scale to all matched nodes' bounds (pixel coords for overlay math)
+        # Apply iOS scale to all matched nodes' bounds (pixel coords for overlay math).
+        # `matches` holds references into the (now cached) hierarchy tree, so we build
+        # new dicts here rather than mutating match["bounds"] in place — otherwise a
+        # second search would re-scale already-scaled bounds in the shared cache.
         scale = self._get_ios_scale()
         if scale != 1.0:
+            scaled_matches = []
             for match in matches:
                 if match.get("bounds"):
                     b = match["bounds"]
-                    match["bounds"] = {
-                        "x": round(b["x"] * scale),
-                        "y": round(b["y"] * scale),
-                        "width": round(b["width"] * scale),
-                        "height": round(b["height"] * scale),
+                    match = {
+                        **match,
+                        "bounds": {
+                            "x": round(b["x"] * scale),
+                            "y": round(b["y"] * scale),
+                            "width": round(b["width"] * scale),
+                            "height": round(b["height"] * scale),
+                        },
                     }
+                scaled_matches.append(match)
+            matches = scaled_matches
         return {"matches": matches, "count": len(matches)}
 
     def _search_nodes(self, node: dict, query: str, filter_type: str) -> list[dict]:
@@ -515,6 +546,31 @@ class IOSDeviceBridge(DeviceBridgeBase):
         raise NotImplementedError("Pinch gesture is not supported on iOS devices")
 
     def get_screenshot(self) -> bytes:
+        """Get a screenshot, using a TTL cache with stale-while-revalidate
+        (same pattern as get_hierarchy() / AndroidDeviceBridge.get_screenshot()).
+        """
+        now = time.time()
+        if self._cached_screenshot is not None:
+            age = now - self._cached_screenshot_time
+            if age < self._screenshot_ttl:
+                return self._cached_screenshot
+            if age < self._screenshot_ttl * 3:
+                threading.Thread(target=self._refresh_screenshot_async, daemon=True).start()
+                return self._cached_screenshot
+        return self._fetch_screenshot_sync()
+
+    def _refresh_screenshot_async(self):
+        """Background refresh after a stale cache hit."""
+        try:
+            time.sleep(0.2)
+            self._fetch_screenshot_sync()
+        except Exception as e:
+            logger.warning("[get_screenshot] Background refresh failed: %s", e)
+
+    def _fetch_screenshot_sync(self) -> bytes:
+        """Synchronous screenshot fetch (idb, falling back to xcrun simctl).
+        Caches the result on success; raises on failure without caching.
+        """
         tmp_dir = tempfile.gettempdir()
         screenshot_path = os.path.join(tmp_dir, "ios_screenshot.png")
 
@@ -541,7 +597,10 @@ class IOSDeviceBridge(DeviceBridgeBase):
         else:
             try:
                 with open(screenshot_path, "rb") as f:
-                    return f.read()
+                    data = f.read()
+                self._cached_screenshot = data
+                self._cached_screenshot_time = time.time()
+                return data
             except FileNotFoundError:
                 raise Exception("screenshot file not found after capture")
 
@@ -558,7 +617,10 @@ class IOSDeviceBridge(DeviceBridgeBase):
                 file_size = os.path.getsize(xcrun_path)
                 logger.info(f"xcrun simctl screenshot captured: {file_size} bytes")
                 with open(xcrun_path, "rb") as f:
-                    return f.read()
+                    data = f.read()
+                self._cached_screenshot = data
+                self._cached_screenshot_time = time.time()
+                return data
             raise Exception(f"xcrun simctl failed (exit {result.returncode}): {result.stderr or 'unknown error'}")
         except FileNotFoundError:
             raise Exception("screenshot file not found after xcrun fallback")
@@ -570,12 +632,10 @@ class IOSDeviceBridge(DeviceBridgeBase):
         factor from root frame vs screenshot dimensions and applies it to all nodes.
         Returns tuple of (hierarchy_dict, screenshot_bytes) and caches both.
         """
-        # Fetch hierarchy first
+        # Fetch hierarchy first (may be a cached, RAW/unscaled tree — see get_hierarchy())
         hierarchy = self.get_hierarchy()
-        self._cached_hierarchy = hierarchy
-        # Fetch screenshot
+        # Fetch screenshot (may also be served from cache)
         screenshot_bytes = self.get_screenshot()
-        self._cached_screenshot = screenshot_bytes
         # Compute iOS scale factor: screenshot pixels / WDA points
         # Root frame is in points; screenshot is in pixels (typically 2x or 3x)
         root_bounds = hierarchy.get("bounds", {})
@@ -588,8 +648,10 @@ class IOSDeviceBridge(DeviceBridgeBase):
             scale_x = png_w / root_bounds["width"]
             scale_y = png_h / root_bounds["height"]
             self._ios_scale = max(scale_x, scale_y)  # use larger if non-square (should be ~3.0)
-            # Re-apply scale to hierarchy bounds
-            hierarchy = self._apply_scale_to_tree(hierarchy, self._ios_scale)
+            # Apply scale to a COPY, not the cached tree in place — get_hierarchy()
+            # caches the raw/unscaled tree, and mutating it here would double-scale
+            # bounds on the next cache hit.
+            hierarchy = self._apply_scale_to_tree(copy.deepcopy(hierarchy), self._ios_scale)
         logger.info("[fetch_hierarchy_and_screenshot] Done")
         return hierarchy, screenshot_bytes
 
@@ -601,15 +663,7 @@ class IOSDeviceBridge(DeviceBridgeBase):
         Returns:
             The matching node dict, or None if not found.
         """
-        if not isinstance(tree, dict):
-            return None
-        if tree.get("id") == node_id:
-            return tree
-        for child in tree.get("children", []):
-            found = self._find_node_by_id(child, node_id)
-            if found:
-                return found
-        return None
+        return _find_node_by_id_util(tree, node_id)
 
     def generate_locators(self, node: dict) -> dict:
         """Generate all Appium locator strategies for a UI node (WDA/iOS).
@@ -727,12 +781,14 @@ class IOSDeviceBridge(DeviceBridgeBase):
 
     def audit_accessibility(self, tree: dict) -> dict:
         """Run WCAG accessibility checks against the iOS hierarchy tree.
-        Checks:
-        - touch_target: bounds width × height < 48dp
-        - missing_label: clickable element with no label/value
-        - duplicate_text: siblings with identical label
-        - text_overflow: text bounds exceed parent bounds
-        - contrast: skipped (iOS doesn't easily provide colors)
+
+        Delegates to the shared `accessibility_utils.walk_and_audit()` used by
+        the Android bridge, via `IOSMapper`, so both platforms run the same
+        checks (contrast, touch_target, missing_label, duplicate_text,
+        text_overflow) and can't silently diverge. Contrast is a no-op for iOS
+        since `IOSMapper.has_colors()` returns False (iOS doesn't easily
+        provide colors).
+
         Returns:
             {
               "timestamp": "ISO string",
@@ -741,102 +797,10 @@ class IOSDeviceBridge(DeviceBridgeBase):
               "summary": {"high": N, "medium": N, "low": N}
             }
         """
-        from datetime import datetime
+        from device.accessibility_utils import IOSMapper, build_audit_result, walk_and_audit
 
-        issues = []
-        total_nodes = 0
-
-        def walk_node(node: dict, siblings: list[dict] | None = None, parent_bounds: dict | None = None):
-            nonlocal issues, total_nodes
-            total_nodes += 1
-            class_name = node.get("className", "")
-            node_id = node.get("id", "")
-            label = node.get("label", "")
-            value = node.get("value", "")
-            bounds = node.get("bounds", {})
-            node.get("enabled", True)
-            short_class = class_name.split(".")[-1] if class_name else "XCUIElementTypeOther"
-            # Determine if clickable based on class name heuristics
-            clickable = short_class in (
-                "XCUIElementTypeButton",
-                "XCUIElementTypeLink",
-                "XCUIElementTypeTab",
-                "XCUIElementTypeCell",
-                "XCUIElementTypeStaticText",  # some tappable labels
-            )
-            # Check: touch target size
-            if clickable and bounds:
-                width = bounds.get("width", 0)
-                height = bounds.get("height", 0)
-                if width > 0 and height > 0 and (width < 48 or height < 48):
-                    issues.append(
-                        {
-                            "nodeId": node_id,
-                            "check": "touch_target",
-                            "severity": "medium",
-                            "description": f"Touch target {width}dp × {height}dp is below WCAG minimum of 48dp × 48dp",
-                            "element": {"label": label, "value": value, "className": class_name},
-                        }
-                    )
-            # Check: missing label (clickable but no label or value)
-            if clickable and not label and not value:
-                issues.append(
-                    {
-                        "nodeId": node_id,
-                        "check": "missing_label",
-                        "severity": "high",
-                        "description": f"Interactive element ({short_class}) has no label or value for screen readers",
-                        "element": {"className": class_name, "nodeId": node_id},
-                    }
-                )
-            # Check: duplicate text among siblings
-            if label and siblings:
-                dup_count = sum(1 for s in siblings if s.get("label") == label and s.get("id") != node_id)
-                if dup_count > 0:
-                    issues.append(
-                        {
-                            "nodeId": node_id,
-                            "check": "duplicate_text",
-                            "severity": "low",
-                            "description": f"Label '{label}' appears {dup_count + 1} times among siblings — screen readers may confuse users",
-                            "element": {"label": label, "className": class_name},
-                        }
-                    )
-            # Check: text overflow (text bounds exceed parent)
-            if label and bounds and parent_bounds:
-                p_bounds = parent_bounds
-                if (
-                    bounds.get("x", 0) < p_bounds.get("x", 0)
-                    or bounds.get("y", 0) < p_bounds.get("y", 0)
-                    or bounds.get("x", 0) + bounds.get("width", 0) > p_bounds.get("x", 0) + p_bounds.get("width", 0)
-                    or bounds.get("y", 0) + bounds.get("height", 0) > p_bounds.get("y", 0) + p_bounds.get("height", 0)
-                ):
-                    issues.append(
-                        {
-                            "nodeId": node_id,
-                            "check": "text_overflow",
-                            "severity": "medium",
-                            "description": "Text element bounds exceed parent bounds",
-                            "element": {"label": label[:30], "className": class_name},
-                        }
-                    )
-            # Recurse with siblings context
-            children = node.get("children", [])
-            for child in children:
-                walk_node(child, siblings=children, parent_bounds=bounds)
-
-        walk_node(tree)
-        summary = {
-            "high": sum(1 for i in issues if i["severity"] == "high"),
-            "medium": sum(1 for i in issues if i["severity"] == "medium"),
-            "low": sum(1 for i in issues if i["severity"] == "low"),
-        }
-        return {
-            "timestamp": datetime.now(UTC).isoformat(),
-            "totalNodes": total_nodes,
-            "issues": issues,
-            "summary": summary,
-        }
+        issues, total_nodes = walk_and_audit(tree, IOSMapper())
+        return build_audit_result(issues, total_nodes)
 
     def get_contexts(self) -> list[dict]:
         """List all available contexts (NATIVE_APP + WebViews).
@@ -955,6 +919,8 @@ class IOSDeviceBridge(DeviceBridgeBase):
     def shutdown(self) -> None:
         """Clean up resources on application shutdown."""
         self._cached_hierarchy = None
+        self._cached_hierarchy_time = 0.0
         self._cached_screenshot = None
+        self._cached_screenshot_time = 0.0
         self._ios_scale = 1.0
         logger.info("[IOSDeviceBridge] shutdown complete")

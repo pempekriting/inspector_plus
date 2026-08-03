@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState, memo, useCallback } from 'react';
 
 import { getApiUrl } from '../config/apiConfig';
+import { apiFetch } from '../services/api';
 import { useDeviceStore } from '../stores/deviceStore';
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -24,17 +25,17 @@ interface AuditResult {
 
 export function useAccessibilityAudit() {
   return useMutation({
-    mutationFn: async (udid: string | undefined): Promise<AuditResult> => {
+    // Uses apiFetch (not raw fetch) so the X-API-Key header configured in Settings
+    // is attached — a bare `fetch()` here would silently fail auth when a key is set.
+    mutationFn: (udid: string | undefined): Promise<AuditResult> => {
       const url = udid
         ? `${getApiUrl()}/hierarchy/audit?udid=${encodeURIComponent(udid)}`
         : `${getApiUrl()}/hierarchy/audit`;
-      const res = await fetch(url, {
+      return apiFetch<AuditResult>(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error(`Audit failed: ${res.status}`);
-      return res.json();
     },
   });
 }

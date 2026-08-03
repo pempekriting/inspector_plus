@@ -6,6 +6,8 @@ import subprocess
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+import dependencies
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -42,9 +44,7 @@ async def start_proxy(req: StartProxyRequest):
     logger.info(f"[start_proxy] actual_port={actual_port}")
 
     if req.udid:
-        from device import create_bridge_for_device
-
-        bridge = create_bridge_for_device(req.udid)
+        bridge = dependencies.get_bridge_or_raise(req.udid)
         try:
             tunnel_result = bridge.setup_network_proxy(actual_port)
             logger.info(f"[start_proxy] tunnel_result={tunnel_result}")
@@ -80,9 +80,7 @@ async def start_vpn_proxy(req: StartVpnRequest):
     if not req.udid:
         return {"success": False, "error": "No device specified"}
 
-    from device import create_bridge_for_device
-
-    bridge = create_bridge_for_device(req.udid)
+    bridge = dependencies.get_bridge_or_raise(req.udid)
 
     logger.info(f"[start_vpn_proxy] udid={req.udid}, port={req.port}")
     result = bridge.setup_vpn_proxy(req.port)
@@ -96,9 +94,7 @@ async def stop_vpn_proxy(udid: str | None = Query(None)):
     if not udid:
         return {"success": False, "error": "No device specified"}
 
-    from device import create_bridge_for_device
-
-    bridge = create_bridge_for_device(udid)
+    bridge = dependencies.get_bridge_or_raise(udid)
 
     logger.info(f"[stop_vpn_proxy] udid={udid}")
     result = bridge.stop_vpn_proxy()
@@ -112,9 +108,7 @@ async def vpn_status(udid: str | None = Query(None)):
     if not udid:
         return {"running": False, "error": "No device specified"}
 
-    from device import create_bridge_for_device
-
-    bridge = create_bridge_for_device(udid)
+    bridge = dependencies.get_bridge_or_raise(udid)
     return {"running": bridge.is_vpn_running()}
 
 
@@ -143,20 +137,16 @@ async def install_cert(req: InstallCertRequest):
     """Install MITM certificate on device."""
     if not req.udid:
         return {"success": False, "error": "No device specified"}
-    from device import create_bridge_for_device
-
-    bridge = create_bridge_for_device(req.udid)
+    bridge = dependencies.get_bridge_or_raise(req.udid)
     return bridge.install_certificate()
 
 
 @router.get("/info")
 async def network_info(udid: str | None = None):
     """Get device network diagnostic info."""
-    from device import create_bridge_for_device
-
     if not udid:
         return {"error": "No device specified"}
-    bridge = create_bridge_for_device(udid)
+    bridge = dependencies.get_bridge_or_raise(udid)
     return bridge.get_network_info()
 
 

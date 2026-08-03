@@ -16,6 +16,28 @@ import { getHierarchy, getNode, getChildren, getAncestors, getPath, searchNodes,
 const PORT = parseInt(process.env.MCP_PORT || "8002", 10);
 
 // =============================================================================
+// Tool Result Helper
+// =============================================================================
+
+/**
+ * Runs a tool handler and wraps its JSON-serializable result (or thrown
+ * error) into the MCP content format. Centralizes the try/catch shape that
+ * used to be repeated in every registered tool below.
+ */
+async function callTool(fn: () => Promise<unknown>): Promise<{
+  content: { type: "text"; text: string }[];
+  isError?: boolean;
+}> {
+  try {
+    const data = await fn();
+    return { content: [{ type: "text", text: JSON.stringify(data) }] };
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
+  }
+}
+
+// =============================================================================
 // MCP Server Factory - create new instance per session
 // =============================================================================
 
@@ -48,24 +70,18 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ deviceId, maxDepth }) => {
-      try {
+    async ({ deviceId, maxDepth }) =>
+      callTool(async () => {
         const result = await getHierarchy(deviceId, maxDepth);
         return {
-          content: [{ type: "text", text: JSON.stringify({
-            data: {
-              tree: result.tree,
-              path: [],
-              stats: result.stats,
-            },
-            _meta: result._meta,
-          }) }],
+          data: {
+            tree: result.tree,
+            path: [],
+            stats: result.stats,
+          },
+          _meta: result._meta,
         };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+      })
   );
 
   server.registerTool(
@@ -82,20 +98,14 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ nodeId, deviceId }) => {
-      try {
+    async ({ nodeId, deviceId }) =>
+      callTool(async () => {
         const result = await getNode(nodeId, deviceId);
         return {
-          content: [{ type: "text", text: JSON.stringify({
-            data: { node: result.node, path: result.path },
-            _meta: { source: "android" },
-          }) }],
+          data: { node: result.node, path: result.path },
+          _meta: { source: "android" },
         };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+      })
   );
 
   server.registerTool(
@@ -114,22 +124,16 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ nodeId, deviceId, cursor, pageSize }) => {
-      try {
+    async ({ nodeId, deviceId, cursor, pageSize }) =>
+      callTool(async () => {
         const result = await getChildren(nodeId, deviceId, cursor, pageSize);
         return {
-          content: [{ type: "text", text: JSON.stringify({
-            data: { children: result.data, parentId: result.parentId },
-            nextCursor: result.nextCursor,
-            hasMore: result.hasMore,
-            _meta: { source: "android", totalCount: result.data.length },
-          }) }],
+          data: { children: result.data, parentId: result.parentId },
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+          _meta: { source: "android", totalCount: result.data.length },
         };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+      })
   );
 
   server.registerTool(
@@ -146,17 +150,11 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ nodeId, deviceId }) => {
-      try {
+    async ({ nodeId, deviceId }) =>
+      callTool(async () => {
         const path = await getPath(nodeId, deviceId);
-        return {
-          content: [{ type: "text", text: JSON.stringify({ path }) }],
-        };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+        return { path };
+      })
   );
 
   server.registerTool(
@@ -173,20 +171,14 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ nodeId, deviceId }) => {
-      try {
+    async ({ nodeId, deviceId }) =>
+      callTool(async () => {
         const result = await getAncestors(nodeId, deviceId);
         return {
-          content: [{ type: "text", text: JSON.stringify({
-            data: result,
-            path: result.ancestors.map((a: { label: string }) => a.label),
-          }) }],
+          data: result,
+          path: result.ancestors.map((a: { label: string }) => a.label),
         };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+      })
   );
 
   server.registerTool(
@@ -205,20 +197,14 @@ function registerTools(server: McpServer): void {
         openWorldHint: true,
       },
     },
-    async ({ deviceId, query, matchType, limit }) => {
-      try {
+    async ({ deviceId, query, matchType, limit }) =>
+      callTool(async () => {
         const result = await searchNodes(deviceId, query, matchType || "text", limit);
         return {
-          content: [{ type: "text", text: JSON.stringify({
-            data: { matches: result.matches, query, matchType },
-            _meta: { source: "android", totalMatches: result.totalMatches },
-          }) }],
+          data: { matches: result.matches, query, matchType },
+          _meta: { source: "android", totalMatches: result.totalMatches },
         };
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        return { content: [{ type: "text", text: JSON.stringify({ error: errMsg }) }], isError: true };
-      }
-    }
+      })
   );
 }
 
@@ -228,7 +214,14 @@ function registerTools(server: McpServer): void {
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "*" }));
+// This endpoint serves full on-device UI hierarchy data, so restrict
+// cross-origin access to localhost by default instead of a wildcard (which
+// let any website read it via a browser). Override via MCP_CORS_ORIGIN
+// (comma-separated) for non-default setups.
+const corsOrigin = process.env.MCP_CORS_ORIGIN
+  ? process.env.MCP_CORS_ORIGIN.split(",").map((o) => o.trim())
+  : [/^https?:\/\/localhost(:\d+)?$/, /^https?:\/\/127\.0\.0\.1(:\d+)?$/];
+app.use(cors({ origin: corsOrigin }));
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {

@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useRecording } from '../hooks/useRecording';
 import { useInputText } from '../services/api';
@@ -85,6 +87,8 @@ export function ScreenshotCanvas() {
   const [screenshotError, setScreenshotError] = useState(false);
 
   const { selectedDevice, setDeviceResolution } = useDeviceStore();
+  // Select only the fields this component uses (with shallow equality) so
+  // unrelated store updates don't force a re-render here.
   const {
     isLoadingScreenshot,
     uiTree,
@@ -93,16 +97,30 @@ export function ScreenshotCanvas() {
     lockSelection,
     setLoadingScreenshot,
     combinedScreenshotUrl,
-    lockedNode,
     canvasMode,
     setCanvasMode,
     setCanvasTransform,
     triggerScreenshotRefresh,
-  } = useHierarchyStore();
+  } = useHierarchyStore(
+    useShallow((s) => ({
+      isLoadingScreenshot: s.isLoadingScreenshot,
+      uiTree: s.uiTree,
+      setHoveredNode: s.setHoveredNode,
+      setSelectedNode: s.setSelectedNode,
+      lockSelection: s.lockSelection,
+      setLoadingScreenshot: s.setLoadingScreenshot,
+      combinedScreenshotUrl: s.combinedScreenshotUrl,
+      canvasMode: s.canvasMode,
+      setCanvasMode: s.setCanvasMode,
+      setCanvasTransform: s.setCanvasTransform,
+      triggerScreenshotRefresh: s.triggerScreenshotRefresh,
+    }))
+  );
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
   const { isRecording, recordStep } = useRecording();
   const inputTextMutation = useInputText();
+  const queryClient = useQueryClient();
 
   // D2: Zoom + Pan state
   const [zoom, setZoom] = useState(0.7);
@@ -118,6 +136,23 @@ export function ScreenshotCanvas() {
   };
   const zoomIn = () => setZoom((z) => Math.min(4, +(z * 1.25).toFixed(2)));
   const zoomOut = () => setZoom((z) => Math.max(0.25, +(z / 1.25).toFixed(2)));
+
+  // Cache image metrics (which require layout-forcing getBoundingClientRect()
+  // calls) and only recompute when something that can actually change them
+  // (image, zoom, pan, or the window) changes — instead of on every single
+  // mousemove event, which fires far more often than these values change.
+  const metricsRef = useRef<ImageMetrics | null>(null);
+  const containerRectRef = useRef<DOMRect | null>(null);
+  useLayoutEffect(() => {
+    const recompute = () => {
+      metricsRef.current =
+        containerRef.current && imageUrl ? getImageMetrics(containerRef.current) : null;
+      containerRectRef.current = containerRef.current?.getBoundingClientRect() ?? null;
+    };
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, [imageUrl, zoom, pan, imageSize]);
 
   // Load screenshot from combined /hierarchy-and-screenshot endpoint
   useEffect(() => {
@@ -175,10 +210,11 @@ export function ScreenshotCanvas() {
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || !imageUrl) return;
 
-    const metrics = getImageMetrics(containerRef.current);
+    const metrics = metricsRef.current;
     if (!metrics || metrics.naturalWidth === 0) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = containerRectRef.current;
+    if (!rect) return;
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
@@ -244,10 +280,11 @@ export function ScreenshotCanvas() {
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || !imageUrl) return;
 
-    const metrics = getImageMetrics(containerRef.current);
+    const metrics = metricsRef.current;
     if (!metrics || metrics.naturalWidth === 0) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = containerRectRef.current;
+    if (!rect) return;
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
@@ -724,6 +761,10 @@ export function ScreenshotCanvas() {
                 setScreenshotError(false);
                 setLoadingScreenshot(true);
                 triggerScreenshotRefresh();
+                // Actually refetch the screenshot/hierarchy query — incrementing the
+                // counter above alone does not trigger a refetch since no query key
+                // depends on it.
+                queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
               }}
               className="px-4 py-2 text-xs font-bold rounded-lg transition-colors"
               style={{

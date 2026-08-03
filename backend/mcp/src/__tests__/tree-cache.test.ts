@@ -146,4 +146,39 @@ describe('TreeCache', () => {
       expect(cache.get('key1')).toBe('value2');
     });
   });
+
+  describe('bounded size (eviction)', () => {
+    it('should evict the oldest entry once maxEntries is exceeded', () => {
+      const bounded = new TreeCache<string>(3);
+      bounded.set('key1', 'value1');
+      bounded.set('key2', 'value2');
+      bounded.set('key3', 'value3');
+      bounded.set('key4', 'value4'); // should evict key1 (oldest)
+
+      expect(bounded.get('key1')).toBeNull();
+      expect(bounded.get('key2')).toBe('value2');
+      expect(bounded.get('key3')).toBe('value3');
+      expect(bounded.get('key4')).toBe('value4');
+      expect(bounded.stats().size).toBe(3);
+    });
+
+    it('should not evict when re-setting an existing key at capacity', () => {
+      const bounded = new TreeCache<string>(2);
+      bounded.set('key1', 'value1');
+      bounded.set('key2', 'value2');
+      bounded.set('key1', 'value1-updated'); // update, not a new entry
+
+      expect(bounded.stats().size).toBe(2);
+      expect(bounded.get('key1')).toBe('value1-updated');
+      expect(bounded.get('key2')).toBe('value2');
+    });
+
+    it('should never grow past maxEntries even with many distinct keys', () => {
+      const bounded = new TreeCache<string>(5);
+      for (let i = 0; i < 50; i++) {
+        bounded.set(`search:device:${i}`, `result-${i}`);
+      }
+      expect(bounded.stats().size).toBe(5);
+    });
+  });
 });

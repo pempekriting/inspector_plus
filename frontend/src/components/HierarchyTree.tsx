@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useEffect, memo, useMemo, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useRecording } from '../hooks/useRecording';
 import { useDeviceStore } from '../stores/deviceStore';
@@ -142,22 +143,21 @@ export function HierarchyTree({
   refreshKey?: string | null;
   onRefresh?: () => void;
 }) {
+  // Select only the fields this component uses (with shallow equality) so
+  // unrelated store updates (e.g. screenshot/canvas state living in the same
+  // store) don't force a re-render here.
   const {
     uiTree,
     hoveredNode,
     selectedNode,
-    refreshCounter,
-    setUiTree,
     setHoveredNode,
     setSelectedNode,
-    setLoadingHierarchy,
     searchQuery,
     searchFilter,
     isSearchActive,
     searchResults,
     searchResultsCount,
     currentSearchIndex,
-    setCurrentSearchIndex,
     expandedNodes,
     toggleExpanded,
     expandAll,
@@ -166,7 +166,29 @@ export function HierarchyTree({
     lockedNode,
     isLoadingHierarchy,
     isRefreshing,
-  } = useHierarchyStore();
+  } = useHierarchyStore(
+    useShallow((s) => ({
+      uiTree: s.uiTree,
+      hoveredNode: s.hoveredNode,
+      selectedNode: s.selectedNode,
+      setHoveredNode: s.setHoveredNode,
+      setSelectedNode: s.setSelectedNode,
+      searchQuery: s.searchQuery,
+      searchFilter: s.searchFilter,
+      isSearchActive: s.isSearchActive,
+      searchResults: s.searchResults,
+      searchResultsCount: s.searchResultsCount,
+      currentSearchIndex: s.currentSearchIndex,
+      expandedNodes: s.expandedNodes,
+      toggleExpanded: s.toggleExpanded,
+      expandAll: s.expandAll,
+      collapseAll: s.collapseAll,
+      lockSelection: s.lockSelection,
+      lockedNode: s.lockedNode,
+      isLoadingHierarchy: s.isLoadingHierarchy,
+      isRefreshing: s.isRefreshing,
+    }))
+  );
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
   const { isRecording, recordStep } = useRecording();
@@ -356,6 +378,33 @@ export function HierarchyTree({
   const handleHover = useCallback((node: UiNode) => setHoveredNode(node), [setHoveredNode]);
   const handleHoverClear = useCallback(() => setHoveredNode(null), [setHoveredNode]);
 
+  // Memoized so TreeNode's React.memo isn't defeated by a new onSelect
+  // reference on every render (e.g. on hover, which previously re-rendered
+  // the entire visible tree since these were inline arrow functions in JSX).
+  const handleSearchResultSelect = useCallback(
+    (n: UiNode) => {
+      setSelectedNode(n);
+      lockSelection(n);
+      if (isRecording) {
+        recordStep({ action: 'click', nodeId: n.id, locator: nodeToLocator(n) });
+      }
+    },
+    [setSelectedNode, lockSelection, isRecording, recordStep]
+  );
+
+  const handleTreeNodeSelect = useCallback(
+    (n: UiNode) => {
+      setSelectedNode(n);
+      lockSelection(n);
+      const idx = visibleNodes.findIndex((vn) => vn.id === n.id);
+      if (idx >= 0) setFocusedIndex(idx);
+      if (isRecording) {
+        recordStep({ action: 'click', nodeId: n.id, locator: nodeToLocator(n) });
+      }
+    },
+    [setSelectedNode, lockSelection, visibleNodes, isRecording, recordStep]
+  );
+
   // Refresh button handler - invalidates TanStack Query cache
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
@@ -474,18 +523,7 @@ export function HierarchyTree({
                 onToggleExpand={toggleExpanded}
                 isDark={isDark}
                 onHover={handleHover}
-                onSelect={(n) => {
-                  setSelectedNode(n);
-                  lockSelection(n);
-                  // Record click step if recording is active
-                  if (isRecording) {
-                    recordStep({
-                      action: 'click',
-                      nodeId: n.id,
-                      locator: nodeToLocator(n),
-                    });
-                  }
-                }}
+                onSelect={handleSearchResultSelect}
                 depth={0}
               />
             ))
@@ -497,21 +535,7 @@ export function HierarchyTree({
               lockedNode={lockedNode}
               focusedNode={visibleNodes[focusedIndex]}
               onHover={handleHover}
-              onSelect={(n) => {
-                setSelectedNode(n);
-                lockSelection(n);
-                // Update focused index
-                const idx = visibleNodes.findIndex((vn) => vn.id === n.id);
-                if (idx >= 0) setFocusedIndex(idx);
-                // Record click step if recording is active
-                if (isRecording) {
-                  recordStep({
-                    action: 'click',
-                    nodeId: n.id,
-                    locator: nodeToLocator(n),
-                  });
-                }
-              }}
+              onSelect={handleTreeNodeSelect}
               depth={0}
               expandedNodes={expandedNodes}
               onToggleExpand={toggleExpanded}
