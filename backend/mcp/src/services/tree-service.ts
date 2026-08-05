@@ -159,12 +159,55 @@ export async function getHierarchy(deviceId: string, maxDepth?: number): Promise
   return result;
 }
 
+interface NodeIndexEntry {
+  node: AiFriendlyNode;
+  path: string[];
+  ancestors: AiFriendlyNode[];
+}
+
+/**
+ * Per-device id→node index, keyed by the exact hierarchy tree object it was
+ * built from. getHierarchy() already caches the tree for the TTL window, but
+ * every getNode/getChildren/getPath/getAncestors call used to re-walk the
+ * whole tree from scratch to find one node. Since the tree object reference
+ * only changes when getHierarchy() actually refetches, comparing `tree`
+ * identity lets repeat lookups within the same cache window be O(1) instead
+ * of O(n), while a real refresh naturally invalidates the stale index.
+ */
+const nodeIndexCache = new Map<string, { tree: AiFriendlyNode; index: Map<string, NodeIndexEntry> }>();
+
+function buildNodeIndex(root: AiFriendlyNode): Map<string, NodeIndexEntry> {
+  const index = new Map<string, NodeIndexEntry>();
+  const walk = (node: AiFriendlyNode, path: string[], ancestors: AiFriendlyNode[]) => {
+    const currentPath = [...path, node.label || node.nodeType];
+    index.set(node.id, { node, path: currentPath, ancestors });
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child, currentPath, [...ancestors, node]);
+      }
+    }
+  };
+  walk(root, [], []);
+  return index;
+}
+
+function getNodeIndex(deviceId: string, tree: AiFriendlyNode): Map<string, NodeIndexEntry> {
+  const cached = nodeIndexCache.get(deviceId);
+  if (cached && cached.tree === tree) {
+    return cached.index;
+  }
+  const index = buildNodeIndex(tree);
+  nodeIndexCache.set(deviceId, { tree, index });
+  return index;
+}
+
 /**
  * Get a specific node by ID.
  */
 export async function getNode(nodeId: string, deviceId?: string, returnHierarchy: boolean = false): Promise<{
   node: AiFriendlyNode;
   path: string[];
+  ancestors: AiFriendlyNode[];
   hierarchy?: AiFriendlyNode;
 }> {
   // Fetch full hierarchy and find node
@@ -177,39 +220,14 @@ export async function getNode(nodeId: string, deviceId?: string, returnHierarchy
     throw new NodeNotFoundError(nodeId);
   }
 
-  // Recursive search for node
-  function findNode(nodes: AiFriendlyNode[], targetId: string): AiFriendlyNode | null {
-    for (const node of nodes) {
-      if (node.id === targetId) return node;
-      if (node.children) {
-        const found = findNode(node.children, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  const node = findNode([hierarchy], nodeId);
-  if (!node) {
+  const found = getNodeIndex(deviceId!, hierarchy).get(nodeId);
+  if (!found) {
     throw new NodeNotFoundError(nodeId);
   }
 
-  // Build path
-  function findPath(nodes: AiFriendlyNode[], targetId: string, path: string[] = []): string[] | null {
-    for (const node of nodes) {
-      const currentPath = [...path, node.label || node.nodeType];
-      if (node.id === targetId) return currentPath;
-      if (node.children) {
-        const found = findPath(node.children, targetId, currentPath);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  const path = findPath([hierarchy], nodeId) || [];
-
-  return returnHierarchy ? { node, path, hierarchy } : { node, path };
+  return returnHierarchy
+    ? { node: found.node, path: found.path, ancestors: found.ancestors, hierarchy }
+    : { node: found.node, path: found.path, ancestors: found.ancestors };
 }
 
 /**
@@ -255,40 +273,7 @@ export async function getAncestors(nodeId: string, deviceId?: string): Promise<{
   node: AiFriendlyNode;
 }> {
   const result = await getNode(nodeId, deviceId, true);
-
-  const hierarchy = result.hierarchy;
-  if (!hierarchy) {
-    return { ancestors: [], node: result.node };
-  }
-
-  // Find path from root to target node and collect ancestors
-  const ancestors: AiFriendlyNode[] = [];
-
-  function findNodeWithAncestors(
-    nodes: AiFriendlyNode[],
-    targetId: string,
-    currentAncestors: AiFriendlyNode[]
-  ): AiFriendlyNode | null {
-    for (const n of nodes) {
-      if (n.id === targetId) {
-        // Found target - set ancestors to current path (excluding self)
-        ancestors.push(...currentAncestors);
-        return n;
-      }
-      if (n.children) {
-        const found = findNodeWithAncestors(n.children, targetId, [...currentAncestors, n]);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  const found = findNodeWithAncestors([hierarchy], nodeId, []);
-  if (!found) {
-    return { ancestors: [], node: result.node };
-  }
-
-  return { ancestors, node: result.node };
+  return { ancestors: result.ancestors, node: result.node };
 }
 
 /**
@@ -316,9 +301,15 @@ export async function searchNodes(
     return { ...cached, matches: cached.matches.slice(0, limit) };
   }
 
-  // Use FastAPI search endpoint
-  const filter = matchType === "text" ? "text" : matchType === "xpath" ? "xpath" : "text";
-  const url = `/hierarchy/search?query=${encodeURIComponent(query)}&filter=${filter}${deviceId ? `&udid=${encodeURIComponent(deviceId)}` : ""}`;
+  // Regex mode has no equivalent in /hierarchy/search's filter types — it must
+  // go through /hierarchy/find?regex=true, which actually runs re.search().
+  // Routing it through /hierarchy/search?filter=text (as before) silently
+  // degraded to a plain substring match with no error signal.
+  const deviceQuery = deviceId ? `&udid=${encodeURIComponent(deviceId)}` : "";
+  const url =
+    matchType === "regex"
+      ? `/hierarchy/find?q=${encodeURIComponent(query)}&regex=true${deviceQuery}`
+      : `/hierarchy/search?query=${encodeURIComponent(query)}&filter=${matchType}${deviceQuery}`;
 
   const results = await fetchFromFastAPI<any>(url);
 
@@ -326,8 +317,10 @@ export async function searchNodes(
     throw new Error(results.error);
   }
 
-  // Transform results
-  const matches = (results.results || results.nodes || []).map((r: any) => {
+  // /hierarchy/find returns { results: [{ node, ... }] }, /hierarchy/search
+  // returns { matches: [...] } — normalize both shapes here.
+  const rawMatches = results.results || results.matches || results.nodes || [];
+  const matches = rawMatches.map((r: any) => {
     const node = r.node || r;
     return transformNode(node);
   });

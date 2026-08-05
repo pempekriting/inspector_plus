@@ -1,5 +1,6 @@
 import { useState, useCallback, memo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 import { useHierarchyStore } from '../stores/hierarchyStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -391,34 +392,58 @@ interface LayoutOverlayProps {
 }
 
 export function LayoutBoundsOverlay({ canvasRef, zoom, pan }: LayoutOverlayProps) {
-  const { uiTree, hoveredNode, selectedNode, lockedNode, setSelectedNode, lockSelection } =
-    useHierarchyStore();
+  // hoveredNode/selectedNode/lockedNode were destructured here but never
+  // read by this component (hover state is tracked locally via
+  // localHoveredId below) — selecting only what's used avoids re-rendering
+  // this whole overlay tree on every hierarchy hover/selection change.
+  const { uiTree, setSelectedNode, lockSelection } = useHierarchyStore(
+    useShallow((s) => ({
+      uiTree: s.uiTree,
+      setSelectedNode: s.setSelectedNode,
+      lockSelection: s.lockSelection,
+    }))
+  );
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
   const [localHoveredId, setLocalHoveredId] = useState<string | null>(null);
 
-  // Poll getImageLayout until screenshot is loaded
   const [layout, setLayout] = useState<{ imgLeft: number; imgTop: number; scale: number } | null>(
     null
   );
 
+  const updateLayout = useCallback(() => {
+    const result = getImageLayout();
+    if (result) setLayout(result);
+  }, []);
+
+  // Same event-driven approach as Overlay.tsx: a ResizeObserver on the
+  // screenshot img (catches it loading/resizing) plus a window resize
+  // listener, instead of polling getImageLayout() on a 250ms interval.
   useEffect(() => {
     if (!canvasRef) return;
-
-    const updateLayout = () => {
-      const result = getImageLayout();
-      if (result) setLayout(result);
-    };
 
     updateLayout();
     window.addEventListener('resize', updateLayout);
 
-    const interval = setInterval(updateLayout, 250);
+    const img = canvasRef.querySelector('.screenshot-img');
+    let observer: ResizeObserver | null = null;
+    if (img) {
+      observer = new ResizeObserver(updateLayout);
+      observer.observe(img);
+    }
+
     return () => {
       window.removeEventListener('resize', updateLayout);
-      clearInterval(interval);
+      if (observer) observer.disconnect();
     };
-  }, [canvasRef]);
+  }, [canvasRef, updateLayout]);
+
+  // Screenshot may not have been in the DOM yet when the observer above was
+  // set up (e.g. entering layout mode while still loading) — recompute when
+  // zoom/pan change since those only happen once the user can see the image.
+  useEffect(() => {
+    updateLayout();
+  }, [zoom, pan, updateLayout]);
 
   const handleHover = useCallback((id: string | null) => setLocalHoveredId(id), []);
   const handleClick = useCallback(

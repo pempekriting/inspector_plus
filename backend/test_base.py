@@ -1,17 +1,14 @@
 """
-Tests for device/base.py — DeviceBridgeBase, create_bridge, create_bridge_for_device.
+Tests for device/base.py — DeviceBridgeBase, create_bridge_for_device.
 """
 
 import os
 import sys
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from device.android_bridge import AndroidDeviceBridge
-from device.base import DeviceBridgeBase, create_bridge, create_bridge_for_device
+from device.base import DeviceBridgeBase, create_bridge_for_device
 from device.ios_bridge import IOSDeviceBridge
 
 
@@ -53,35 +50,6 @@ class TestDeviceBridgeBase:
         ]
         for method in required:
             assert hasattr(bridge, method), f"Missing method: {method}"
-
-
-class TestCreateBridge:
-    """Factory function create_bridge auto-detects platform from udid format."""
-
-    def test_android_udid_returns_android_bridge(self):
-        bridge = create_bridge("emulator-5554")
-        assert isinstance(bridge, AndroidDeviceBridge)
-
-    def test_android_explicit_prefix(self):
-        bridge = create_bridge("android://emulator-5554")
-        assert isinstance(bridge, AndroidDeviceBridge)
-
-    def test_ios_udid_format_returns_ios_bridge(self):
-        bridge = create_bridge("00001234-0001234567890123")
-        assert isinstance(bridge, IOSDeviceBridge)
-
-    def test_ios_udid_uppercase_returns_ios_bridge(self):
-        bridge = create_bridge("00001234-000123456789ABCD")
-        assert isinstance(bridge, IOSDeviceBridge)
-
-    def test_none_udid_defaults_to_android(self):
-        bridge = create_bridge(None)
-        assert isinstance(bridge, AndroidDeviceBridge)
-
-    def test_android_long_hex_still_android(self):
-        """Long hex without dashes should default to Android."""
-        bridge = create_bridge("abcdef123456")
-        assert isinstance(bridge, AndroidDeviceBridge)
 
 
 class TestCreateBridgeForDevice:

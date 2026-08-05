@@ -117,7 +117,7 @@ class TestVpnProxyEndpoints:
     def test_start_vpn_proxy(self, client):
         mock_bridge = MagicMock()
         mock_bridge.setup_vpn_proxy.return_value = {"success": True}
-        with patch("device.create_bridge_for_device", return_value=mock_bridge):
+        with patch("dependencies.get_bridge_or_raise", return_value=mock_bridge):
             response = client.post("/network/proxy/vpn/start", json={"port": 8080, "udid": "device123"})
             assert response.status_code == 200
             assert response.json()["success"] is True
@@ -130,7 +130,7 @@ class TestVpnProxyEndpoints:
     def test_stop_vpn_proxy(self, client):
         mock_bridge = MagicMock()
         mock_bridge.stop_vpn_proxy.return_value = {"success": True}
-        with patch("device.create_bridge_for_device", return_value=mock_bridge):
+        with patch("dependencies.get_bridge_or_raise", return_value=mock_bridge):
             response = client.post("/network/proxy/vpn/stop?udid=device123")
             assert response.status_code == 200
             assert response.json()["success"] is True
@@ -143,7 +143,7 @@ class TestVpnProxyEndpoints:
     def test_vpn_status_running(self, client):
         mock_bridge = MagicMock()
         mock_bridge.is_vpn_running.return_value = True
-        with patch("device.create_bridge_for_device", return_value=mock_bridge):
+        with patch("dependencies.get_bridge_or_raise", return_value=mock_bridge):
             response = client.get("/network/proxy/vpn/status?udid=device123")
             assert response.status_code == 200
             assert response.json()["running"] is True
@@ -158,7 +158,7 @@ class TestCertEndpoints:
     def test_install_cert(self, client):
         mock_bridge = MagicMock()
         mock_bridge.install_certificate.return_value = {"success": True}
-        with patch("device.create_bridge_for_device", return_value=mock_bridge):
+        with patch("dependencies.get_bridge_or_raise", return_value=mock_bridge):
             response = client.post("/network/cert/install", json={"udid": "device123"})
             assert response.status_code == 200
             assert response.json()["success"] is True
@@ -173,7 +173,7 @@ class TestNetworkInfoEndpoint:
     def test_network_info(self, client):
         mock_bridge = MagicMock()
         mock_bridge.get_network_info.return_value = {"ip": "192.168.1.1", "type": "wifi"}
-        with patch("device.create_bridge_for_device", return_value=mock_bridge):
+        with patch("dependencies.get_bridge_or_raise", return_value=mock_bridge):
             response = client.get("/network/info?udid=device123")
             assert response.status_code == 200
             assert "ip" in response.json()

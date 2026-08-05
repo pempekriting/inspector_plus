@@ -9,17 +9,34 @@ interface OnboardingStep {
   content: (props: { isDark: boolean }) => React.ReactNode;
 }
 
+// ─── Shared color palette ──────────────────────────────────────────────────────
+// Single source of truth for the isDark ? ... : ... color mapping — this used to
+// be copy-pasted (with several unused entries) into every step component below.
+
+function getOnboardingPalette(isDark: boolean) {
+  return {
+    bgPrimary: isDark ? '#0f0f12' : '#faf9f7',
+    bgSecondary: isDark ? '#1a1a1f' : '#ffffff',
+    bgCard: isDark ? '#1a1a1f' : '#ffffff',
+    bgElevated: isDark ? '#242429' : '#f0eeeb',
+    bgHeader: isDark ? '#18181b' : '#e5e5e5',
+    bgFooter: isDark ? '#18181b' : '#e5e5e5',
+    border: isDark ? '#3a3a42' : '#e5e2dd',
+    borderStrong: isDark ? '#4a4a55' : '#c5c2bb',
+    textPrimary: isDark ? '#f0f0f5' : '#1a1a2e',
+    textSecondary: isDark ? '#a8a8b3' : '#4a4a5c',
+    textTertiary: isDark ? '#6b6b78' : '#7a7a8c',
+    accent: isDark ? '#00e5cc' : '#0c4a6e',
+    codeBg: isDark ? '#0f0f12' : '#faf9f7',
+    codeText: isDark ? '#00e5cc' : '#0c4a6e',
+    errorText: isDark ? '#fb7185' : '#dc2626',
+  };
+}
+
 // ─── Welcome Step ────────────────────────────────────────────────────────────
 
 function WelcomeStep({ isDark }: { isDark: boolean }) {
-  const bg = isDark ? '#0f0f12' : '#faf9f7';
-  const bgCard = isDark ? '#1a1a1f' : '#ffffff';
-  const bgElevated = isDark ? '#242429' : '#f0eeeb';
-  const border = isDark ? '#3a3a42' : '#e5e2dd';
-  const accent = isDark ? '#00e5cc' : '#0c4a6e';
-  const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';
-  const textSecondary = isDark ? '#a8a8b3' : '#4a4a5c';
-  const textTertiary = isDark ? '#6b6b78' : '#7a7a8c';
+  const { accent, textPrimary, textSecondary } = getOnboardingPalette(isDark);
 
   return (
     <div className="space-y-6">
@@ -69,15 +86,8 @@ function WelcomeStep({ isDark }: { isDark: boolean }) {
 // ─── Device Connection Step ───────────────────────────────────────────────────
 
 function DeviceConnectionStep({ isDark }: { isDark: boolean }) {
-  const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';
-  const textSecondary = isDark ? '#a8a8b3' : '#4a4a5c';
-  const textTertiary = isDark ? '#6b6b78' : '#7a7a8c';
-  const bgCard = isDark ? '#1a1a1f' : '#ffffff';
-  const border = isDark ? '#3a3a42' : '#e5e2dd';
-  const bgElevated = isDark ? '#242429' : '#f0eeeb';
-  const accent = isDark ? '#00e5cc' : '#0c4a6e';
-  const codeBg = isDark ? '#0f0f12' : '#faf9f7';
-  const codeText = isDark ? '#00e5cc' : '#0c4a6e';
+  const { textPrimary, textSecondary, textTertiary, bgCard, border, accent, codeBg, codeText } =
+    getOnboardingPalette(isDark);
 
   return (
     <div className="space-y-5">
@@ -183,14 +193,8 @@ function DeviceConnectionStep({ isDark }: { isDark: boolean }) {
 // ─── Feature Tour Step ─────────────────────────────────────────────────────────
 
 function FeatureTourStep({ isDark }: { isDark: boolean }) {
-  const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';
-  const textSecondary = isDark ? '#a8a8b3' : '#4a4a5c';
-  const textTertiary = isDark ? '#6b6b78' : '#7a7a8c';
-  const bgCard = isDark ? '#1a1a1f' : '#ffffff';
-  const border = isDark ? '#3a3a42' : '#e5e2dd';
-  const accent = isDark ? '#00e5cc' : '#0c4a6e';
-  const codeBg = isDark ? '#0f0f12' : '#faf9f7';
-  const codeText = isDark ? '#00e5cc' : '#0c4a6e';
+  const { textPrimary, textTertiary, bgCard, border, codeBg, codeText } =
+    getOnboardingPalette(isDark);
 
   const features = [
     { title: 'Inspector', desc: 'View and search the UI element tree', key: '01' },
@@ -269,15 +273,8 @@ function FeatureTourStep({ isDark }: { isDark: boolean }) {
 // ─── Troubleshooting Step ─────────────────────────────────────────────────────
 
 function TroubleshootingStep({ isDark }: { isDark: boolean }) {
-  const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';
-  const textSecondary = isDark ? '#a8a8b3' : '#4a4a5c';
-  const textTertiary = isDark ? '#6b6b78' : '#7a7a8c';
-  const bgCard = isDark ? '#1a1a1f' : '#ffffff';
-  const border = isDark ? '#3a3a42' : '#e5e2dd';
-  const accent = isDark ? '#00e5cc' : '#0c4a6e';
-  const codeBg = isDark ? '#0f0f12' : '#faf9f7';
-  const codeText = isDark ? '#00e5cc' : '#0c4a6e';
-  const errorText = isDark ? '#fb7185' : '#dc2626';
+  const { textPrimary, textSecondary, textTertiary, bgCard, border, errorText } =
+    getOnboardingPalette(isDark);
 
   const issues = [
     {
@@ -406,18 +403,8 @@ export function OnboardingModal() {
   const step = STEPS[currentStep];
   const isLastStep = currentStep === STEPS.length - 1;
 
-  const bgPrimary = isDark ? '#0f0f12' : '#faf9f7';
-  const bgSecondary = isDark ? '#1a1a1f' : '#ffffff';
-  const bgHeader = isDark ? '#18181b' : '#e5e5e5';
-  const bgFooter = isDark ? '#18181b' : '#e5e5e5';
-  const border = isDark ? '#3a3a42' : '#e5e2dd';
-  const borderStrong = isDark ? '#4a4a55' : '#c5c2bb';
-  const textPrimary = isDark ? '#f0f0f5' : '#1a1a2e';
-  const textSecondary = isDark ? '#a8a8b3' : '#4a4a5c';
-  const textTertiary = isDark ? '#6b6b78' : '#7a7a8c';
-  const accent = isDark ? '#00e5cc' : '#0c4a6e';
-  const codeBg = isDark ? '#0f0f12' : '#faf9f7';
-  const codeText = isDark ? '#00e5cc' : '#0c4a6e';
+  const { bgSecondary, bgHeader, bgFooter, border, textSecondary, textTertiary, accent } =
+    getOnboardingPalette(isDark);
 
   return (
     <div

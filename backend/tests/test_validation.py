@@ -24,10 +24,17 @@ class TestValidateCommandDangerousChars:
         assert not ok
         assert ch in reason or ch[0] in reason  # ">>" reports as ">"
 
-    def test_newline_not_rejected(self):
-        # newlines are not in _DANGEROUS_CHARS
-        _ok, _reason = validate_command("input tap 100 100\ninput tap 200 200")
-        # This would be split but not caught by dangerous chars
+    def test_newline_rejected(self):
+        # Newlines are a device-shell command separator just like ';' — a payload
+        # like "input tap 0 0\nrm -rf /sdcard/foo" must not slip past the allowlist.
+        ok, reason = validate_command("input tap 100 100\ninput tap 200 200")
+        assert not ok
+        assert "\n" in reason
+
+    def test_carriage_return_rejected(self):
+        ok, reason = validate_command("input tap 100 100\rinput tap 200 200")
+        assert not ok
+        assert "\r" in reason
 
 
 class TestValidateCommandDangerousExecutables:

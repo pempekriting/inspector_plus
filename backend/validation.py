@@ -96,7 +96,7 @@ _DANGEROUS_EXECS = {
     "ncat",
 }
 
-_DANGEROUS_CHARS = ["&&", "||", "|", ";", "`", "$(", ">", ">>", "<"]
+_DANGEROUS_CHARS = ["&&", "||", "|", ";", "`", "$(", ">", ">>", "<", "\n", "\r", "\x00"]
 
 
 def validate_command(command: str) -> tuple[bool, str]:

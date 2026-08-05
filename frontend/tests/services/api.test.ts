@@ -5,12 +5,9 @@ import {
   UiNodeSchema,
   DeviceInfoSchema,
   DeviceStatusSchema,
-  HierarchyResponseSchema,
   HierarchyAndScreenshotSchema,
   NetworkFlowSchema,
   NetworkInfoSchema,
-  LocatorResultSchema,
-  DeviceContextsResponseSchema,
 } from '../../src/services/api';
 
 describe('api Zod schemas', () => {
@@ -163,22 +160,6 @@ describe('api Zod schemas', () => {
     });
   });
 
-  describe('HierarchyResponseSchema', () => {
-    it('parses valid hierarchy response', () => {
-      const result = HierarchyResponseSchema.parse({
-        tree: {
-          id: 'root',
-          bounds: { x: 0, y: 0, width: 1080, height: 1920 },
-        },
-      });
-      expect(result.tree.id).toBe('root');
-    });
-
-    it('rejects missing tree', () => {
-      expect(() => HierarchyResponseSchema.parse({})).toThrow();
-    });
-  });
-
   describe('HierarchyAndScreenshotSchema', () => {
     it('parses valid hierarchy+screenshot response', () => {
       const result = HierarchyAndScreenshotSchema.parse({
@@ -263,62 +244,4 @@ describe('api Zod schemas', () => {
     });
   });
 
-  describe('LocatorResultSchema', () => {
-    it('parses valid locator result', () => {
-      const result = LocatorResultSchema.parse({
-        nodeId: 'node1',
-        locators: [
-          { strategy: 'xpath', value: '//button', expression: '//button[@text="Submit"]', stability: 0.9 },
-          { strategy: 'id', value: 'submit-btn', expression: 'id("submit-btn")', stability: 1.0 },
-        ],
-        best: 'id',
-      });
-      expect(result.nodeId).toBe('node1');
-      expect(result.locators).toHaveLength(2);
-      expect(result.best).toBe('id');
-    });
-
-    it('parses without best field (optional)', () => {
-      const result = LocatorResultSchema.parse({
-        nodeId: 'node1',
-        locators: [{ strategy: 'xpath', value: '//button', expression: '//button', stability: 0.5 }],
-      });
-      expect(result.best).toBeUndefined();
-    });
-
-    it('rejects empty locators array', () => {
-      // Empty array means no locators found - parse succeeds since it's a valid array
-      const result = LocatorResultSchema.parse({ nodeId: 'node1', locators: [] });
-      expect(result.locators).toHaveLength(0);
-    });
-
-    it('rejects missing locators field', () => {
-      expect(() => LocatorResultSchema.parse({ nodeId: 'node1' })).toThrow();
-    });
-  });
-
-  describe('DeviceContextsResponseSchema', () => {
-    it('parses native context', () => {
-      const result = DeviceContextsResponseSchema.parse({
-        contexts: [{ id: 'NATIVE_APP', type: 'native', description: 'Native context' }],
-      });
-      expect(result.contexts).toHaveLength(1);
-      expect(result.contexts[0].type).toBe('native');
-    });
-
-    it('parses webview context', () => {
-      const result = DeviceContextsResponseSchema.parse({
-        contexts: [{ id: 'WEBVIEW_1', type: 'webview', description: 'Chrome' }],
-      });
-      expect(result.contexts[0].type).toBe('webview');
-    });
-
-    it('rejects invalid context type', () => {
-      expect(() =>
-        DeviceContextsResponseSchema.parse({
-          contexts: [{ id: 'ctx1', type: 'browser', description: '???' }],
-        })
-      ).toThrow();
-    });
-  });
 });

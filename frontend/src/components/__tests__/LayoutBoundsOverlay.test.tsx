@@ -62,7 +62,6 @@ const createMockStore = (overrides = {}) => ({
   collapseAll: vi.fn(),
   setContext: vi.fn(),
   setCanvasMode: vi.fn(),
-  getDemoTree: vi.fn(),
   ...overrides,
 });
 

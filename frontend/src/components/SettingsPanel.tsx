@@ -9,6 +9,25 @@ interface SettingsPanelProps {
   onClose: () => void;
 }
 
+/**
+ * Probe a `/health` endpoint with a timeout, returning the parsed JSON body
+ * or null on any failure (non-OK status, timeout, network error). Shared by
+ * the single verify and multi-port scan below, which used to each copy-paste
+ * this fetch+timeout+catch shape.
+ */
+async function fetchHealth(baseUrl: string, timeoutMs: number): Promise<any | null> {
+  try {
+    const res = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
@@ -73,44 +92,16 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     setVerifyStatus({ be: 'testing', mcp: 'testing' });
     setDetectedPort(null);
 
-    try {
-      const res = await fetch(`${editedBackend}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.version && !data.service) {
-          setVerifyStatus((prev) => ({ ...prev, be: 'ok', detectedPort: data.port ?? null }));
-          setDetectedPort(data.port ?? null);
-        } else {
-          setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
-        }
-      } else {
-        setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
-      }
-    } catch {
+    const beData = await fetchHealth(editedBackend, 3000);
+    if (beData && beData.version && !beData.service) {
+      setVerifyStatus((prev) => ({ ...prev, be: 'ok', detectedPort: beData.port ?? null }));
+      setDetectedPort(beData.port ?? null);
+    } else {
       setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));
     }
 
-    try {
-      const res = await fetch(`${editedMcp}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.service) {
-          setVerifyStatus((prev) => ({ ...prev, mcp: 'ok' }));
-        } else {
-          setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
-        }
-      } else {
-        setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
-      }
-    } catch {
-      setVerifyStatus((prev) => ({ ...prev, mcp: 'fail' }));
-    }
+    const mcpData = await fetchHealth(editedMcp, 3000);
+    setVerifyStatus((prev) => ({ ...prev, mcp: mcpData?.service ? 'ok' : 'fail' }));
   };
 
   const handleScanBoth = async () => {
@@ -123,42 +114,26 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
     for (let port = 8001; port < 8100; port++) {
       setScanProgress(((port - 8001) / 99) * 100);
-      try {
-        const res = await fetch(`http://localhost:${port}/health`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(500),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.version && !data.service) {
-            bePort = data.port ?? port;
-            setDetectedPort(data.port ?? port);
-            setEditedBackend(`http://localhost:${port}`);
-            setVerifyStatus((prev) => ({ ...prev, be: 'ok' }));
-            break;
-          }
-        }
-      } catch {}
+      const data = await fetchHealth(`http://localhost:${port}`, 500);
+      if (data && data.version && !data.service) {
+        bePort = data.port ?? port;
+        setDetectedPort(data.port ?? port);
+        setEditedBackend(`http://localhost:${port}`);
+        setVerifyStatus((prev) => ({ ...prev, be: 'ok' }));
+        break;
+      }
     }
 
     for (let port = 8002; port < 8100; port++) {
       if (port === bePort) continue;
       setScanProgress(((port - 8001) / 99) * 100);
-      try {
-        const res = await fetch(`http://localhost:${port}/health`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(500),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.service) {
-            mcpPort = port;
-            setEditedMcp(`http://localhost:${port}`);
-            setVerifyStatus((prev) => ({ ...prev, mcp: 'ok' }));
-            break;
-          }
-        }
-      } catch {}
+      const data = await fetchHealth(`http://localhost:${port}`, 500);
+      if (data?.service) {
+        mcpPort = port;
+        setEditedMcp(`http://localhost:${port}`);
+        setVerifyStatus((prev) => ({ ...prev, mcp: 'ok' }));
+        break;
+      }
     }
 
     if (!bePort) setVerifyStatus((prev) => ({ ...prev, be: 'fail' }));

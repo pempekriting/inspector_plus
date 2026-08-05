@@ -163,17 +163,10 @@ async def gesture_execute(req: GestureExecuteRequest, udid: str | None = None):
         return val
 
     if is_ios:
-        for action in req.actions:
-            if action.type == "move":
-                x = to_absolute(action.x, device_width)
-                y = to_absolute(action.y, device_height)
-                if x is not None and y is not None:
-                    pass
-            elif action.type == "pointerDown" or action.type == "pointerUp":
-                pass
-            elif action.type == "pause":
-                await asyncio.sleep((action.duration or 100) / 1000)
-        return {"success": True, "message": "iOS multi-pointer gesture executed"}
+        # Multi-pointer gestures (move/pointerDown/pointerUp) aren't implemented for iOS —
+        # fail loudly instead of silently no-oping and reporting success, matching the
+        # convention used by /device/drag and /device/pinch for unsupported iOS actions.
+        raise UnsupportedOnPlatformError("multi-pointer gesture", "iOS")
 
     # Android: use input command sequence
     for action in req.actions:
@@ -229,10 +222,9 @@ async def execute_script(req: ExecuteScriptRequest, udid: str | None = None):
         result = await asyncio.to_thread(
             subprocess.run,
             ["idb", "run", udid, "--", *req.script.split()],
-            None,  # stdin
-            True,  # capture_output
-            True,  # text
-            30,  # timeout
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         return {
             "success": result.returncode == 0,

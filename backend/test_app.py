@@ -494,16 +494,26 @@ class TestAdbCommand:
 
     @patch("dependencies.get_bridge")
     def test_post_adb_command_failure(self, mock_get_bridge, client, mock_android_bridge):
-        """POST /device/adb returns error in response on failure."""
+        """POST /device/adb returns error in response when the bridge itself fails,
+        for a command that is allowed by the allowlist."""
         mock_get_bridge.return_value = mock_android_bridge
         mock_android_bridge.execute_adb_command.return_value = {
             "output": "",
             "error": "error: device not found",
             "exitCode": 1,
         }
-        # "foobar" is not in the ADB allowlist — triggers 400 before hitting bridge
+        response = client.post("/device/adb", json={"command": "input tap 500 800"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["exitCode"] == 1
+        assert data["error"] == "error: device not found"
+
+    def test_post_adb_command_disallowed_rejected_by_model_validator(self, client):
+        """POST /device/adb with a command outside the allowlist is rejected at the
+        Pydantic model layer (AdbCommandRequest.validate_command_field), returning 422
+        before the request ever reaches the handler/bridge."""
         response = client.post("/device/adb", json={"command": "foobar"})
-        assert response.status_code == 400
+        assert response.status_code == 422
 
     @patch("dependencies.get_bridge")
     def test_post_adb_command_bridge_returns_none(self, mock_get_bridge, client):

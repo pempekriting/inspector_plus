@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+from commands.command_runner import run_and_report
+
 
 def _safe_path(path: str, must_exist: bool = True) -> bool:
     """Validate a file path is safe (no path traversal, allowed extension)."""
@@ -55,20 +57,15 @@ class AppCommands:
                 False,
                 "Invalid APK path: must be a .apk file, no path traversal, and must exist",
             )
-        try:
-            result = subprocess.run(
+        return run_and_report(
+            lambda: subprocess.run(
                 self._adb_cmd(["install", "-r", apk_path]),
                 capture_output=True,
                 text=True,
                 timeout=120,
-            )
-            if result.returncode == 0:
-                return (True, result.stdout.strip())
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Install command timed out")
-        except Exception as e:
-            return (False, f"Install failed: {e!s}")
+            ),
+            "Install",
+        )
 
     def is_app_installed(self, package: str) -> tuple[bool, str]:
         """Check if an app is installed on the device.
@@ -104,20 +101,15 @@ class AppCommands:
         """
         if not _safe_package(package):
             return (False, "Invalid package name")
-        try:
-            result = subprocess.run(
+        return run_and_report(
+            lambda: subprocess.run(
                 self._adb_cmd(["uninstall", package]),
                 capture_output=True,
                 text=True,
                 timeout=30,
-            )
-            if result.returncode == 0:
-                return (True, result.stdout.strip())
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Uninstall command timed out")
-        except Exception as e:
-            return (False, f"Uninstall failed: {e!s}")
+            ),
+            "Uninstall",
+        )
 
     def launch_app(self, package: str) -> tuple[bool, str]:
         """Launch an app on the device.
@@ -130,8 +122,8 @@ class AppCommands:
         """
         if not _safe_package(package):
             return (False, "Invalid package name")
-        try:
-            result = subprocess.run(
+        return run_and_report(
+            lambda: subprocess.run(
                 self._adb_cmd(
                     [
                         "shell",
@@ -146,14 +138,10 @@ class AppCommands:
                 capture_output=True,
                 text=True,
                 timeout=10,
-            )
-            if result.returncode == 0:
-                return (True, f"Launched app: {package}")
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "Launch command timed out")
-        except Exception as e:
-            return (False, f"Launch failed: {e!s}")
+            ),
+            "Launch",
+            success_message=f"Launched app: {package}",
+        )
 
     def list_installed_apps(self) -> tuple[bool, str]:
         """Get list of all installed packages on the device.
@@ -161,22 +149,22 @@ class AppCommands:
         Returns:
             Tuple of (success, list of packages or error message)
         """
-        try:
-            result = subprocess.run(
+
+        def _format_packages(result: subprocess.CompletedProcess) -> str:
+            lines = result.stdout.strip().split("\n")
+            packages = [line.replace("package:", "").strip() for line in lines if line.startswith("package:")]
+            return "\n".join(packages)
+
+        return run_and_report(
+            lambda: subprocess.run(
                 self._adb_cmd(["shell", "pm", "list", "packages"]),
                 capture_output=True,
                 text=True,
                 timeout=30,
-            )
-            if result.returncode == 0:
-                lines = result.stdout.strip().split("\n")
-                packages = [line.replace("package:", "").strip() for line in lines if line.startswith("package:")]
-                return (True, "\n".join(packages))
-            return (False, result.stderr.strip() or result.stdout.strip())
-        except subprocess.TimeoutExpired:
-            return (False, "List packages command timed out")
-        except Exception as e:
-            return (False, f"List packages failed: {e!s}")
+            ),
+            "List packages",
+            success_message=_format_packages,
+        )
 
     def get_app_info(self, package: str) -> tuple[bool, dict]:
         """Get detailed info about a specific installed package.

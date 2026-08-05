@@ -62,18 +62,6 @@ describe('settingsStore', () => {
     });
   });
 
-  describe('loadSettings', () => {
-    it('re-reads from apiConfig', async () => {
-      const { getApiUrl, getMcpUrl } = await import('../../src/config/apiConfig');
-      vi.mocked(getApiUrl).mockReturnValue('http://reloaded:8001');
-      vi.mocked(getMcpUrl).mockReturnValue('http://reloaded:8002');
-
-      useSettingsStore.getState().loadSettings();
-      expect(useSettingsStore.getState().backendUrl).toBe('http://reloaded:8001');
-      expect(useSettingsStore.getState().mcpUrl).toBe('http://reloaded:8002');
-    });
-  });
-
   describe('resetSettings', () => {
     it('resets to defaults and calls reset functions', async () => {
       const { resetApiUrl, resetMcpUrl } = await import('../../src/config/apiConfig');
@@ -119,28 +107,6 @@ describe('settingsStore', () => {
       expect(() => useSettingsStore.getState().setApiKey('some-key')).not.toThrow();
       // State still updated
       expect(useSettingsStore.getState().apiKey).toBe('some-key');
-    });
-  });
-
-  describe('loadApiKey', () => {
-    it('returns stored key on init', () => {
-      vi.mocked(localStorage.getItem).mockReturnValue('loaded-key');
-      useSettingsStore.getState().loadSettings();
-      expect(useSettingsStore.getState().apiKey).toBe('loaded-key');
-    });
-
-    it('returns empty string when no key stored', () => {
-      vi.mocked(localStorage.getItem).mockReturnValue(null);
-      useSettingsStore.getState().loadSettings();
-      expect(useSettingsStore.getState().apiKey).toBe('');
-    });
-
-    it('returns empty string when localStorage throws', () => {
-      vi.mocked(localStorage.getItem).mockImplementation(() => {
-        throw new Error('Storage blocked');
-      });
-      useSettingsStore.getState().loadSettings();
-      expect(useSettingsStore.getState().apiKey).toBe('');
     });
   });
 

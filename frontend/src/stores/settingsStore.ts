@@ -18,7 +18,6 @@ interface SettingsState {
   setBackendUrl: (url: string) => void;
   setMcpUrl: (url: string) => void;
   setApiKey: (key: string) => void;
-  loadSettings: () => void;
   resetSettings: () => void;
 }
 
@@ -54,14 +53,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }
     } catch {}
     set({ apiKey: key });
-  },
-
-  loadSettings: () => {
-    set({
-      backendUrl: getApiUrl(),
-      mcpUrl: getMcpUrl(),
-      apiKey: loadApiKey(),
-    });
   },
 
   resetSettings: () => {

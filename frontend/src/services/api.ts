@@ -50,10 +50,6 @@ export const DeviceStatusSchema = z.object({
   devices: z.array(DeviceInfoSchema),
 });
 
-export const HierarchyResponseSchema = z.object({
-  tree: UiNodeSchema,
-});
-
 export const HierarchyAndScreenshotSchema = z.object({
   hierarchy: UiNodeSchema,
   screenshot: z.string(),
@@ -146,38 +142,6 @@ export function useDeviceStatus() {
   });
 }
 
-// Devices list
-export function useDevices() {
-  return useQuery({
-    queryKey: ['devices'],
-    queryFn: () =>
-      apiFetch<z.infer<typeof DeviceStatusSchema>>(`${getApiUrl()}/device/status`, undefined, DeviceStatusSchema).then(
-        (data) => data.devices
-      ),
-    retry: 2,
-    staleTime: 10000,
-    gcTime: 60000,
-  });
-}
-
-// Hierarchy
-export function useHierarchy(udid?: string) {
-  return useQuery({
-    queryKey: ['hierarchy', udid],
-    queryFn: () =>
-      apiFetch<z.infer<typeof HierarchyResponseSchema>>(
-        udid
-          ? `${getApiUrl()}/hierarchy?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/hierarchy`,
-        undefined,
-        HierarchyResponseSchema
-      ).then((data) => data.tree),
-    staleTime: 1000,
-    gcTime: 30000,
-    retry: 2,
-  });
-}
-
 // Combined hierarchy + screenshot (single request, base64 encoded)
 export function useHierarchyAndScreenshot(udid?: string) {
   return useQuery({
@@ -199,29 +163,6 @@ export function useHierarchyAndScreenshot(udid?: string) {
     staleTime: 2000,
     gcTime: 10000,
     retry: 1,
-  });
-}
-
-// Tap device
-export function useTapDevice() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ x, y, udid }: { x: number; y: number; udid?: string }) =>
-      apiFetch<void>(
-        udid ? `${getApiUrl()}/tap?udid=${encodeURIComponent(udid)}` : `${getApiUrl()}/tap`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ x, y }),
-        }
-      ),
-    onError: (error) => {
-      console.error('Tap command failed:', error);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hierarchy-and-screenshot'] });
-      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
-    },
   });
 }
 
@@ -250,50 +191,6 @@ export function useExecuteCommand() {
     onError: (error) => {
       console.error('Command execution failed:', error);
     },
-  });
-}
-
-// Locator result types
-export interface Locator {
-  strategy: string;
-  value: string;
-  expression: string;
-  stability: number;
-}
-
-export const LocatorSchema: z.ZodType<Locator> = z.object({
-  strategy: z.string(),
-  value: z.string(),
-  expression: z.string(),
-  stability: z.number(),
-});
-
-export interface LocatorResult {
-  nodeId: string;
-  locators: Locator[];
-  best?: string;
-}
-
-export const LocatorResultSchema: z.ZodType<LocatorResult> = z.object({
-  nodeId: z.string(),
-  locators: z.array(LocatorSchema),
-  best: z.string().optional(),
-});
-
-// Fetch locators for a node
-export function useLocators(nodeId: string | null) {
-  return useQuery({
-    queryKey: ['locators', nodeId],
-    queryFn: () =>
-      apiFetch<z.infer<typeof LocatorResultSchema>>(
-        `${getApiUrl()}/hierarchy/locators?nodeId=${encodeURIComponent(nodeId || '')}`,
-        undefined,
-        LocatorResultSchema
-      ),
-    enabled: !!nodeId,
-    staleTime: 30000,
-    gcTime: 60000,
-    retry: 1,
   });
 }
 
@@ -404,82 +301,6 @@ export function useExecuteScript() {
 }
 
 // Accessibility Audit
-export interface AccessibilityIssue {
-  nodeId: string;
-  check: string;
-  severity: 'high' | 'medium' | 'low';
-  description: string;
-  element: Record<string, unknown>;
-}
-
-export interface AuditResult {
-  timestamp: string;
-  totalNodes: number;
-  issues: AccessibilityIssue[];
-  summary: { high: number; medium: number; low: number };
-}
-
-export function useAccessibilityAudit() {
-  return useMutation({
-    mutationFn: () =>
-      apiFetch<AuditResult>(`${getApiUrl()}/hierarchy/audit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }),
-  });
-}
-
-// F3: Context (WebView support)
-export interface ContextInfo {
-  id: string;
-  type: 'native' | 'webview';
-  description: string;
-}
-
-export const ContextInfoSchema = z.object({
-  id: z.string(),
-  type: z.enum(['native', 'webview']),
-  description: z.string(),
-});
-
-export const DeviceContextsResponseSchema = z.object({
-  contexts: z.array(ContextInfoSchema),
-});
-
-export function useDeviceContexts(udid?: string) {
-  return useQuery({
-    queryKey: ['device-contexts', udid],
-    queryFn: () =>
-      apiFetch<z.infer<typeof DeviceContextsResponseSchema>>(
-        udid
-          ? `${getApiUrl()}/device/contexts?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/device/contexts`,
-        undefined,
-        DeviceContextsResponseSchema
-      ).then((data) => data.contexts),
-    staleTime: 15000,
-    gcTime: 30000,
-    retry: 1,
-  });
-}
-
-export function useSwitchContext() {
-  return useMutation({
-    mutationFn: ({ contextId, udid }: { contextId: string; udid?: string }) =>
-      apiFetch<{ success: boolean }>(
-        udid
-          ? `${getApiUrl()}/device/switch-context?udid=${encodeURIComponent(udid)}`
-          : `${getApiUrl()}/device/switch-context`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contextId }),
-        }
-      ),
-  });
-}
-
 // F2: Test Recorder
 // App Info
 
